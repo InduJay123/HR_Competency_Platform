@@ -4,13 +4,14 @@ import { useCallback, useEffect, useState } from "react";
 import { api, post } from "@/lib/api";
 import { human, type Review } from "@/lib/reviews";
 import { Button, Card, Feedback, Badge } from "./ui";
+import { HrCoaching, type CoachingSummary } from "./hr-review-presentation";
 type Observation = {
   observation: string;
   source_ids: string[];
   question: string;
   uncertainty: string;
 };
-type Analysis = {
+export type Analysis = {
   id: string;
   round: number;
   state: string;
@@ -18,6 +19,7 @@ type Analysis = {
   prompt_version: string;
   model: string;
   created_at: string;
+  reviewed_at?: string | null;
   decision: string;
   decision_notes: string;
   error_code: string;
@@ -28,8 +30,12 @@ type Analysis = {
     limitations: string[];
   };
 };
-type State = { configured: boolean; analyses: Analysis[] };
-export function Coach({ review }: { review: Review }) {
+export type State = { configured: boolean; analyses: Analysis[] };
+export function Coach({ review, oversight = false, onSummary }: {
+  review: Review;
+  oversight?: boolean;
+  onSummary?: (summary: CoachingSummary) => void;
+}) {
   const [data, setData] = useState<State | null>(null),
     [notes, setNotes] = useState(""),
     [error, setError] = useState(""),
@@ -42,6 +48,18 @@ export function Coach({ review }: { review: Review }) {
   useEffect(() => {
     reload().catch((e) => setError(e.message));
   }, [reload]);
+  useEffect(() => {
+    if (!onSummary || !data) return;
+    const current = data.analyses.filter((a) => a.round === review.round);
+    const accepted = current.some((a) => a.state === "SUCCEEDED" && a.decision === "ACCEPTED");
+    onSummary({
+      reviewId: review.id,
+      round: review.round,
+      accepted,
+      status: accepted ? "Accepted" : current[0]
+        ? human(current[0].decision || current[0].state) : "Not requested",
+    });
+  }, [data, onSummary, review.id, review.round]);
   useEffect(() => {
     if (
       !data?.analyses.some((a) =>
@@ -86,6 +104,11 @@ export function Coach({ review }: { review: Review }) {
       setBusy(false);
     }
   }
+  if (oversight) return (
+    <HrCoaching review={review} data={data} error={error} busy={busy}
+      notes={notes} setNotes={setNotes} request={request} decide={decide}
+      refresh={() => reload().catch((e) => setError(e.message))} />
+  );
   return (
     <>
       <button

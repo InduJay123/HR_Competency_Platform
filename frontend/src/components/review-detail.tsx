@@ -14,6 +14,7 @@ import { Button, Card, Feedback, Loading, Badge } from "./ui";
 import { useSession } from "./shell";
 import { ReviewForm } from "./review-form";
 import { Coach } from "./review-coach";
+import { HrDisclosure, HrReviewFrame, HrWorkflow, hrReviewStyles, type CoachingSummary } from "./hr-review-presentation";
 
 export function RecordContent({ value }: { value: Json }) {
   if (value === null || value === "")
@@ -145,9 +146,13 @@ type DraftCommitment = {
 function HumanConversation({
   review,
   onSaved,
+  oversight = false,
+  acceptedCoaching = false,
 }: {
   review: Review;
   onSaved: () => void;
+  oversight?: boolean;
+  acceptedCoaching?: boolean;
 }) {
   const [discussion, setDiscussion] = useState(""),
     [overall, setOverall] = useState(""),
@@ -215,6 +220,7 @@ function HumanConversation({
           maxLength={20000}
         />
       </label>
+      {(!oversight || !acceptedCoaching) && <HrDisclosure enabled={oversight} label="Proceeding without AI guidance">
       <label>
         Reason for proceeding without AI
         <small>
@@ -227,6 +233,8 @@ function HumanConversation({
           maxLength={4000}
         />
       </label>
+      </HrDisclosure>}
+      <div className={oversight ? hrReviewStyles.commitments : undefined}>
       <h3>Agreed development commitments · {items.length} of 3–5</h3>
       {items.map((x, i) => (
         <fieldset key={i}>
@@ -291,19 +299,93 @@ function HumanConversation({
             Add commitment
           </Button>
         )}
-        <Button disabled={busy} onClick={save}>
+        {!oversight && <Button disabled={busy} onClick={save}>
           Share for acknowledgement
-        </Button>
+        </Button>}
       </div>
+      </div>
+      {oversight && <div className={hrReviewStyles.nextAction}>
+        <p>Next action</p>
+        <Button disabled={busy} onClick={save}>Share for acknowledgement</Button>
+      </div>}
       <Feedback error={error} />
     </Card>
   );
 }
 
-export function ReviewDetail() {
+type CoachingItem = {
+  observation: string;
+  source_ids: string[];
+  question: string;
+  uncertainty: string;
+};
+type AcceptedCoaching = {
+  available: boolean;
+  coaching: {
+    strengths: CoachingItem[];
+    gaps: CoachingItem[];
+    support_options: CoachingItem[];
+    limitations: string[];
+  } | null;
+  sources?: Record<string, string>;
+};
+
+function EmployeeCoaching({ review }: { review: Review }) {
+  const [result, setResult] = useState<AcceptedCoaching | null>(null);
+  useEffect(() => {
+    let alive = true;
+    api<AcceptedCoaching>(`reviews/${review.id}/accepted-coaching/`)
+      .then((data) => {
+        if (alive) setResult(data);
+      })
+      .catch(() => {
+        if (alive) setResult(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [review.id, review.version]);
+  if (!result?.available || !result.coaching) return null;
+  return (
+    <Card title="Steward coaching">
+      <p>Human-reviewed guidance from your review</p>
+      <Badge>Reviewed by Head of HR</Badge>
+      {([
+        ["strengths", "Strengths"],
+        ["gaps", "Areas to discuss"],
+        ["support_options", "Support options"],
+      ] as const).map(([key, title]) => (
+        <section key={key}>
+          <h3>{title}</h3>
+          {result.coaching![key].map((item, index) => {
+            const labels = [...new Set(
+              item.source_ids.map((id) => result.sources?.[id]).filter(Boolean),
+            )];
+            return (
+              <div key={index}>
+                <p>{item.observation}</p>
+                <p>Discuss: {item.question}</p>
+                {item.uncertainty && <p>{item.uncertainty}</p>}
+                {labels.length > 0 && <small>Sources: {labels.join(", ")}</small>}
+              </div>
+            );
+          })}
+        </section>
+      ))}
+      <h3>Limitations</h3>
+      {result.coaching.limitations.map((item, index) => <p key={index}>{item}</p>)}
+    </Card>
+  );
+}
+
+export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }: {
+  showAcceptedCoaching?: boolean;
+  oversight?: boolean;
+}) {
   const { id } = useParams<{ id: string }>();
   const s = useSession();
   const member = s.memberships?.find((m) => m.company_id === s.company_id);
+  const [coachingSummary, setCoachingSummary] = useState<CoachingSummary>();
   const [review, setReview] = useState<Review | null>(null),
     [comments, setComments] = useState(""),
     [error, setError] = useState(""),
@@ -357,8 +439,10 @@ export function ReviewDetail() {
     manager = member?.id === review.manager_member,
     hr = member?.id === review.reviewer;
   const own = employee ? "EMPLOYEE" : manager ? "MANAGER" : null;
+  const currentCoaching = coachingSummary?.reviewId === review.id && coachingSummary.round === review.round
+    ? coachingSummary : undefined;
   return (
-    <>
+    <HrReviewFrame enabled={oversight}>
       <Link
         href={
           hr
@@ -371,7 +455,7 @@ export function ReviewDetail() {
         ← Review workspace
       </Link>
       <p className="eyebrow">
-        {review.senior_leader
+        {oversight ? `${human(review.cycle_detail.kind)} review · Round ${review.round}${review.senior_leader ? " · Senior leadership" : ""}` : review.senior_leader
           ? "SENIOR LEADERSHIP EVALUATION"
           : "STEWARDSHIP EVALUATION"}
       </p>
@@ -379,8 +463,10 @@ export function ReviewDetail() {
         <div>
           <h1>{review.employee_name}</h1>
           <p className="subtitle">
-            {human(review.cycle_detail.kind)} {review.cycle_detail.year} · Round{" "}
-            {review.round} · Due {review.cycle_detail.due_on}
+            {oversight ? <>{review.cycle_detail.starts_on} – {review.cycle_detail.ends_on}<br />Due {review.cycle_detail.due_on}</> : <>
+              {human(review.cycle_detail.kind)} {review.cycle_detail.year} · Round{" "}
+              {review.round} · Due {review.cycle_detail.due_on}
+            </>}
           </p>
         </div>
         <Badge>{human(review.state)}</Badge>
@@ -393,6 +479,7 @@ export function ReviewDetail() {
         </p>
       </div>
       <Feedback error={error} success={success} />
+      {oversight && <HrWorkflow review={review} coaching={currentCoaching} />}
       {own && review.state !== "FINALISED" && (
         <ReviewForm
           key={`${review.id}-${review.round}`}
@@ -406,28 +493,43 @@ export function ReviewDetail() {
         .map((f) => (
           <Card
             key={f.kind}
-            title={`${human(f.kind)} submission · ${f.submitted_at ? "Sealed" : "Draft"}`}
+            title={oversight ? (f.kind === "EMPLOYEE" ? "Employee reflection" : "Manager appraisal") : `${human(f.kind)} submission · ${f.submitted_at ? "Sealed" : "Draft"}`}
           >
-            <RecordContent value={f.content} />
+            {oversight && <>
+              <p><Badge>{f.submitted_at ? "Submitted" : "Draft"}</Badge></p>
+              {f.kind === "MANAGER" && <p>
+                Overall descriptor: {String(f.content.overall || "Not recorded")}<br />
+                ECP: {String(f.content.ecp || "Not recorded")}
+              </p>}
+            </>}
+            <HrDisclosure enabled={oversight} label={f.kind === "EMPLOYEE" ? "View submission" : "View appraisal"}>
+              <RecordContent value={f.content} />
+            </HrDisclosure>
           </Card>
         ))}
+      {showAcceptedCoaching && employee && (
+        <EmployeeCoaching key={`${review.id}-${review.round}-${review.version}`} review={review} />
+      )}
       {hr && (
         <>
-          <Card title="Authorised evidence">
+          <Card title={oversight ? "Evidence and source context" : "Authorised evidence"}>
+            {oversight && !review.evidence?.some((e) => e.validation === "VALIDATED") && (
+              <p className="alert">No validated evidence was supplied for this review. The human assessment should consider this limitation.</p>
+            )}
             {review.evidence?.length ? (
               review.evidence.map((e) => (
                 <EvidenceValidation key={e.id} item={e} onSaved={reload} />
               ))
-            ) : (
+            ) : oversight ? null : (
               <p>
                 No evidence was selected in submitted forms. Discuss and record
                 this limitation before making an assessment.
               </p>
             )}
           </Card>
-          <Coach review={review} />
+          <Coach key={oversight ? `${review.id}-${review.round}` : undefined} review={review} oversight={oversight} onSummary={oversight ? setCoachingSummary : undefined} />
           {["SUBMITTED", "CONVERSATION_READY"].includes(review.state) && (
-            <HumanConversation review={review} onSaved={reload} />
+            <HumanConversation review={review} onSaved={reload} oversight={oversight} acceptedCoaching={currentCoaching?.accepted} />
           )}
         </>
       )}
@@ -501,6 +603,7 @@ export function ReviewDetail() {
       )}
       {hr && review.state !== "FINALISED" && (
         <Card title="Request a formal revision">
+          <HrDisclosure enabled={oversight} label="Open revision options">
           <p>
             Open a new round for both forms. Earlier submissions remain in the
             history.
@@ -520,6 +623,7 @@ export function ReviewDetail() {
           >
             Request revision
           </Button>
+          </HrDisclosure>
         </Card>
       )}
       {confirmation && (
@@ -568,14 +672,16 @@ export function ReviewDetail() {
         </Card>
       )}
       <Card title="Workflow history">
+        <HrDisclosure enabled={oversight} label={`View full history (${review.history?.length || 0} events)`}>
         {review.history?.map((h) => (
-          <div className="history-row" key={h.version}>
+          <div className={`history-row${oversight && /(?:^|[._])saved$/.test(h.action) ? ` ${hrReviewStyles.autosave}` : ""}`} key={h.version}>
             <strong>{human(h.action.replaceAll(".", "_"))}</strong>
             <time>{new Date(h.created_at).toLocaleString()}</time>
             {h.reason && <p>{h.reason}</p>}
           </div>
         ))}
+        </HrDisclosure>
       </Card>
-    </>
+    </HrReviewFrame>
   );
 }

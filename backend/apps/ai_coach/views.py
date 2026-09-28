@@ -33,6 +33,56 @@ class DecisionSerializer(serializers.Serializer):
 
 
 class CoachingActions:
+    @action(detail=True, methods=["get"], url_path="accepted-coaching")
+    def accepted_coaching(self, request, pk=None):
+        from django.shortcuts import get_object_or_404
+
+        from common.permissions import membership
+
+        member = membership(request)
+        review = get_object_or_404(
+            self.get_queryset(), employee__membership=member, pk=pk
+        )
+        analysis = (
+            review.analyses.filter(
+                company=member.company, round=review.round, state="SUCCEEDED", decision="ACCEPTED"
+            )
+            .order_by("-reviewed_at", "-created_at", "-id")
+            .first()
+        )
+        if analysis is None:
+            return Response({"available": False, "coaching": None})
+        coaching = {
+            group: [
+                {key: item[key] for key in ("observation", "source_ids", "question", "uncertainty")}
+                for item in analysis.output.get(group, [])
+            ]
+            for group in ("strengths", "gaps", "support_options")
+        }
+        coaching["limitations"] = analysis.output.get("limitations", [])
+        labels = {
+            "EMPLOYEE_SUBMISSION": "Employee reflection",
+            "MANAGER_SUBMISSION": "Manager appraisal",
+            "VALIDATED_EVIDENCE": "Validated evidence",
+        }
+        cited = {
+            source_id
+            for group in ("strengths", "gaps", "support_options")
+            for item in coaching[group]
+            for source_id in item["source_ids"]
+        }
+        sources = {
+            source["id"]: labels[source["type"]]
+            for source in analysis.input_snapshot.get("sources", [])
+            if source.get("id") in cited and source.get("type") in labels
+        }
+        return Response({
+            "available": True,
+            "coaching": coaching,
+            "reviewed_at": analysis.reviewed_at,
+            "sources": sources,
+        })
+
     @action(detail=True, methods=["get", "post"], url_path="ai-coaching")
     def ai_coaching(self, request, pk=None):
         from apps.reviews.serializers import VersionSerializer

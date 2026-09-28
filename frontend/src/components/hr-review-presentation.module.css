@@ -1,0 +1,59 @@
+.workspace {
+  max-width: 1080px;
+  margin: 0 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.workspace > section,
+.workspace > details {
+  margin: 20px 0;
+}
+.workspace summary:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.workspace details > summary {
+  color: var(--primary);
+}
+.workspace :global(.review-banner) {
+  background: var(--tint);
+  color: var(--muted);
+  padding: 12px 18px;
+  box-shadow: none;
+  margin: 16px 0 24px;
+}
+.workspace :global(.review-banner) strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.workspace :global(.review-banner) p { display: none; }
+.progress {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
+  margin: 0;
+}
+.progress > div {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.progress dt { font-weight: 500; }
+.progress dd { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.muted { color: var(--muted); }
+.guidance { margin-top: 24px; }
+.accepted { padding-top: 8px; }
+.provenance { font-size: 12px; overflow-wrap: anywhere; color: var(--muted); }
+.autosave { color: var(--muted); font-size: 12px; }
+.autosave strong { font-weight: 400; }
+.workspace fieldset { background: #fafbfe; padding: 24px; }
+.workspace fieldset textarea { min-height: 90px; }
+.commitments { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
+.nextAction { margin-top: 24px; padding: 20px; border-radius: 12px; background: var(--tint); }
+.nextAction > p { margin-bottom: 12px; font-weight: 600; }
+@media (max-width: 640px) {
+  .progress { grid-template-columns: 1fr; }
+  .workspace fieldset { padding: 16px; }
+  .workspace :global(.actions) { align-items: stretch; flex-direction: column; }
+  .nextAction { padding: 16px; }
+}
