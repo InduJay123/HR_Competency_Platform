@@ -1,0 +1,1 @@
+import { Platform } from "@/components/platform"; export default Platform;

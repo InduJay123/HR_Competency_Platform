@@ -1,0 +1,1 @@
+import { RequestQueue } from "@/components/access"; export default function Page(){return <RequestQueue/>;}

@@ -1,0 +1,425 @@
+.motion-surface {
+  display: contents;
+}
+.steward-bot {
+  display: inline-block;
+  width: 90px;
+  height: 100px;
+  flex-shrink: 0;
+  --look-x: 0px;
+  --look-y: 0px;
+}
+.steward-bot svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.bot-float {
+  animation: bot-hover 4s ease-in-out infinite;
+}
+.bot-shadow {
+  transform-origin: 90px 190px;
+  animation: bot-shadow 4s ease-in-out infinite;
+}
+.bot-head {
+  transform-origin: 90px 106px;
+  transition: transform 0.35s ease;
+}
+.bot-gaze {
+  transform: translate(var(--look-x), var(--look-y));
+  transition: transform 0.12s ease-out;
+}
+.bot-eyes {
+  transform-origin: 90px 68px;
+  animation: bot-blink 6.2s infinite;
+}
+.bot-arm-right {
+  transform-origin: 131px 123px;
+  transition: transform 0.3s ease;
+}
+.bot-arm-left {
+  transform-origin: 50px 123px;
+}
+.bot-heart {
+  animation: bot-glow 3s ease-in-out infinite;
+}
+.bot-thought {
+  display: none;
+}
+.trainer-launcher {
+  transition:
+    box-shadow 0.25s,
+    border-color 0.25s;
+}
+.trainer-launcher .steward-bot {
+  width: 80px;
+  height: 86px;
+  margin-top: -24px;
+}
+.trainer-launcher:hover,
+.trainer-launcher:focus-visible {
+  border-color: #8dafed !important;
+  box-shadow: 0 10px 34px #3068b82b !important;
+}
+.trainer-launcher:hover .bot-arm-right,
+.trainer-launcher:focus-visible .bot-arm-right,
+.steward-bot:hover .bot-arm-right {
+  animation: bot-wave 0.65s ease-in-out 3;
+}
+.trainer-launcher:hover .bot-head {
+  transform: rotate(-5deg);
+}
+.trainer-launcher:focus-visible,
+.motion-toggle:focus-visible {
+  outline: 2px solid #245cf3;
+  outline-offset: 4px;
+}
+.trainer-heading .steward-bot {
+  width: 72px;
+  height: 80px;
+  margin: -5px 0;
+}
+.steward-bot[data-mood="attentive"] .bot-head {
+  transform: rotate(-7deg);
+}
+.steward-bot[data-mood="thinking"] .bot-head {
+  animation: bot-consider 2s ease-in-out infinite;
+}
+.steward-bot[data-mood="thinking"] .bot-smile {
+  display: none;
+}
+.steward-bot[data-mood="thinking"] .bot-thought {
+  display: block;
+}
+.bot-thought circle {
+  animation: thinking-dot 1.2s ease-in-out infinite;
+}
+.bot-thought circle:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.bot-thought circle:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.steward-bot[data-mood="happy"] .bot-arm-right {
+  animation: bot-wave 0.65s ease-in-out 2;
+}
+.steward-bot[data-mood="happy"] .bot-smile {
+  stroke-width: 6;
+}
+.steward-bot[data-mood="error"] .bot-heart {
+  fill: #f0b965;
+  animation: none;
+}
+.steward-bot[data-mood="error"] .bot-head {
+  transform: rotate(5deg);
+}
+.trainer-panel {
+  animation: panel-arrive 0.25s ease-out both;
+  transform-origin: bottom right;
+}
+.trainer-motion-control {
+  display: flex;
+  justify-content: flex-end;
+  padding: 5px 16px 0;
+}
+.motion-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 10px;
+  font-size: 10px;
+  line-height: 1.2;
+  color: #536a8e;
+  background: #ffffffa6;
+  border: 1px solid #d3e0f5;
+  border-radius: 20px;
+  cursor: pointer;
+  min-height: 30px;
+}
+.motion-toggle:hover {
+  background: white;
+  color: #245cf3;
+}
+.trainer-thinking {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: #526885;
+  font-size: 12px;
+}
+.trainer-thinking > span {
+  display: flex;
+  gap: 4px;
+}
+.trainer-thinking i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4383ea;
+  animation: thinking-dot 1.2s infinite;
+}
+.trainer-thinking i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.trainer-thinking i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.dashboard-company-hero {
+  grid-template-columns: minmax(0, 1fr) 280px;
+}
+.purpose-scene {
+  position: relative;
+  text-align: center;
+}
+.purpose-scene > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.purpose-scene > p {
+  margin: 0 0 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.7px;
+  color: #4168b0;
+}
+.scene-orbit {
+  transform-origin: 164px 108px;
+  animation: scene-orbit 70s linear infinite;
+}
+.scene-check {
+  transform-origin: 252px 45px;
+  animation: scene-float 5s ease-in-out infinite;
+}
+.scene-trend {
+  stroke-dasharray: 1;
+  animation: draw-trend 1.8s ease-out both;
+}
+.scene-person {
+  transform-origin: 72px 199px;
+  animation: scene-sway 7s ease-in-out infinite;
+}
+.scene-person-two {
+  transform-origin: 230px 209px;
+  animation-delay: -3s;
+}
+.scene-spark {
+  animation: scene-spark 4s ease-in-out infinite;
+}
+.scene-board {
+  animation: scene-float 8s ease-in-out infinite;
+}
+.progress-scene {
+  width: 125px;
+  height: 88px;
+  flex-shrink: 0;
+}
+.animated-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 14px 12px 22px;
+  gap: 6px;
+  min-height: 170px;
+  text-align: center;
+  color: var(--muted);
+}
+.animated-empty p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.mini-launch {
+  animation: scene-float 4s ease-in-out infinite;
+}
+.launch-flame {
+  transform-origin: 80px 78px;
+  animation: flame 0.8s ease-in-out infinite alternate;
+}
+.mini-tick {
+  animation: scene-spark 5s ease-in-out infinite;
+}
+.motion-stats > .card {
+  animation: card-arrive 0.5s ease-out both;
+}
+.motion-stats > .card:nth-child(2) {
+  animation-delay: 0.06s;
+}
+.motion-stats > .card:nth-child(3) {
+  animation-delay: 0.12s;
+}
+.motion-stats > .card:nth-child(4) {
+  animation-delay: 0.18s;
+}
+.bar-fill,
+.chart-column {
+  transform-origin: bottom left;
+  animation: chart-arrive 0.7s ease-out both;
+}
+@keyframes bot-hover {
+  50% {
+    transform: translateY(-5px);
+  }
+}
+@keyframes bot-shadow {
+  50% {
+    transform: scaleX(0.85);
+    opacity: 0.13;
+  }
+}
+@keyframes bot-blink {
+  0%,
+  42%,
+  46%,
+  100% {
+    transform: scaleY(1);
+  }
+  44% {
+    transform: scaleY(0.08);
+  }
+}
+@keyframes bot-glow {
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes bot-wave {
+  0%,
+  100% {
+    transform: rotate(-20deg);
+  }
+  50% {
+    transform: rotate(-115deg);
+  }
+}
+@keyframes bot-consider {
+  50% {
+    transform: rotate(7deg);
+  }
+}
+@keyframes thinking-dot {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes panel-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes scene-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes scene-float {
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes scene-sway {
+  50% {
+    transform: rotate(2deg);
+  }
+}
+@keyframes scene-spark {
+  50% {
+    opacity: 0.4;
+  }
+}
+@keyframes draw-trend {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes flame {
+  to {
+    transform: scaleY(0.65);
+  }
+}
+@keyframes card-arrive {
+  from {
+    opacity: 0.3;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes chart-arrive {
+  from {
+    transform: scaleY(0.2);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+/* Explicit pause stops decorative motion throughout the workspace, including older effects. */
+.motion-surface[data-motion="paused"] *,
+.motion-surface[data-motion="paused"] *::before,
+.motion-surface[data-motion="paused"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+.motion-surface[data-motion="paused"] .bot-gaze {
+  transform: none;
+}
+@media (max-width: 1100px) {
+  .dashboard-company-hero {
+    grid-template-columns: minmax(0, 1fr) 210px;
+    gap: 20px;
+  }
+}
+@media (max-width: 760px) {
+  .dashboard-company-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .purpose-scene {
+    width: 190px;
+    justify-self: center;
+  }
+  .purpose-scene > svg {
+    max-height: 135px;
+  }
+  .trainer-launcher .steward-bot {
+    width: 64px;
+    height: 72px;
+    margin-top: -16px;
+  }
+  .trainer-launcher .steward-bot svg {
+    width: 100%;
+    height: 100%;
+  }
+  .trainer-heading .steward-bot {
+    width: 60px;
+    height: 66px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .motion-surface *,
+  .motion-surface *::before,
+  .motion-surface *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .bot-gaze {
+    transform: none;
+  }
+}
+
+.trainer-panel:focus {
+  outline: none;
+}

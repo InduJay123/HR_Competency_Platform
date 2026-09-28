@@ -1,0 +1,42 @@
+name: bfl
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: bfl
+      POSTGRES_USER: bfl
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports: ["127.0.0.1:15433:5432"]
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bfl -d bfl"]
+      interval: 5s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    ports: ["127.0.0.1:6379:6379"]
+    volumes: ["redis_data:/data"]
+    command: ["redis-server", "--appendonly", "yes"]
+  backend:
+    profiles: ["app"]
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://bfl:${POSTGRES_PASSWORD}@db:5432/bfl
+      REDIS_URL: redis://redis:6379/0
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on:
+      db: {condition: service_healthy}
+  worker:
+    profiles: ["app"]
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://bfl:${POSTGRES_PASSWORD}@db:5432/bfl
+      REDIS_URL: redis://redis:6379/0
+    command: ["celery", "-A", "config", "worker", "-l", "warning"]
+    depends_on:
+      db: {condition: service_healthy}
+volumes:
+  postgres_data:
+  redis_data:

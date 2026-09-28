@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const root=process.cwd(),out=path.resolve(root,'dist');
+if(out!==path.join(root,'dist')||!fs.existsSync(path.join(root,'public/index.html')))throw Error('Unexpected build directory');
+fs.rmSync(out,{recursive:true,force:true});
+fs.mkdirSync(out+'/server',{recursive:true});fs.mkdirSync(out+'/.openai',{recursive:true});
+fs.cpSync('public',out+'/client',{recursive:true});
+const home=fs.readFileSync('public/index.html','utf8'),studio=fs.readFileSync('server/studio.html','utf8');
+fs.writeFileSync(out+'/server/index.js',`const HOME_HTML=${JSON.stringify(home)};\nconst STUDIO_HTML=${JSON.stringify(studio)};\n`+fs.readFileSync('server/worker.mjs','utf8'));
+fs.copyFileSync('.openai/hosting.json',out+'/.openai/hosting.json');
+console.log('Built website, protected gallery studio and Worker API.');

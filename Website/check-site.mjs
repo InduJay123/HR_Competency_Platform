@@ -1,0 +1,18 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert/strict';
+const html=fs.readFileSync('public/index.html','utf8');
+const css=['styles.css','hero.css','refinements.css','experience.css'].map(file=>fs.readFileSync('public/'+file,'utf8')).join('\n');
+const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);
+assert.equal(new Set(ids).size,ids.length,'Duplicate IDs');
+for(const [,href] of html.matchAll(/href="#([^"]+)"/g))assert(ids.includes(href),`Missing anchor: ${href}`);
+for(const [,file] of html.matchAll(/(?:src|href)="([^"#:]+)"/g))if(!/^(https?|mailto|tel|data):/.test(file)&&file!=='/studio')assert(fs.existsSync(path.join('public',file)),`Missing asset: ${file}`);
+for(const [,file] of css.matchAll(/url\(['"]?([^'"\)]+)['"]?\)/g))if(!file.startsWith('data:'))assert(fs.existsSync(path.join('public',file)),`Missing CSS asset: ${file}`);
+assert.equal((html.match(/data-book="[0-3]"/g)||[]).length,4);
+for(const name of ['work','reflect','review','grow'])assert(fs.existsSync('public/assets/platform-'+name+'.png'));
+assert(html.includes('id="contact-form"')&&html.includes('id="journal-reel"'));
+assert(!/class="(?:hero-baseline|hero-signoff|motion-control)"/.test(html),'Removed UI remains');
+assert(html.includes('https://www.linkedin.com/in/bradley-emerson-dba-mba-fib-774045a/'));
+assert.equal((html.match(/<details(?: open)?><summary><span>0/g)||[]).length,7);
+assert(!/admin1234|OPENAI_API_KEY|127\.0\.0\.1|localhost:|pricing|\$\d/i.test(html),'Private or pricing content in public HTML');
+console.log(`Validated ${ids.length} unique anchors, local assets, four books and seven services.`);

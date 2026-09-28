@@ -1,0 +1,1 @@
+import { RequestStatus } from "@/components/access"; export default RequestStatus;
