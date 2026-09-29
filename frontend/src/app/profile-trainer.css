@@ -370,6 +370,27 @@
   line-height: 1.7;
   margin: 8px 0 0;
 }
+.trainer-message .trainer-markdown {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.trainer-message .trainer-markdown strong {
+  font-size: inherit;
+  color: inherit;
+}
+.trainer-message .trainer-markdown :is(h1, h2, h3, h4, h5, h6) {
+  font-size: 15px;
+  line-height: 1.4;
+  margin: 14px 0 8px;
+  letter-spacing: normal;
+}
+.trainer-message .trainer-markdown :is(ul, ol) {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+.trainer-message .trainer-markdown li + li {
+  margin-top: 6px;
+}
 .trainer-compose {
   display: flex !important;
   align-items: center;

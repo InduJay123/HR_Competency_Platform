@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 import { StewardBot, type StewardMood } from "./steward-bot";
 import ReasoningText from "./ui/reasoning-text";
 import { MotionToggle } from "./workspace-motion";
@@ -232,7 +233,18 @@ export function Trainer() {
               {messages.map((m) => (
                 <article key={m.id} className={`trainer-message ${m.role}`}>
                   <strong>{m.role === "user" ? "You" : "Steward · AI"}</strong>
-                  <p>{m.content}</p>
+                  {m.role === "assistant" ? (
+                    <div className="trainer-markdown">
+                      <ReactMarkdown skipHtml>
+                        {m.content
+                          .replace(/&#x20;/g, " ")
+                          .replace(/\\([*#-])/g, "$1")
+                          .replace(/^(\s*\d+)\\\.(?=\s)/gm, "$1.")}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p>{m.content}</p>
+                  )}
                 </article>
               ))}
             </div>
