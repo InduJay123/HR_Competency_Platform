@@ -222,10 +222,18 @@ export function Platform() {
           </strong>
           <small>Platform super admin</small>
           <Button
+            type="button"
             variant="neutral"
             onClick={async () => {
-              await post("auth/logout/", {});
-              router.replace("/auth/login");
+              try {
+                setError("");
+                await session();
+                await post("auth/logout/", {});
+                setUser(null);
+                window.location.replace("/auth/login");
+              } catch {
+                setError("Unable to sign out. Please try again.");
+              }
             }}
           >
             Sign out

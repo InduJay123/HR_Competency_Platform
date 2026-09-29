@@ -360,10 +360,18 @@ export function RequestStatus() {
       <div className="action-row">
         <Button onClick={refresh}>Refresh status</Button>
         <Button
+          type="button"
           variant="neutral"
           onClick={async () => {
-            await post("auth/logout/", {});
-            router.replace("/auth/login");
+            try {
+              setError("");
+              await session();
+              await post("auth/logout/", {});
+              setItems([]);
+              window.location.replace("/auth/login");
+            } catch {
+              setError("Unable to sign out. Please try again.");
+            }
           }}
         >
           Sign out

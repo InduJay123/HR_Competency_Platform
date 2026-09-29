@@ -108,8 +108,6 @@ export function HrCoaching({ review, data, error, busy, notes, setNotes, request
       {data?.analyses.map((analysis) => <div className="analysis" key={analysis.id}>
         <h3>Round {analysis.round} <Badge>{human(analysis.state)}</Badge> {analysis.decision && <Badge>{human(analysis.decision)}</Badge>}</h3>
         <dl className="record-fields">
-          <div><dt>Model</dt><dd>{analysis.model}</dd></div>
-          <div><dt>Prompt version</dt><dd>{analysis.prompt_version}</dd></div>
           <div><dt>Requested</dt><dd>{new Date(analysis.created_at).toLocaleString()}</dd></div>
           {analysis.reviewed_at && <div><dt>Reviewed</dt><dd>{new Date(analysis.reviewed_at).toLocaleString()}</dd></div>}
           {analysis.decision_notes && <div><dt>Human review notes</dt><dd>{analysis.decision_notes}</dd></div>}

@@ -297,12 +297,10 @@ export function Trainer() {
             </Button>
           </form>
           <p className="trainer-note">
-            Only this conversation is sent to OpenAI. Avoid confidential
-            employee details. AI guidance can be wrong; people make review
-            decisions.{" "}
-            <Link href="/employee/guide" onClick={close}>
-              Stewardship Guide
-            </Link>
+            AI can make mistakes. Use your judgement and avoid sharing confidential employee information.{" "}
+  <Link href="/employee/guide" onClick={close}>
+    Stewardship Guide
+  </Link>
           </p>
         </div>
       )}

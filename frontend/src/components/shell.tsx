@@ -300,11 +300,20 @@ export function Shell({ children }: { children: ReactNode }) {
                 </div>
               </div>
               <Button
+                type="button"
                 variant="neutral"
                 onClick={async () => {
                   if (!confirmLeaveDraft()) return;
-                  await post("auth/logout/", {});
-                  router.replace("/auth/login");
+                  try {
+                    setError("");
+                    await session();
+                    await post("auth/logout/", {});
+                    setData(null);
+                    setProfile(null);
+                    window.location.replace("/auth/login");
+                  } catch {
+                    setError("Unable to sign out. Please try again.");
+                  }
                 }}
               >
                 Sign out
