@@ -28,7 +28,6 @@ export function HrWorkflow({ review, coaching }: { review: Review; coaching?: Co
   const rows = [
     ["Employee reflection", !review.forms ? "Not available" : review.forms.some((f) => f.kind === "EMPLOYEE" && f.submitted_at) ? "Complete" : "Not submitted"],
     ["Manager appraisal", !review.forms ? "Not available" : review.forms.some((f) => f.kind === "MANAGER" && f.submitted_at) ? "Complete" : "Not submitted"],
-    ["Evidence validation", !review.evidence ? "Not available" : !evidence.length ? "No evidence supplied" : `${evidence.filter((e) => e.validation === "VALIDATED").length} validated · ${evidence.filter((e) => e.validation === "PENDING").length} pending`],
     ["AI coaching", coaching?.status || "Status not loaded"],
     ["Human conversation", review.conversation?.discussion ? "Recorded" : "Pending"],
     ["Commitments", review.commitments?.length ? `${review.commitments.length} recorded` : "Pending"],

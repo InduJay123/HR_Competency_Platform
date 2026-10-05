@@ -383,44 +383,6 @@ export function ReviewForm({
               `${human(p)} · narrative`,
               "Describe specific examples and reference the evidence selected below.",
             )}
-            {manager && (
-              <fieldset disabled={locked || submitting}>
-                <legend>{human(p)} · supporting evidence</legend>
-                {evidence
-                  .filter((e) => ids.includes(e.id))
-                  .map((e) => (
-                    <label className="check-label" key={e.id}>
-                      <input
-                        type="checkbox"
-                        checked={(answers[`sources_${p}`] || "")
-                          .split("|")
-                          .includes(e.id)}
-                        onChange={(event) =>
-                          update(
-                            `sources_${p}`,
-                            event.target.checked
-                              ? [
-                                  ...(answers[`sources_${p}`] || "")
-                                    .split("|")
-                                    .filter(Boolean),
-                                  e.id,
-                                ].join("|")
-                              : (answers[`sources_${p}`] || "")
-                                  .split("|")
-                                  .filter((x) => x !== e.id)
-                                  .join("|"),
-                          )
-                        }
-                      />
-                      {e.title}
-                    </label>
-                  ))}
-                <small>
-                  Select evidence in the submission evidence section below to
-                  make it available here.
-                </small>
-              </fieldset>
-            )}
           </div>
         ))}
       </Card>

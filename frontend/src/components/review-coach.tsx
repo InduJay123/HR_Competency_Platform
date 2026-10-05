@@ -162,12 +162,11 @@ export function Coach({ review, oversight = false, onSummary }: {
               Round {a.round} <Badge>{human(a.state)}</Badge>
             </h3>
             <small>
-              {a.model} · {a.prompt_version} ·{" "}
               {new Date(a.created_at).toLocaleString()}
             </small>
             {a.error_code && (
               <p>
-                Analysis unavailable ({a.error_code}). You can complete a
+                Analysis unavailable. You can complete a
                 human-led review.
               </p>
             )}
@@ -227,10 +226,7 @@ export function Coach({ review, oversight = false, onSummary }: {
                 </>
               )
             )}
-            <details>
-              <summary>Source provenance</summary>
-              <p className="hash">Input SHA-256: {a.input_hash}</p>
-            </details>
+            
           </div>
         ))}
       </Card>
