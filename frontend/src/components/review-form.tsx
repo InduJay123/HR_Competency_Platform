@@ -452,7 +452,7 @@ export function ReviewForm({
           )}
         </Card>
       )}
-      <Card title="Authorised evidence selection">
+      {/*<Card title="Authorised evidence selection">
         <Help label="Evidence visibility">
           Selected evidence becomes part of this review. Linking an item does
           not make its private storage public.
@@ -486,7 +486,7 @@ export function ReviewForm({
             </label>
           ))
         )}
-      </Card>
+      </Card>*/}
       {manager && (
         <Card title="Overall human assessment">
           <label>

@@ -510,7 +510,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
       {showAcceptedCoaching && employee && (
         <EmployeeCoaching key={`${review.id}-${review.round}-${review.version}`} review={review} />
       )}
-      {hr && (
+{/*{hr && (
         <>
           <Card title={oversight ? "Evidence and source context" : "Authorised evidence"}>
             {oversight && !review.evidence?.some((e) => e.validation === "VALIDATED") && (
@@ -532,7 +532,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
             <HumanConversation review={review} onSaved={reload} oversight={oversight} acceptedCoaching={currentCoaching?.accepted} />
           )}
         </>
-      )}
+      )}*/}
       {review.conversation?.discussion && (
         <Card title="Shared conversation record">
           <p className="long-copy">{review.conversation.discussion}</p>
