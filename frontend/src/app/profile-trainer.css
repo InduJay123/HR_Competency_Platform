@@ -391,6 +391,111 @@
 .trainer-message .trainer-markdown li + li {
   margin-top: 6px;
 }
+.trainer-attachments {
+  flex-shrink: 0;
+  min-width: 0;
+  padding: 8px 16px 10px;
+  color: var(--ink);
+}
+.trainer-attachment-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.trainer-attachment-trigger,
+.trainer-attachment-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f9fafb;
+  color: var(--muted);
+}
+.trainer-attachment-trigger {
+  gap: 6px;
+  min-height: 32px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.trainer-attachments svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.trainer-attachment-help {
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.trainer-attachments .trainer-attachment-input {
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+}
+.trainer-attachment-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f9fafb;
+}
+.trainer-attachments .trainer-attachment-document {
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+}
+.trainer-attachment-details {
+  flex: 1;
+  min-width: 0;
+}
+.trainer-attachment-name {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.trainer-attachment-remove {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+.trainer-attachment-trigger:hover:not(:disabled),
+.trainer-attachment-remove:hover:not(:disabled) {
+  background: var(--tint);
+  border-color: #b9caff;
+  color: var(--primary);
+}
+.trainer-attachment-trigger:focus-visible,
+.trainer-attachment-remove:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.trainer-attachment-privacy {
+  display: block;
+  margin-top: 6px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
 .trainer-compose {
   display: flex !important;
   align-items: center;

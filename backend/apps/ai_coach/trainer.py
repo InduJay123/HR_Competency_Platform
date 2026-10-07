@@ -8,6 +8,7 @@ from django.utils import timezone
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.parsers import FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
 from rest_framework.views import APIView
@@ -15,7 +16,14 @@ from rest_framework.views import APIView
 from common.permissions import membership
 
 from .models import TrainerConversation, TrainerMessage
-
+from .trainer_documents import (
+    DEFAULT_DOCUMENT_INTENT,
+    DOCUMENT_INSTRUCTIONS,
+    DOCUMENT_MESSAGE,
+    TrainerDocumentParser,
+    TrainerMemoryUploadHandler,
+    extract_trainer_document_text,
+)
 
 INSTRUCTIONS = """You are Steward, the corporate learning coach in Beyond the Finish Line.
 
@@ -257,6 +265,13 @@ class ConversationSerializer(serializers.ModelSerializer):
 class TrainerViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
 
+    def initialize_request(self, request, *args, **kwargs):
+        # Session CSRF checks can parse POST before DRF selects its parser.
+        # Install this endpoint's bounded memory handler before authentication.
+        if request.method == "POST" and self.action_map.get("post") == "messages":
+            request.upload_handlers = [TrainerMemoryUploadHandler(request)]
+        return super().initialize_request(request, *args, **kwargs)
+
     http_method_names = [
         "get",
         "post",
@@ -290,6 +305,7 @@ class TrainerViewSet(viewsets.ModelViewSet):
     @action(
         detail=True,
         methods=["get", "post"],
+        parser_classes=[JSONParser, FormParser, TrainerDocumentParser],
     )
     def messages(self, request, pk=None):
         conversation = self.get_object()
@@ -308,12 +324,19 @@ class TrainerViewSet(viewsets.ModelViewSet):
                 )
             )
 
+        files = request.FILES
+        if files and (set(files) != {"file"} or len(files.getlist("file")) != 1):
+            raise ValidationError("Attach only one document using the file field.")
+        document = files.get("file")
         content = serializers.CharField(
             max_length=4000,
             trim_whitespace=True,
+            allow_blank=document is not None,
         ).run_validation(
-            request.data.get("content")
+            request.data.get("content", "" if document is not None else None)
         )
+        saved_content = content or DOCUMENT_MESSAGE
+        content = content or DEFAULT_DOCUMENT_INTENT
 
         if not configured():
             return Response(
@@ -358,6 +381,9 @@ class TrainerViewSet(viewsets.ModelViewSet):
             )
 
         try:
+            document_text = (
+                extract_trainer_document_text(document) if document is not None else None
+            )
             if conversation.messages.count() >= 100:
                 raise ValidationError(
                     "Start a new conversation to continue learning."
@@ -378,6 +404,13 @@ class TrainerViewSet(viewsets.ModelViewSet):
             )
 
             trainer_instructions = INSTRUCTIONS
+            model_content = content
+            if document_text is not None:
+                trainer_instructions += DOCUMENT_INSTRUCTIONS
+                model_content += (
+                    "\n\nUSER UPLOADED DOCUMENT:\n--- BEGIN DOCUMENT ---\n"
+                    + document_text + "\n--- END DOCUMENT ---"
+                )
 
             if knowledge_context:
                 trainer_instructions += f"""
@@ -415,7 +448,7 @@ service keys or internal technical metadata.
                     + [
                         {
                             "role": "user",
-                            "content": content,
+                            "content": model_content,
                         }
                     ],
                     "max_output_tokens": 1800,
@@ -445,11 +478,15 @@ service keys or internal technical metadata.
             if not reply or len(reply) > 20000:
                 raise ValueError("Invalid response")
 
+            if document_text and " ".join(document_text.split()) in " ".join(reply.split()):
+                # Do not persist the full source even if the provider echoes it.
+                raise ValueError("Document reproduced in response")
+
             with transaction.atomic():
                 TrainerMessage.objects.create(
                     conversation=conversation,
                     role="user",
-                    content=content,
+                    content=saved_content,
                 )
 
                 message = TrainerMessage.objects.create(

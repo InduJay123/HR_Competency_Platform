@@ -40,12 +40,14 @@ export function Trainer() {
     [selected, setSelected] = useState(""),
     [messages, setMessages] = useState<Message[]>([]),
     [draft, setDraft] = useState(""),
+    [attachment, setAttachment] = useState<File | null>(null),
     [busy, setBusy] = useState(false),
     [sending, setSending] = useState(false),
     [error, setError] = useState(""),
     [lesson, setLesson] = useState<number | null>(null),
     [composing, setComposing] = useState(false);
   const panel = useRef<HTMLDivElement>(null),
+    fileInput = useRef<HTMLInputElement>(null),
     launcher = useRef<HTMLButtonElement>(null),
     end = useRef<HTMLDivElement>(null),
     restoreFocus = useRef(false);
@@ -83,6 +85,7 @@ export function Trainer() {
       setMessages(loaded);
       setSelected(id);
       setDraft("");
+      setAttachment(null);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -91,31 +94,39 @@ export function Trainer() {
   }
   async function send(e: FormEvent) {
     e.preventDefault();
-    if (!draft.trim() || busy || !available) return;
+    if ((!draft.trim() && !attachment) || busy || !available) return;
     setBusy(true);
     setError("");
     setSending(true);
     const content = draft.trim();
+    const displayContent = content || "Document self-evaluation";
     try {
       let id = selected;
       if (!id) {
         const c = await post<Conversation>("trainer/conversations/", {
-          title: content.slice(0, 100),
+          title: displayContent.slice(0, 100),
         });
         id = c.id;
         setSelected(id);
         setConversations((xs) => [c, ...xs]);
       }
-      const reply = await post<Message>(
-        `trainer/conversations/${id}/messages/`,
-        { content },
-      );
+      const path = `trainer/conversations/${id}/messages/`;
+      let reply: Message;
+      if (attachment) {
+        const body = new FormData();
+        body.append("content", content);
+        body.append("file", attachment);
+        reply = await api<Message>(path, { method: "POST", body });
+      } else {
+        reply = await post<Message>(path, { content });
+      }
       setMessages((xs) => [
         ...xs,
-        { id: `u-${reply.id}`, role: "user", content },
+        { id: `u-${reply.id}`, role: "user", content: displayContent },
         reply,
       ]);
       setDraft("");
+      setAttachment(null);
       setLesson(null);
     } catch (e) {
       setError((e as Error).message);
@@ -270,6 +281,113 @@ export function Trainer() {
               explore the learning guides now.
             </p>
           )}
+          <div className="trainer-attachments">
+            <div className="trainer-attachment-toolbar">
+              <button
+                className="trainer-attachment-trigger"
+                type="button"
+                aria-describedby="trainer-attachment-help"
+                disabled={!available || busy}
+                onClick={() => fileInput.current?.click()}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="m21 11-8.5 8.5a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8L15 6" />
+                </svg>
+                Attach document
+              </button>
+              <span
+                id="trainer-attachment-help"
+                className="trainer-attachment-help"
+              >
+                PDF, DOCX, TXT · max 10 MB
+              </span>
+            </div>
+            <input
+              ref={fileInput}
+              className="sr-only trainer-attachment-input"
+              tabIndex={-1}
+              type="file"
+              aria-label="Attach document"
+              aria-describedby="trainer-attachment-help"
+              accept=".pdf,.docx,.txt"
+              disabled={!available || busy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                if (!/\.(pdf|docx|txt)$/i.test(file.name)) {
+                  setError("Upload a PDF, DOCX or TXT file.");
+                } else if (file.size > 10 * 1024 * 1024) {
+                  setError("Document must be 10 MB or smaller.");
+                } else if (!file.size) {
+                  setError("The uploaded document is empty.");
+                } else {
+                  setAttachment(file);
+                  setError("");
+                }
+              }}
+            />
+            {attachment && (
+              <div className="trainer-attachment-card">
+                <svg
+                  className="trainer-attachment-document"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+                  <path d="M14 2v6h6M8 13h8M8 17h5" />
+                </svg>
+                <div className="trainer-attachment-details">
+                  <span
+                    className="trainer-attachment-name"
+                    title={attachment.name}
+                  >
+                    {attachment.name}
+                  </span>
+                  <span className="trainer-attachment-help">
+                    {attachment.name.split(".").pop()?.toUpperCase()} · ready to
+                    analyze
+                  </span>
+                </div>
+                <button
+                  className="trainer-attachment-remove"
+                  type="button"
+                  aria-label="Remove attachment"
+                  title="Remove attachment"
+                  disabled={busy}
+                  onClick={() => setAttachment(null)}
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d="m6 6 12 12M18 6 6 18" />
+                  </svg>
+                </button>
+              </div>
+            )}
+            
+          </div>
           <form className="trainer-compose" onSubmit={send}>
             <label className="sr-only" htmlFor="trainer-draft">
               Message Steward
@@ -290,17 +408,18 @@ export function Trainer() {
               }
             />
             <Button
-              disabled={!available || busy || !draft.trim()}
+              disabled={!available || busy || (!draft.trim() && !attachment)}
               aria-label="Send training message"
             >
               Send
             </Button>
           </form>
           <p className="trainer-note">
-            AI can make mistakes. Use your judgement and avoid sharing confidential employee information.{" "}
-  <Link href="/employee/guide" onClick={close}>
-    Stewardship Guide
-  </Link>
+            AI can make mistakes. Use your judgement and avoid sharing
+            confidential employee information.{" "}
+            <Link href="/employee/guide" onClick={close}>
+              Stewardship Guide
+            </Link>
           </p>
         </div>
       )}
