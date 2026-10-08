@@ -384,6 +384,10 @@ class TrainerViewSet(viewsets.ModelViewSet):
             document_text = (
                 extract_trainer_document_text(document) if document is not None else None
             )
+            if document_text:
+                print("=== EXTRACTED DOCUMENT TEXT START ===", flush=True)
+                print(document_text, flush=True)
+                print("=== EXTRACTED DOCUMENT TEXT END ===", flush=True)
             if conversation.messages.count() >= 100:
                 raise ValidationError(
                     "Start a new conversation to continue learning."
@@ -397,7 +401,33 @@ class TrainerViewSet(viewsets.ModelViewSet):
 
             history.reverse()
 
-            knowledge_rows = retrieve_trainer_knowledge(content)
+            rag_query = content
+
+            if document_text:
+                # Use representative parts of the document for RAG retrieval.
+                # Do not send the entire potentially large document to the embedding endpoint.
+                document_length = len(document_text)
+
+                if document_length <= 12000:
+                    rag_document_context = document_text
+                else:
+                    middle = document_length // 2
+
+                    rag_document_context = "\n".join(
+                        [
+                            document_text[:4000],
+                            document_text[middle - 2000:middle + 2000],
+                            document_text[-4000:],
+                        ]
+                    )
+
+                rag_query = (
+                    f"{content}\n\n"
+                    "Relevant themes from the user's self-reflection document:\n"
+                    f"{rag_document_context}"
+                )
+
+            knowledge_rows = retrieve_trainer_knowledge(rag_query)
 
             knowledge_context = format_knowledge_context(
                 knowledge_rows
