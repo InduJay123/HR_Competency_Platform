@@ -48,7 +48,7 @@ class CoachingTests(TestCase):
         }
 
     def test_incomplete_submissions_block_ai(self):
-        result = self.acting(self.hr).post(
+        result = self.acting(self.nimal).post(
             f"/api/v1/reviews/{self.review.id}/ai-coaching/", {"version": 1}, format="json"
         )
         self.assertEqual(result.status_code, 400)
@@ -56,7 +56,7 @@ class CoachingTests(TestCase):
 
     def test_interrupted_worker_is_recoverable_without_changing_review(self):
         self.ready()
-        analysis = request_analysis(self.hr, self.review, self.review.version)
+        analysis = request_analysis(self.nimal, self.review, self.review.version)
         Analysis.objects.filter(pk=analysis.pk).update(
             state="RUNNING", started_at=timezone.now() - timedelta(minutes=11)
         )
@@ -67,7 +67,7 @@ class CoachingTests(TestCase):
         self.assertEqual(analysis.error_code, "WORKER_INTERRUPTED")
         self.assertEqual(self.review.state, "SUBMITTED")
 
-    def test_only_appointed_hr_can_request(self):
+    def test_manager_cannot_request(self):
         self.ready()
         result = self.acting(self.sarah).post(
             f"/api/v1/reviews/{self.review.id}/ai-coaching/", {"version": self.review.version}, format="json"
@@ -76,8 +76,8 @@ class CoachingTests(TestCase):
 
     def test_inputs_are_submitted_only_and_duplicate_is_idempotent(self):
         self.ready()
-        a = request_analysis(self.hr, self.review, self.review.version)
-        b = request_analysis(self.hr, self.review, self.review.version)
+        a = request_analysis(self.nimal, self.review, self.review.version)
+        b = request_analysis(self.nimal, self.review, self.review.version)
         self.assertEqual(a.id, b.id)
         payload = make_input(self.review)
         self.assertEqual(len(payload["sources"]), 2)
@@ -94,7 +94,7 @@ class CoachingTests(TestCase):
     @patch("apps.ai_coach.tasks.requests.post")
     def test_successful_coaching_never_changes_assessment(self, http):
         self.ready()
-        obj = request_analysis(self.hr, self.review, self.review.version)
+        obj = request_analysis(self.nimal, self.review, self.review.version)
         output = self.output(obj.input_snapshot["sources"][0]["id"])
         http.return_value = Mock(
             content=b"{}",
@@ -119,7 +119,7 @@ class CoachingTests(TestCase):
     @patch("apps.ai_coach.tasks.requests.post")
     def test_invalid_response_is_failed_and_human_review_remains_available(self, http):
         self.ready()
-        obj = request_analysis(self.hr, self.review, self.review.version)
+        obj = request_analysis(self.nimal, self.review, self.review.version)
         http.return_value = Mock(content=b"{}", json=lambda: {"status": "incomplete"})
         run_analysis.run(str(obj.id))
         obj.refresh_from_db()

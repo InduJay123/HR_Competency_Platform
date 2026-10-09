@@ -90,28 +90,33 @@ class ReviewTests(TestCase):
         review.refresh_from_db()
 
     def conversation(self, review):
+        from uuid import uuid4
+
+        from apps.ai_coach.models import Analysis
+        from apps.ai_coach.services import make_input
+
         review.refresh_from_db()
-        data = {
-            "version": review.version,
-            "discussion": "Reviewed evidence and agreed support.",
-            "assessment": {
-                "overall": "Strong Steward",
-                "rationale": "Human-led assessment.",
-                "human_only_reason": "Provider unavailable; manual review completed.",
-            },
-            "commitments": [
-                {
-                    "owner": str(self.nimal.profile.id),
-                    "action": f"Action {i}",
-                    "manager_support": "Protected time",
-                    "success_measure": "Agreed outcome",
-                    "due_date": "2026-12-01",
-                }
-                for i in range(3)
-            ],
-        }
-        r = self.acting(self.hr).post(f"/api/v1/reviews/{review.id}/conversation/", data, format="json")
-        self.assertEqual(r.status_code, 200, r.data)
+        Analysis.objects.create(company=self.company, review=review, round=review.round,
+            requested_by=self.nimal, input_hash=uuid4().hex, input_snapshot=make_input(review),
+            model="test", state="SUCCEEDED", output={"strengths": [], "gaps": [],
+                "support_options": [], "limitations": ["Test coaching"]})
+
+        def act(actor, action, **values):
+            review.refresh_from_db()
+            response = self.acting(actor).post(f"/api/v1/reviews/{review.id}/{action}/",
+                {"version": review.version, **values}, format="json")
+            self.assertEqual(response.status_code, 200, response.data)
+
+        for actor in (self.nimal, self.sarah):
+            act(actor, "conversation")
+        for i in range(3):
+            act(self.nimal, "commitments", commitment={
+                "owner": str(self.nimal.profile.id), "action": f"Action {i}",
+                "manager_support": "Protected time", "success_measure": "Agreed outcome",
+                "due_date": "2026-12-01"})
+        act(self.hr, "human-assessment", assessment={"overall": "Strong Steward", "rationale": "Human-led assessment."})
+        for actor in (self.nimal, self.sarah):
+            act(actor, "confirm-commitments")
         review.refresh_from_db()
 
     def finish(self, review):
@@ -127,7 +132,7 @@ class ReviewTests(TestCase):
         self.assertEqual(r.status_code, 200, r.data)
         review.refresh_from_db()
 
-    def test_manual_midyear_to_yearend(self):
+    def test_midyear_to_yearend(self):
         review = self.launch()
         self.submit(review, "MANAGER")
         self.submit(review, "EMPLOYEE")

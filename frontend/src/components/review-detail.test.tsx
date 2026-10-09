@@ -10,7 +10,7 @@ vi.mock("./shell", () => ({
   useSession: () => ({ company_id: "company-1", memberships: [{ id: "member-1", company_id: "company-1" }] }),
 }));
 vi.mock("./review-form", () => ({ ReviewForm: () => null }));
-vi.mock("./review-coach", () => ({ Coach: () => <div>HR coaching controls</div> }));
+vi.mock("./review-coach", () => ({ Coach: () => <div>Shared coaching panel</div> }));
 
 const review = {
   id: "review-1", employee_member: "member-1", employee_name: "Employee",
@@ -37,7 +37,7 @@ it("renders accepted guidance with friendly sources and no AI controls", async (
     "Sources: Employee reflection", "Areas to discuss", "Support options", "Limited evidence",
     "Reviewed by Head of HR"]) expect(screen.getByText(text)).toBeTruthy();
   expect(screen.queryByText("raw-source-uuid")).toBeNull();
-  expect(screen.queryByText("HR coaching controls")).toBeNull();
+  expect(screen.getByText("Shared coaching panel")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /generate|refresh|accept|reject/i })).toBeNull();
 });
 

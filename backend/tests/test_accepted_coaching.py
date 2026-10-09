@@ -109,7 +109,6 @@ class AcceptedCoachingTests(TestCase):
         client = self.acting(self.nimal)
         self.assertEqual(client.post(self.url, {}, format="json").status_code, 405)
         for action, payload in (
-            ("ai-coaching", {"version": self.review.version}),
             ("ai-decision", {"analysis_id": str(analysis.pk), "decision": "REJECTED", "notes": "No"}),
         ):
             self.assertEqual(client.post(
@@ -117,4 +116,4 @@ class AcceptedCoachingTests(TestCase):
             ).status_code, 403)
         self.assertEqual(client.get(
             f"/api/v1/reviews/{self.review.id}/ai-coaching/"
-        ).status_code, 403)
+        ).status_code, 200)

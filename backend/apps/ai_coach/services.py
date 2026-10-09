@@ -6,7 +6,7 @@ import jsonschema
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.audit.services import record
 from apps.reviews.services import current_forms, evidence_ready, lock, require_reviewer
@@ -34,7 +34,8 @@ def make_input(review):
     ]
     # No names, contact details, file URLs, private workbook or raw file contents.
     return {
-        "period": {"year": review.cycle.year, "kind": review.cycle.kind},
+        "period": {"year": review.cycle.year, "kind": review.cycle.kind,
+            "starts_on": review.cycle.starts_on.isoformat(), "ends_on": review.cycle.ends_on.isoformat()},
         "senior_leader": review.employee.senior_leader,
         "sources": sources,
     }
@@ -43,14 +44,20 @@ def make_input(review):
 @transaction.atomic
 def request_analysis(member, review, version):
     review = lock(member, review, version)
-    require_reviewer(member, review)
-    if review.state not in ["SUBMITTED", "CONVERSATION_READY"]:
+    if member.id != review.employee.membership_id:
+        raise PermissionDenied("Only the employee can run AI coaching for their review.")
+    if current_forms(review).filter(submitted_at__isnull=False).count() != 2:
         raise ValidationError(
-            "Coaching is available after both submissions and before the shared conversation record."
+            "Submit both the employee reflection and manager appraisal before running AI coaching."
         )
+    existing = review.analyses.filter(company=member.company, round=review.round, state="SUCCEEDED").order_by("-created_at").first()
+    if existing:
+        return existing
+    if review.state not in ["SUBMITTED", "CONVERSATION_READY", "ACKNOWLEDGEMENT_PENDING"]:
+        raise ValidationError("Coaching requires both submitted forms.")
     if not configured():
         raise ValidationError(
-            "AI is not configured. Continue a human-led review or configure the server integration."
+            "AI is not configured. Ask Head of HR to configure the server integration."
         )
     url = urlparse(settings.N8N_WEBHOOK_URL)
     if url.scheme != "https" and not (settings.DEBUG and url.hostname in ["localhost", "127.0.0.1", "n8n"]):
@@ -70,7 +77,8 @@ def request_analysis(member, review, version):
         review=review,
         round=review.round,
         input_hash=digest,
-        defaults={"requested_by": member, "input_snapshot": payload, "model": settings.OPENAI_MODEL},
+        defaults={"requested_by": member, "input_snapshot": payload, "model": settings.OPENAI_MODEL,
+            "prompt_version": PROMPT_VERSION},
     )
     if created:
         record(member, "ai.requested", obj, input_hash=digest)

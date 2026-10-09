@@ -4,7 +4,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, post } from "@/lib/api";
 import {
-  OVERALL,
   human,
   type Evidence,
   type Json,
@@ -13,6 +12,7 @@ import {
 import { Button, Card, Feedback, Loading, Badge } from "./ui";
 import { useSession } from "./shell";
 import { ReviewForm } from "./review-form";
+import { ReviewWorkflow } from "./review-workflow";
 import { Coach } from "./review-coach";
 import { HrDisclosure, HrReviewFrame, HrWorkflow, hrReviewStyles, type CoachingSummary } from "./hr-review-presentation";
 
@@ -133,183 +133,6 @@ function EvidenceValidation({
         </>
       )}
     </div>
-  );
-}
-
-type DraftCommitment = {
-  owner: string;
-  action: string;
-  manager_support: string;
-  success_measure: string;
-  due_date: string;
-};
-function HumanConversation({
-  review,
-  onSaved,
-  oversight = false,
-  acceptedCoaching = false,
-}: {
-  review: Review;
-  onSaved: () => void;
-  oversight?: boolean;
-  acceptedCoaching?: boolean;
-}) {
-  const [discussion, setDiscussion] = useState(""),
-    [overall, setOverall] = useState(""),
-    [rationale, setRationale] = useState(""),
-    [manual, setManual] = useState(""),
-    [error, setError] = useState(""),
-    [busy, setBusy] = useState(false),
-    [items, setItems] = useState<DraftCommitment[]>(
-      Array.from({ length: 3 }, () => ({
-        owner: review.employee,
-        action: "",
-        manager_support: "",
-        success_measure: "",
-        due_date: "",
-      })),
-    );
-  function change(i: number, k: keyof DraftCommitment, v: string) {
-    setItems(items.map((x, n) => (n === i ? { ...x, [k]: v } : x)));
-  }
-  async function save() {
-    setBusy(true);
-    setError("");
-    try {
-      await post(`reviews/${review.id}/conversation/`, {
-        version: review.version,
-        discussion,
-        assessment: { overall, rationale, human_only_reason: manual },
-        commitments: items,
-      });
-      onSaved();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <Card title="Human review and conversation">
-      <p>
-        Discuss both perspectives with the employee and manager before sharing
-        this record for acknowledgement.
-      </p>
-      <label>
-        Head of HR · overall assessment
-        <select value={overall} onChange={(e) => setOverall(e.target.value)}>
-          <option value="">Choose descriptor</option>
-          {OVERALL.map((x) => (
-            <option key={x}>{x}</option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Human assessment rationale
-        <textarea
-          value={rationale}
-          onChange={(e) => setRationale(e.target.value)}
-          maxLength={20000}
-        />
-      </label>
-      <label>
-        Conversation record
-        <textarea
-          value={discussion}
-          onChange={(e) => setDiscussion(e.target.value)}
-          maxLength={20000}
-        />
-      </label>
-      {(!oversight || !acceptedCoaching) && <HrDisclosure enabled={oversight} label="Proceeding without AI guidance">
-      <label>
-        Reason for proceeding without AI
-        <small>
-          Required if no successful analysis is available. AI failure does not
-          prevent a human-led review.
-        </small>
-        <textarea
-          value={manual}
-          onChange={(e) => setManual(e.target.value)}
-          maxLength={4000}
-        />
-      </label>
-      </HrDisclosure>}
-      <div className={oversight ? hrReviewStyles.commitments : undefined}>
-      <h3>Agreed development commitments · {items.length} of 3–5</h3>
-      {items.map((x, i) => (
-        <fieldset key={i}>
-          <legend>Commitment {i + 1}</legend>
-          <label>
-            Owner
-            <select
-              value={x.owner}
-              onChange={(e) => change(i, "owner", e.target.value)}
-            >
-              <option value={review.employee}>{review.employee_name}</option>
-              <option value={review.manager}>{review.manager_name}</option>
-            </select>
-          </label>
-          {(["action", "manager_support", "success_measure"] as const).map(
-            (k) => (
-              <label key={k}>
-                {human(k)}
-                <textarea
-                  value={x[k]}
-                  maxLength={4000}
-                  onChange={(e) => change(i, k, e.target.value)}
-                />
-              </label>
-            ),
-          )}
-          <label>
-            Due date
-            <input
-              type="date"
-              value={x.due_date}
-              onChange={(e) => change(i, "due_date", e.target.value)}
-            />
-          </label>
-          {items.length > 3 && (
-            <Button
-              variant="neutral"
-              onClick={() => setItems(items.filter((_, n) => n !== i))}
-            >
-              Remove commitment
-            </Button>
-          )}
-        </fieldset>
-      ))}
-      <div className="actions">
-        {items.length < 5 && (
-          <Button
-            variant="neutral"
-            onClick={() =>
-              setItems([
-                ...items,
-                {
-                  owner: review.employee,
-                  action: "",
-                  manager_support: "",
-                  success_measure: "",
-                  due_date: "",
-                },
-              ])
-            }
-          >
-            Add commitment
-          </Button>
-        )}
-        {!oversight && <Button disabled={busy} onClick={save}>
-          Share for acknowledgement
-        </Button>}
-      </div>
-      </div>
-      {oversight && <div className={hrReviewStyles.nextAction}>
-        <p>Next action</p>
-        <Button disabled={busy} onClick={save}>Share for acknowledgement</Button>
-      </div>}
-      <Feedback error={error} />
-    </Card>
   );
 }
 
@@ -479,7 +302,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
         </p>
       </div>
       <Feedback error={error} success={success} />
-      {oversight && <HrWorkflow review={review} coaching={currentCoaching} />}
+      <HrWorkflow review={review} coaching={currentCoaching} />
       {own && review.state !== "FINALISED" && (
         <ReviewForm
           key={`${review.id}-${review.round}`}
@@ -510,29 +333,13 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
       {showAcceptedCoaching && employee && (
         <EmployeeCoaching key={`${review.id}-${review.round}-${review.version}`} review={review} />
       )}
-{/*{hr && (
-        <>
-          <Card title={oversight ? "Evidence and source context" : "Authorised evidence"}>
-            {oversight && !review.evidence?.some((e) => e.validation === "VALIDATED") && (
-              <p className="alert">No validated evidence was supplied for this review. The human assessment should consider this limitation.</p>
-            )}
-            {review.evidence?.length ? (
-              review.evidence.map((e) => (
-                <EvidenceValidation key={e.id} item={e} onSaved={reload} />
-              ))
-            ) : oversight ? null : (
-              <p>
-                No evidence was selected in submitted forms. Discuss and record
-                this limitation before making an assessment.
-              </p>
-            )}
-          </Card>
-          <Coach key={oversight ? `${review.id}-${review.round}` : undefined} review={review} oversight={oversight} onSummary={oversight ? setCoachingSummary : undefined} />
-          {["SUBMITTED", "CONVERSATION_READY"].includes(review.state) && (
-            <HumanConversation review={review} onSaved={reload} oversight={oversight} acceptedCoaching={currentCoaching?.accepted} />
-          )}
-        </>
-      )}*/}
+{hr && <Card title={oversight ? "Evidence and source context" : "Authorised evidence"}>
+        {!review.evidence?.length && <p className="alert">No validated evidence was supplied for this review. The human assessment should consider this limitation.</p>}
+        {review.evidence?.map(item => <EvidenceValidation key={item.id} item={item} onSaved={reload} />)}
+      </Card>}
+      {(employee || manager || hr || review.can_view_coaching) && <Coach review={review} oversight={oversight} onSummary={setCoachingSummary} onSaved={reload} />}
+      <ReviewWorkflow key={`${review.id}-${review.round}`} review={review} role={employee ? "employee" : manager ? "manager" : null} hr={hr} onSaved={reload} />
+
       {review.conversation?.discussion && (
         <Card title="Shared conversation record">
           <p className="long-copy">{review.conversation.discussion}</p>
@@ -548,7 +355,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
           ))}
         </Card>
       )}
-      {review.state === "ACKNOWLEDGEMENT_PENDING" && (
+      {(review.forms || review.snapshot) && (
         <Card title="Acknowledgements">
           {review.employee_comments && (
             <div>
@@ -560,7 +367,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
             Employee: {review.employee_ack ? "Acknowledged" : "Pending"} ·
             Manager: {review.manager_ack ? "Acknowledged" : "Pending"}
           </p>
-          {((employee && !review.employee_ack) ||
+          {review.state !== "FINALISED" && ((employee && !review.employee_ack) ||
             (manager && !review.manager_ack)) && (
             <>
               {employee && (
@@ -579,28 +386,29 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
                 </label>
               )}
               <p>
-                Acknowledgement confirms the discussion and receipt of the
-                record. It does not require agreement with every judgement.
+                Acknowledgement means “I have reviewed this final record”. It does not require agreement with every judgement.
                 Raise discrepancies with Head of HR before finalisation.
               </p>
               <Button
-                disabled={busy}
+                disabled={busy || review.state === "FINALISED" || !review.workflow?.commitments_complete || !review.hr_assessment?.overall}
                 onClick={() => setConfirmation("acknowledge")}
               >
-                Acknowledge this record
+                Acknowledge Review
               </Button>
             </>
           )}
-          {hr && (
-            <Button
-              disabled={busy || !review.employee_ack || !review.manager_ack}
-              onClick={() => setConfirmation("complete")}
-            >
-              Finalise annual record
-            </Button>
-          )}
+          {!review.workflow?.commitments_complete && review.state !== "FINALISED" && <p className="alert">Acknowledgement unlocks after both participants confirm commitments.</p>}
+          {review.workflow?.commitments_complete && !review.hr_assessment?.overall && <p className="alert">Waiting for Head of HR to record the final human assessment.</p>}
+
         </Card>
       )}
+      {hr && review.state !== "FINALISED" && <Card title="Finalisation">
+        {!!review.workflow?.missing.length && <div role="alert" className="alert error">
+          <strong>Cannot finalise review</strong><p>Missing:</p>
+          <ul>{review.workflow.missing.map(item => <li key={item}>{item}</li>)}</ul>
+        </div>}
+        <Button disabled={busy || !review.workflow || !!review.workflow.missing.length} onClick={() => setConfirmation("complete")}>Validate and Finalise Review</Button>
+      </Card>}
       {hr && review.state !== "FINALISED" && (
         <Card title="Request a formal revision">
           <HrDisclosure enabled={oversight} label="Open revision options">
@@ -656,27 +464,17 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
           </details>
         </Card>
       )}
-      {review.snapshot && (
-        <Card title="Final record · read-only">
-          <p>
-            This record is sealed. Development follow-up does not change it.
-          </p>
-          <p className="hash">SHA-256 {review.snapshot.sha256}</p>
-          <details>
-            <summary>View complete saved record</summary>
-            <RecordContent value={review.snapshot.content} />
-          </details>
-          <Button variant="neutral" onClick={() => window.print()}>
-            Print / save PDF
-          </Button>
-        </Card>
-      )}
+      
+      {!!review.submission_history?.length && <Card title="Review history">
+        <RecordContent value={review.submission_history} />
+      </Card>}
       <Card title="Workflow history">
         <HrDisclosure enabled={oversight} label={`View full history (${review.history?.length || 0} events)`}>
         {review.history?.map((h) => (
           <div className={`history-row${oversight && /(?:^|[._])saved$/.test(h.action) ? ` ${hrReviewStyles.autosave}` : ""}`} key={h.version}>
             <strong>{human(h.action.replaceAll(".", "_"))}</strong>
             <time>{new Date(h.created_at).toLocaleString()}</time>
+            {h.actor_id && <p>By {[h.actor__user__first_name, h.actor__user__last_name].filter(Boolean).join(" ") || h.actor_id}</p>}
             {h.reason && <p>{h.reason}</p>}
           </div>
         ))}

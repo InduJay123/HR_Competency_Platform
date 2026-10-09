@@ -86,16 +86,16 @@ class CoachingActions:
     @action(detail=True, methods=["get", "post"], url_path="ai-coaching")
     def ai_coaching(self, request, pk=None):
         from apps.reviews.serializers import VersionSerializer
-        from apps.reviews.services import require_reviewer
+        from apps.reviews.workflow import require_content_access
         from common.permissions import membership
 
         member, review = membership(request), self.get_object()
-        require_reviewer(member, review)
+        require_content_access(member, review)
         if request.method == "GET":
             return Response(
                 {
                     "configured": services.configured(),
-                    "analyses": AnalysisSerializer(review.analyses.order_by("-created_at"), many=True).data,
+                    "analyses": AnalysisSerializer(review.analyses.filter(company=member.company).order_by("-created_at"), many=True).data,
                 }
             )
         data = VersionSerializer(data=request.data)

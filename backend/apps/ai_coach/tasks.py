@@ -41,7 +41,7 @@ def run_analysis(self, analysis_id):
         if obj.state not in ["QUEUED", "RETRYING"]:
             return
         review = Review.objects.get(id=obj.review_id)
-        if review.round != obj.round or review.state not in ["SUBMITTED", "CONVERSATION_READY"]:
+        if review.round != obj.round or review.state not in ["SUBMITTED", "CONVERSATION_READY", "ACKNOWLEDGEMENT_PENDING"]:
             obj.state = "STALE"
             obj.save(update_fields=["state"])
             return
@@ -114,7 +114,7 @@ def run_analysis(self, analysis_id):
             return
         obj.state = (
             "SUCCEEDED"
-            if review.round == obj.round and review.state in ["SUBMITTED", "CONVERSATION_READY"]
+            if review.round == obj.round and review.state in ["SUBMITTED", "CONVERSATION_READY", "ACKNOWLEDGEMENT_PENDING"]
             else "STALE"
         )
         obj.output = output

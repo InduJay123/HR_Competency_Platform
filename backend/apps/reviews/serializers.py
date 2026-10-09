@@ -30,6 +30,12 @@ class LaunchSerializer(serializers.Serializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
+    workflow = serializers.SerializerMethodField()
+
+    def get_workflow(self, obj):
+        from .workflow import workflow_status
+        return workflow_status(obj)
+
     employee_name = serializers.CharField(source="employee.membership.user.get_full_name", read_only=True)
     manager_name = serializers.CharField(source="manager.membership.user.get_full_name", read_only=True)
     cycle_detail = CycleSerializer(source="cycle", read_only=True)
@@ -57,6 +63,7 @@ class ReviewSerializer(serializers.ModelSerializer):
             "employee_ack",
             "manager_ack",
             "finalised_at",
+            "workflow",
         ]
 
 
@@ -69,6 +76,13 @@ class SaveFormSerializer(serializers.Serializer):
 
 class VersionSerializer(serializers.Serializer):
     version = serializers.IntegerField(min_value=1)
+
+    def to_internal_value(self, data):
+        # Explicit identity/status payloads must not be silently ignored.
+        forbidden = set(data) & {"actor", "role", "employee", "manager", "employee_ack", "manager_ack", "participant"}
+        if forbidden:
+            raise serializers.ValidationError({"non_field_errors": ["The authenticated participant can act only for themselves."]})
+        return super().to_internal_value(data)
 
 
 class RevisionSerializer(VersionSerializer):
@@ -99,3 +113,12 @@ class ConversationSerializer(VersionSerializer):
     discussion = serializers.CharField(max_length=20000)
     assessment = HrAssessmentSerializer()
     commitments = CommitmentSerializer(many=True)
+
+
+class SaveCommitmentSerializer(VersionSerializer):
+    commitment_id = serializers.UUIDField(required=False)
+    commitment = CommitmentSerializer()
+
+
+class AssessmentSerializer(VersionSerializer):
+    assessment = HrAssessmentSerializer()

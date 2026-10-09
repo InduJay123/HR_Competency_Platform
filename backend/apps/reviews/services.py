@@ -17,13 +17,14 @@ from common.permissions import require_hr
 
 from .models import FinalSnapshot, Review, ReviewCycle, ReviewEvent, Submission
 from .schemas import OVERALL, validate_form
+from .workflow import confirmations, require_participant, workflow_status
 
 
 def visible_reviews(member):
     qs = Review.objects.filter(company=member.company).select_related(
         "cycle", "employee__membership__user", "manager__membership__user", "reviewer__user"
     )
-    if member.is_hr:
+    if member.is_hr or member.is_head_hr:
         return qs
     return qs.filter(Q(employee__membership=member) | Q(manager__membership=member) | Q(reviewer=member))
 
@@ -202,62 +203,107 @@ def evidence_ready(review):
 
 @transaction.atomic
 def prepare_conversation(member, review, version, discussion, assessment, commitments):
+    # Retain the old service name for callers, but never allow the former HR
+    # action to replace participant commitments or impersonate participation.
+    raise ValidationError("Use participant conversation confirmation and the shared commitment actions.")
+
+
+@transaction.atomic
+def confirm_participation(member, review, version):
+    review = lock(member, review, version)
+    role = require_participant(member, review)
+    status = workflow_status(review)
+    if not status["employee_submitted"] or not status["manager_submitted"] or status["ai_coaching"] != "Complete":
+        raise ValidationError("Both submissions and completed AI coaching are required before participation confirmation.")
+    marks = confirmations(review).copy()
+    key = f"{role}_participation"
+    if marks.get(key):
+        raise ValidationError("Your participation is already confirmed.")
+    marks[key] = {"actor": str(member.id), "at": timezone.now().isoformat()}
+    review.conversation = {**review.conversation, "workflow": marks}
+    touch(member, review, f"{role}.participation_confirmed")
+    return review
+
+
+@transaction.atomic
+def save_commitment(member, review, version, commitment, commitment_id=None):
+    review = lock(member, review, version)
+    require_participant(member, review)
+    status = workflow_status(review)
+    if not status["conversation_complete"]:
+        raise ValidationError("Both participants must confirm the human conversation first.")
+    if status["commitments_complete"] or review.employee_ack or review.manager_ack:
+        raise ValidationError("The agreed plan is locked. Request a formal revision.")
+    owner = commitment.pop("owner")
+    if owner not in (review.employee_id, review.manager_id):
+        raise ValidationError("Commitment owner must be the employee or assigned manager.")
+    previous = None
+    if commitment_id:
+        obj = review.commitments.filter(pk=commitment_id, company=member.company).first()
+        if obj is None:
+            raise ValidationError("Choose a commitment from this review.")
+        previous = review.commitments.filter(pk=obj.pk).values().get()
+        for key, value in commitment.items():
+            setattr(obj, key, value)
+        obj.owner_id = owner
+        obj.version += 1
+        obj.save()
+    else:
+        obj = Commitment.objects.create(company=member.company, review=review,
+            employee=review.employee, owner_id=owner, **commitment)
+    marks = confirmations(review).copy()
+    # Every edit invalidates agreement to the previous plan, not its audit trail.
+    marks.pop("employee_commitments", None)
+    marks.pop("manager_commitments", None)
+    review.conversation = {**review.conversation, "workflow": marks}
+    touch(member, review, "commitment.saved", json.dumps({
+        "id": str(obj.id), "previous": previous,
+        "saved": {"owner": str(owner), **commitment},
+    }, default=str))
+    return review
+
+
+@transaction.atomic
+def confirm_commitments(member, review, version):
+    review = lock(member, review, version)
+    role = require_participant(member, review)
+    if not workflow_status(review)["conversation_complete"] or not review.commitments.exists():
+        raise ValidationError("Confirm the conversation and record a shared action plan first.")
+    marks = confirmations(review).copy()
+    key = f"{role}_commitments"
+    if marks.get(key):
+        raise ValidationError("You have already confirmed this plan.")
+    marks[key] = {"actor": str(member.id), "at": timezone.now().isoformat()}
+    review.conversation = {**review.conversation, "workflow": marks}
+    if all(marks.get(f"{person}_commitments") for person in ("employee", "manager")):
+        review.state = "ACKNOWLEDGEMENT_PENDING"
+    touch(member, review, f"{role}.commitments_confirmed")
+    return review
+
+
+@transaction.atomic
+def save_assessment(member, review, version, assessment):
     review = lock(member, review, version)
     require_reviewer(member, review)
-    if review.state not in ["SUBMITTED", "CONVERSATION_READY"]:
-        raise ValidationError("Both employee and manager submissions are required.")
-    evidence_ready(review)
-    from apps.ai_coach.models import Analysis
-
-    analysis = Analysis.objects.filter(review=review, round=review.round, state="SUCCEEDED").first()
-    if analysis and not analysis.decision:
-        raise ValidationError(
-            "Head of HR must accept or reject the available AI coaching before sharing the conversation record."
-        )
-    if not analysis and not assessment.get("human_only_reason", "").strip():
-        raise ValidationError("Record why this review proceeds without AI coaching.")
+    if review.employee_ack or review.manager_ack:
+        raise ValidationError("An acknowledged assessment requires a formal revision.")
+    if current_forms(review).filter(submitted_at__isnull=False).count() != 2:
+        raise ValidationError("Both submissions are required before the final human assessment.")
     if assessment.get("overall") not in OVERALL or not assessment.get("rationale", "").strip():
-        raise ValidationError("Head of HR must record a human overall assessment and rationale.")
-    if not discussion.strip():
-        raise ValidationError("Record the review conversation.")
-    if not 3 <= len(commitments) <= 5:
-        raise ValidationError("Agree three to five owned development commitments.")
-    # Draft commitments are replaced only before acknowledgement; final snapshots preserve their content.
-    Commitment.objects.filter(review=review).delete()
-    for item in commitments:
-        owner = EmployeeProfile.objects.filter(id=item["owner"], company=member.company).first()
-        if owner not in [review.employee, review.manager]:
-            raise ValidationError("Commitment owner must be the employee or their reviewing manager.")
-        Commitment.objects.create(
-            company=member.company,
-            review=review,
-            employee=review.employee,
-            owner=owner,
-            action=item["action"],
-            manager_support=item["manager_support"],
-            success_measure=item["success_measure"],
-            due_date=item["due_date"],
-        )
+        raise ValidationError("Record a human assessment and rationale.")
     review.hr_assessment = assessment
-    review.conversation = {"discussion": discussion}
-    review.state = "ACKNOWLEDGEMENT_PENDING"
-    review.employee_ack = None
-    review.manager_ack = None
-    touch(member, review, "acknowledgement.requested")
-    for person in [review.employee, review.manager]:
-        notify(
-            member.company,
-            person.membership.user,
-            f"review:{review.id}:{review.version}:ack",
-            "Review acknowledgement requested",
-            f"/employee/reviews/{review.id}",
-        )
+    touch(member, review, "assessment.saved", json.dumps(assessment))
     return review
 
 
 @transaction.atomic
 def acknowledge(member, review, version, comments=""):
     review = lock(member, review, version)
+    require_participant(member, review)
+    if not workflow_status(review)["commitments_complete"]:
+        raise ValidationError("Both participants must confirm commitments before acknowledgement.")
+    if not review.hr_assessment.get("overall") or not review.hr_assessment.get("rationale"):
+        raise ValidationError("Head of HR must record the final human assessment before acknowledgement.")
     if review.state != "ACKNOWLEDGEMENT_PENDING":
         raise ValidationError("Acknowledgement is not open.")
     if member.id == review.employee.membership_id:
@@ -293,6 +339,12 @@ def request_revision(member, review, version, reason):
     require_reviewer(member, review)
     if not reason.strip():
         raise ValidationError("A revision reason is required.")
+    touch(member, review, "revision.archived", json.dumps({
+        "round": review.round, "conversation": review.conversation,
+        "hr_assessment": review.hr_assessment, "employee_ack": review.employee_ack,
+        "manager_ack": review.manager_ack, "employee_comments": review.employee_comments,
+        "commitments": list(review.commitments.values()),
+    }, default=str))
     review.round += 1
     review.state = "REVISION_REQUESTED"
     review.employee_ack = None
@@ -316,8 +368,9 @@ def request_revision(member, review, version, reason):
 def finalise(member, review, version):
     review = lock(member, review, version)
     require_reviewer(member, review)
-    if review.state != "ACKNOWLEDGEMENT_PENDING" or not review.employee_ack or not review.manager_ack:
-        raise ValidationError("Both participants must acknowledge the shared record before HR finalisation.")
+    missing = workflow_status(review)["missing"]
+    if missing:
+        raise ValidationError({"missing": missing})
     sources = evidence_ready(review)
     forms = [
         {

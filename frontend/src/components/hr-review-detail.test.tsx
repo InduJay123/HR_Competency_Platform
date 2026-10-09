@@ -22,6 +22,9 @@ const baseReview = {
     { kind: "EMPLOYEE", submitted_at: "2026-07-01", content: { outcomes: "Original employee reflection" } },
     { kind: "MANAGER", submitted_at: "2026-07-02", content: { overall: "Developing Steward", ecp: "Growers", summary: "Original manager appraisal" } },
   ],
+  workflow: { employee_submitted: true, manager_submitted: true, ai_coaching: "Complete",
+    conversation_complete: false, commitments_complete: false, confirmations: { round: 1 },
+    missing: ["Commitments confirmation", "Manager acknowledgement"] },
   evidence: [], history: [
     { action: "employee.saved", version: 1, created_at: "2026-07-01", reason: "Saved reflection" },
     { action: "employee.submitted", version: 2, created_at: "2026-07-02", reason: "Sealed reflection" },
@@ -88,16 +91,14 @@ it("keeps submissions and audit records in closed disclosures and accepted coach
   expect(within(history).getByText("Saved reflection")).toBeTruthy();
 });
 
-it("uses the existing generation and refresh endpoints", async () => {
+it("offers HR refresh but keeps generation employee-owned", async () => {
   analyses = [];
   await show();
-  fireEvent.click(screen.getByRole("button", { name: "Generate coaching" }));
-  await waitFor(() => expect(post).toHaveBeenCalledWith("reviews/review-1/ai-coaching/", { version: 7 }));
-  await waitFor(() => expect((screen.getByRole("button", { name: "Generate coaching" }) as HTMLButtonElement).disabled).toBe(false));
+  expect(screen.queryByRole("button", { name: /Generate coaching|Run AI Coaching/ })).toBeNull();
   const count = vi.mocked(api).mock.calls.length;
   fireEvent.click(screen.getByRole("button", { name: "Refresh status" }));
   await waitFor(() => expect(vi.mocked(api).mock.calls.length).toBeGreaterThan(count));
-  expect(api).toHaveBeenLastCalledWith("reviews/review-1/ai-coaching/");
+  expect(api).toHaveBeenCalledWith("reviews/review-1/ai-coaching/");
 });
 
 it.each(["ACCEPTED", "REJECTED"])("preserves the %s decision payload", async (decision) => {
@@ -118,51 +119,26 @@ it.each(["ACCEPTED", "REJECTED"])("preserves the %s decision payload", async (de
   }
 });
 
-it("saves human judgement and three commitments through the unchanged share action", async () => {
+it("saves human judgement separately and never edits participant commitments", async () => {
   await show();
-  const assessment = screen.getByLabelText(/Head of HR.*overall assessment/) as HTMLSelectElement;
+  const assessment = screen.getByLabelText("Overall assessment") as HTMLSelectElement;
   expect(assessment.value).toBe("");
   fireEvent.change(assessment, { target: { value: "Developing Steward" } });
   fireEvent.change(screen.getByLabelText("Human assessment rationale"), { target: { value: "Human rationale" } });
-  fireEvent.change(screen.getByLabelText("Conversation record"), { target: { value: "Discussed together" } });
-  screen.getAllByRole("group", { name: /^Commitment / }).forEach((card, index) => {
-    fireEvent.change(within(card).getByLabelText("Action"), { target: { value: `Action ${index + 1}` } });
-    fireEvent.change(within(card).getByLabelText("Manager support"), { target: { value: "Weekly support" } });
-    fireEvent.change(within(card).getByLabelText("Success measure"), { target: { value: "Documented progress" } });
-    fireEvent.change(within(card).getByLabelText("Due date"), { target: { value: "2026-12-01" } });
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Share for acknowledgement" }));
-  await waitFor(() => expect(post).toHaveBeenCalledWith("reviews/review-1/conversation/", {
-    version: 7, discussion: "Discussed together",
-    assessment: { overall: "Developing Steward", rationale: "Human rationale", human_only_reason: "" },
-    commitments: [1, 2, 3].map((number) => ({
-      owner: "employee-1", action: `Action ${number}`, manager_support: "Weekly support",
-      success_measure: "Documented progress", due_date: "2026-12-01",
-    })),
+  fireEvent.click(screen.getByRole("button", { name: "Save human assessment" }));
+  await waitFor(() => expect(post).toHaveBeenCalledWith("reviews/review-1/human-assessment/", {
+    version: 7, assessment: { overall: "Developing Steward", rationale: "Human rationale" },
   }));
+  expect(screen.queryByRole("button", { name: "Save commitment" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Confirm Participation" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Acknowledge Review" })).toBeNull();
 });
 
-it("keeps the 3–5 commitment controls and manual reason available without accepted current coaching", async () => {
-  analyses = [{ ...accepted, round: 0 }];
+it("explains the missing finalisation prerequisites", async () => {
   await show();
-  const manual = disclosure(/^Proceeding without AI guidance$/);
-  expect(manual.open).toBe(false);
-  manual.open = true;
-  fireEvent.change(screen.getByLabelText(/Reason for proceeding without AI/), { target: { value: "Human-led review" } });
-  expect(screen.queryByText("Accepted by Head of HR")).toBeNull();
-  expect(screen.getAllByRole("group", { name: /^Commitment / })).toHaveLength(3);
-  fireEvent.click(screen.getByRole("button", { name: "Add commitment" }));
-  fireEvent.click(screen.getByRole("button", { name: "Add commitment" }));
-  expect(screen.getAllByRole("group", { name: /^Commitment / })).toHaveLength(5);
-  expect(screen.queryByRole("button", { name: "Add commitment" })).toBeNull();
-  fireEvent.click(screen.getAllByRole("button", { name: "Remove commitment" })[0]);
-  fireEvent.click(screen.getAllByRole("button", { name: "Remove commitment" })[0]);
-  expect(screen.getAllByRole("group", { name: /^Commitment / })).toHaveLength(3);
-  expect(screen.queryByRole("button", { name: "Remove commitment" })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Share for acknowledgement" }));
-  await waitFor(() => expect(post).toHaveBeenCalledWith("reviews/review-1/conversation/", expect.objectContaining({
-    assessment: expect.objectContaining({ human_only_reason: "Human-led review" }),
-  })));
+  expect(screen.getByText("Cannot finalise review")).toBeTruthy();
+  expect(screen.getByText("Manager acknowledgement")).toBeTruthy();
+  expect(screen.getByText("Commitments confirmation")).toBeTruthy();
 });
 
 it("preserves revision confirmation and its existing payload", async () => {
@@ -178,10 +154,10 @@ it("preserves revision confirmation and its existing payload", async () => {
 });
 
 it("preserves finalisation gating and confirmation", async () => {
-  review = { ...review, state: "ACKNOWLEDGEMENT_PENDING", employee_ack: "2026-07-03", manager_ack: "2026-07-03" };
+  review = { ...review, state: "ACKNOWLEDGEMENT_PENDING", employee_ack: "2026-07-03", manager_ack: "2026-07-03", workflow: { ...review.workflow!, missing: [] } };
   await show();
   expect(screen.queryByRole("button", { name: "Share for acknowledgement" })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Finalise annual record" }));
+  fireEvent.click(screen.getByRole("button", { name: "Validate and Finalise Review" }));
   fireEvent.click(screen.getByRole("button", { name: "Confirm Complete" }));
   await waitFor(() => expect(post).toHaveBeenCalledWith("reviews/review-1/complete/", { version: 7, reason: "" }));
 });
@@ -189,7 +165,7 @@ it("preserves finalisation gating and confirmation", async () => {
 it("keeps finalisation disabled until both acknowledgements exist", async () => {
   review = { ...review, state: "ACKNOWLEDGEMENT_PENDING", employee_ack: "2026-07-03" };
   await show();
-  expect((screen.getByRole("button", { name: "Finalise annual record" }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole("button", { name: "Validate and Finalise Review" }) as HTMLButtonElement).disabled).toBe(true);
 });
 
 it("retains evidence validation and labels known sources without showing IDs in primary guidance", async () => {

@@ -24,15 +24,14 @@ export function HrDisclosure({ enabled, label, children }: {
 }
 
 export function HrWorkflow({ review, coaching }: { review: Review; coaching?: CoachingSummary }) {
-  const evidence = review.evidence || [];
   const rows = [
-    ["Employee reflection", !review.forms ? "Not available" : review.forms.some((f) => f.kind === "EMPLOYEE" && f.submitted_at) ? "Complete" : "Not submitted"],
-    ["Manager appraisal", !review.forms ? "Not available" : review.forms.some((f) => f.kind === "MANAGER" && f.submitted_at) ? "Complete" : "Not submitted"],
-    ["AI coaching", coaching?.status || "Status not loaded"],
-    ["Human conversation", review.conversation?.discussion ? "Recorded" : "Pending"],
-    ["Commitments", review.commitments?.length ? `${review.commitments.length} recorded` : "Pending"],
+    ["Employee reflection", (review.workflow?.employee_submitted ?? review.forms?.some((f) => f.kind === "EMPLOYEE" && f.submitted_at)) ? "Complete" : "Not submitted"],
+    ["Manager appraisal", (review.workflow?.manager_submitted ?? review.forms?.some((f) => f.kind === "MANAGER" && f.submitted_at)) ? "Complete" : "Not submitted"],
+    ["AI coaching", review.workflow?.ai_coaching || coaching?.status || "Loading coaching status…"],
+    ["Human conversation", review.workflow?.conversation_complete ? "Complete" : "Pending"],
+    ["Commitments", review.workflow?.commitments_complete ? "Complete" : "Pending"],
     ["Acknowledgement", `Employee: ${review.employee_ack ? "acknowledged" : "pending"} · Manager: ${review.manager_ack ? "acknowledged" : "pending"}`],
-    ["Final record", review.finalised_at ? "Finalised" : "Pending"],
+    ["Final record", review.finalised_at || review.state === "FINALISED" ? "Complete" : "Pending"],
   ];
   return <Card title="Review progress">
     <dl className={styles.progress}>
@@ -62,10 +61,11 @@ function Guidance({ analysis, review }: { analysis: Analysis; review: Review }) 
   </>;
 }
 
-export function HrCoaching({ review, data, error, busy, notes, setNotes, request, refresh, decide }: {
+export function HrCoaching({ review, data, error, busy, notes, setNotes, refresh, decide, canDecide }: {
   review: Review; data: State | null; error: string; busy: boolean; notes: string;
   setNotes: (notes: string) => void; request: () => Promise<void>;
   refresh: () => Promise<unknown>; decide: (id: string, decision: string) => Promise<void>;
+  canDecide: boolean;
 }) {
   const current = data?.analyses.filter((a) => a.round === review.round) || [];
   const accepted = current.filter((a) => a.state === "SUCCEEDED" && a.decision === "ACCEPTED")
@@ -76,7 +76,8 @@ export function HrCoaching({ review, data, error, busy, notes, setNotes, request
     <p className={styles.muted}>Human-reviewed advisory guidance</p>
     <p>AI offers discussion questions and support options. Human judgement determines the assessment.</p>
     {!data && !error && <p role="status">Loading coaching status…</p>}
-    {data && !data.configured && <p className="alert">AI connection is not configured. The human review can continue.</p>}
+    {data && !data.configured && <p className="alert">AI connection is not configured. Configure the integration to enable new coaching.</p>}
+    <p>{review.workflow?.ai_coaching}</p>
     <Feedback error={error} />
     {accepted && <div className={styles.accepted}>
       <Badge>Accepted by Head of HR</Badge>
@@ -86,7 +87,7 @@ export function HrCoaching({ review, data, error, busy, notes, setNotes, request
     {pending.map((analysis) => <details key={analysis.id} open={!accepted}>
       <summary>Coaching awaiting human review · {new Date(analysis.created_at).toLocaleString()}</summary>
       <Guidance analysis={analysis} review={review} />
-      {review.state !== "FINALISED" && <>
+      {canDecide && review.state !== "FINALISED" && <>
         <label>Human review notes
           <textarea maxLength={5000} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </label>
@@ -98,7 +99,7 @@ export function HrCoaching({ review, data, error, busy, notes, setNotes, request
     </details>)}
     <HrDisclosure enabled={!!accepted} label="Coaching actions">
       <div className="actions">
-        <Button disabled={busy || !data?.configured || !["SUBMITTED", "CONVERSATION_READY"].includes(review.state)} onClick={request}>Generate coaching</Button>
+        <p>The employee runs AI coaching after both submissions are complete.</p>
         <Button variant="neutral" onClick={refresh}>Refresh status</Button>
       </div>
     </HrDisclosure>

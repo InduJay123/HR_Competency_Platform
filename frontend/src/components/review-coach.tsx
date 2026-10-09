@@ -5,6 +5,7 @@ import { api, post } from "@/lib/api";
 import { human, type Review } from "@/lib/reviews";
 import { Button, Card, Feedback, Badge } from "./ui";
 import { HrCoaching, type CoachingSummary } from "./hr-review-presentation";
+import { useSession } from "./shell";
 type Observation = {
   observation: string;
   source_ids: string[];
@@ -31,23 +32,28 @@ export type Analysis = {
   };
 };
 export type State = { configured: boolean; analyses: Analysis[] };
-export function Coach({ review, oversight = false, onSummary }: {
+export function Coach({ review, oversight = false, onSummary, onSaved }: {
   review: Review;
   oversight?: boolean;
   onSummary?: (summary: CoachingSummary) => void;
+  onSaved?: () => Promise<void>;
 }) {
+  const session = useSession();
+  const member = session.memberships?.find(m => m.company_id === session.company_id);
+  const employee = member?.id === review.employee_member;
+  const reviewer = member?.id === review.reviewer;
   const [data, setData] = useState<State | null>(null),
     [notes, setNotes] = useState(""),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [open, setOpen] = useState(false);
   const reload = useCallback(
-    () => api<State>(`reviews/${review.id}/ai-coaching/`).then(setData),
+    () => api<State>(`reviews/${review.id}/ai-coaching/`).then(value => { setData(value); }),
     [review.id],
   );
   useEffect(() => {
     reload().catch((e) => setError(e.message));
-  }, [reload]);
+  }, [reload, review.version]);
   useEffect(() => {
     if (!onSummary || !data) return;
     const current = data.analyses.filter((a) => a.round === review.round);
@@ -56,7 +62,7 @@ export function Coach({ review, oversight = false, onSummary }: {
       reviewId: review.id,
       round: review.round,
       accepted,
-      status: accepted ? "Accepted" : current[0]
+      status: current.some(a => a.state === "SUCCEEDED") ? "Complete" : current[0]
         ? human(current[0].decision || current[0].state) : "Not requested",
     });
   }, [data, onSummary, review.id, review.round]);
@@ -68,11 +74,11 @@ export function Coach({ review, oversight = false, onSummary }: {
     )
       return;
     const timer = setTimeout(
-      () => void reload().catch((e) => setError(e.message)),
+      () => void reload().then(() => onSaved?.()).catch((e) => setError(e.message)),
       4000,
     );
     return () => clearTimeout(timer);
-  }, [data, reload]);
+  }, [data, reload, onSaved]);
   async function request() {
     setBusy(true);
     setError("");
@@ -81,6 +87,7 @@ export function Coach({ review, oversight = false, onSummary }: {
         version: review.version,
       });
       await reload();
+      await onSaved?.();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -107,7 +114,7 @@ export function Coach({ review, oversight = false, onSummary }: {
   if (oversight) return (
     <HrCoaching review={review} data={data} error={error} busy={busy}
       notes={notes} setNotes={setNotes} request={request} decide={decide}
-      refresh={() => reload().catch((e) => setError(e.message))} />
+      refresh={() => reload().then(() => onSaved?.()).catch((e) => setError(e.message))} canDecide={reviewer} />
   );
   return (
     <>
@@ -120,32 +127,37 @@ export function Coach({ review, oversight = false, onSummary }: {
         <Image src="/steward.png" width={54} height={54} alt="" />
         <span>Steward</span>
       </button>
-      <Card title="AI coaching · human-reviewed">
+      <Card title="AI Coaching">
         <p>
           Advisory questions and support options, grounded in the submitted
           forms and Head of HR’s authorised excerpts. AI does not assign ratings
           or make employment decisions.
         </p>
-        {!data?.configured && (
+        {data && !data.configured && (
           <p className="alert">
-            AI connection is not configured. The human review can continue.
+            AI connection is not configured. Contact Head of HR to configure it.
           </p>
         )}
         <Feedback error={error} />
+        <p role="status">{review.workflow?.ai_coaching || "Loading coaching status…"}</p>
+        {review.workflow?.ai_blocked_reason && <p className="alert">{review.workflow.ai_blocked_reason}</p>}
+        {!employee && <p>The employee runs AI coaching after both submissions are complete.</p>}
         <div className="actions">
-          <Button
+          {employee && <Button
             disabled={
               busy ||
               !data?.configured ||
-              !["SUBMITTED", "CONVERSATION_READY"].includes(review.state)
+              !!review.workflow?.ai_blocked_reason ||
+              review.state === "FINALISED" ||
+              !["Ready", "Failed / retry"].includes(review.workflow?.ai_coaching || "")
             }
             onClick={request}
           >
-            Generate coaching
-          </Button>
+            Run AI Coaching
+          </Button>}
           <Button
             variant="neutral"
-            onClick={() => reload().catch((e) => setError(e.message))}
+            onClick={() => reload().then(() => onSaved?.()).catch((e) => setError(e.message))}
           >
             Refresh status
           </Button>
@@ -166,8 +178,7 @@ export function Coach({ review, oversight = false, onSummary }: {
             </small>
             {a.error_code && (
               <p>
-                Analysis unavailable. You can complete a
-                human-led review.
+                Analysis failed. The employee can retry; contact Head of HR if retries are exhausted.
               </p>
             )}
             {a.output?.strengths &&
@@ -196,7 +207,7 @@ export function Coach({ review, oversight = false, onSummary }: {
                 Human review: {a.decision} · {a.decision_notes}
               </p>
             ) : (
-              a.state === "SUCCEEDED" &&
+              reviewer && a.state === "SUCCEEDED" &&
               a.round === review.round &&
               review.state !== "FINALISED" && (
                 <>

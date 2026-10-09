@@ -14,11 +14,12 @@ from .comparison import ComparisonActions
 from .models import ReviewCycle
 from .serializers import (
     AcknowledgementSerializer,
-    ConversationSerializer,
+    AssessmentSerializer,
     CycleSerializer,
     LaunchSerializer,
     ReviewSerializer,
     RevisionSerializer,
+    SaveCommitmentSerializer,
     SaveFormSerializer,
     VersionSerializer,
 )
@@ -99,9 +100,10 @@ class ReviewViewSet(CoachingActions, ComparisonActions, viewsets.ReadOnlyModelVi
         member = membership(request)
         data = ReviewSerializer(obj).data
         # General HR can monitor status; narrative requires a participant or explicit appointment.
-        participant = member.id in [obj.employee.membership_id, obj.manager.membership_id, obj.reviewer_id]
+        participant = member.is_head_hr or member.id in [obj.employee.membership_id, obj.manager.membership_id, obj.reviewer_id]
         if not participant:
             return Response(data)
+        data["can_view_coaching"] = True
         forms = services.current_forms(obj)
         visible = []
         for form in forms:
@@ -124,14 +126,17 @@ class ReviewViewSet(CoachingActions, ComparisonActions, viewsets.ReadOnlyModelVi
         data["forms"] = visible
         data["employee_comments"] = obj.employee_comments
         data["history"] = list(
-            obj.events.order_by("created_at").values("action", "reason", "version", "created_at")
+            obj.events.order_by("created_at").values("action", "reason", "version", "created_at", "actor_id", "actor__user__first_name", "actor__user__last_name")
         )
+        data["submission_history"] = list(obj.submissions.filter(submitted_at__isnull=False)
+            .exclude(round=obj.round).order_by("round", "kind")
+            .values("kind", "round", "content", "submitted_at", "author_id"))
         from apps.evidence.models import EvidenceItem
         from apps.evidence.views import EvidenceSerializer
 
         ids = forms.filter(submitted_at__isnull=False).values_list("evidence__id", flat=True)
         data["evidence"] = EvidenceSerializer(EvidenceItem.objects.filter(id__in=ids), many=True).data
-        if obj.state in ["ACKNOWLEDGEMENT_PENDING", "FINALISED"] or member.id == obj.reviewer_id:
+        if participant:
             data["conversation"] = obj.conversation
             data["hr_assessment"] = obj.hr_assessment
             data["commitments"] = list(
@@ -168,9 +173,27 @@ class ReviewViewSet(CoachingActions, ComparisonActions, viewsets.ReadOnlyModelVi
 
     @action(detail=True, methods=["post"])
     def conversation(self, request, pk=None):
-        obj = services.prepare_conversation(
-            membership(request), self.get_object(), **validated(ConversationSerializer, request)
+        obj = services.confirm_participation(
+            membership(request), self.get_object(), **validated(VersionSerializer, request)
         )
+        return Response(ReviewSerializer(obj).data)
+
+    @action(detail=True, methods=["post"], url_path="commitments")
+    def save_commitment(self, request, pk=None):
+        obj = services.save_commitment(membership(request), self.get_object(),
+            **validated(SaveCommitmentSerializer, request))
+        return Response(ReviewSerializer(obj).data)
+
+    @action(detail=True, methods=["post"], url_path="confirm-commitments")
+    def confirm_commitments(self, request, pk=None):
+        obj = services.confirm_commitments(membership(request), self.get_object(),
+            **validated(VersionSerializer, request))
+        return Response(ReviewSerializer(obj).data)
+
+    @action(detail=True, methods=["post"], url_path="human-assessment")
+    def human_assessment(self, request, pk=None):
+        obj = services.save_assessment(membership(request), self.get_object(),
+            **validated(AssessmentSerializer, request))
         return Response(ReviewSerializer(obj).data)
 
     @action(detail=True, methods=["post"])

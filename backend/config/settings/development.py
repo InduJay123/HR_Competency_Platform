@@ -6,6 +6,11 @@ SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
     "local-only-change-this-before-deployment"
 )  # noqa: F405EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# Local development: avoid reusing stale Supabase connections.
+DATABASES["default"]["CONN_MAX_AGE"] = 0
+DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
+DATABASES["default"].setdefault("OPTIONS", {})
+DATABASES["default"]["OPTIONS"]["connect_timeout"] = 10
 
 EMAIL_HOST = os.environ.get(
     "EMAIL_HOST",

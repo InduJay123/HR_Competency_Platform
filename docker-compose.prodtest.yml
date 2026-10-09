@@ -31,6 +31,24 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings.docker
       REDIS_URL: redis://redis:6379/0
 
+    command:
+      - gunicorn
+      - config.wsgi:application
+      - --bind
+      - 0.0.0.0:8000
+      - --workers
+      - "2"
+      - --worker-class
+      - gthread
+      - --threads
+      - "4"
+      - --timeout
+      - "90"
+      - --graceful-timeout
+      - "30"
+      - --access-logfile
+      - "-"
+
     ports:
       - "127.0.0.1:8000:8000"
 
@@ -42,29 +60,29 @@ services:
 
 
   worker:
-    build:
-      context: ./backend
+      build:
+        context: ./backend
 
-    env_file:
-      - .env
+      env_file:
+        - .env
 
-    environment:
-      DJANGO_SETTINGS_MODULE: config.settings.docker
-      REDIS_URL: redis://redis:6379/0
+      environment:
+        DJANGO_SETTINGS_MODULE: config.settings.docker
+        REDIS_URL: redis://redis:6379/0
 
-    command:
-      - celery
-      - -A
-      - config
-      - worker
-      - -l
-      - info
+      command:
+        - celery
+        - -A
+        - config
+        - worker
+        - -l
+        - info
 
-    depends_on:
-      redis:
-        condition: service_healthy
+      depends_on:
+        redis:
+          condition: service_healthy
 
-    restart: unless-stopped
+      restart: unless-stopped
 
 
   beat:
@@ -85,6 +103,8 @@ services:
       - beat
       - -l
       - info
+      - --schedule
+      - /tmp/celerybeat-schedule
 
     depends_on:
       redis:

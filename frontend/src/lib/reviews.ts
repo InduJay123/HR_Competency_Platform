@@ -43,6 +43,18 @@ export type Form = {
   submitted_at: string | null;
 };
 export type Review = {
+  can_view_coaching?: boolean;
+  workflow?: {
+    employee_submitted: boolean;
+    manager_submitted: boolean;
+    ai_coaching: string;
+    ai_blocked_reason?: string;
+    conversation_complete: boolean;
+    commitments_complete: boolean;
+    confirmations: { round: number; [key: string]: number | { actor: string; at: string } };
+    missing: string[];
+  };
+  submission_history?: Json[];
   id: string;
   employee: string;
   employee_name: string;
@@ -67,8 +79,11 @@ export type Review = {
     reason: string;
     created_at: string;
     version: number;
+    actor_id?: string;
+    actor__user__first_name?: string;
+    actor__user__last_name?: string;
   }[];
-  conversation?: { discussion: string };
+  conversation?: { discussion?: string };
   hr_assessment?: {
     overall: string;
     rationale: string;
