@@ -155,12 +155,7 @@ export function Coach({ review, oversight = false, onSummary, onSaved }: {
           >
             Run AI Coaching
           </Button>}
-          <Button
-            variant="neutral"
-            onClick={() => reload().then(() => onSaved?.()).catch((e) => setError(e.message))}
-          >
-            Refresh status
-          </Button>
+          
         </div>
         {open && (
           <p className="coach-tip">

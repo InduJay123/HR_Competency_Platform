@@ -74,7 +74,7 @@ it("keeps submissions and audit records in closed disclosures and accepted coach
   expect(within(disclosure(/^View appraisal$/)).getByText("Original manager appraisal")).toBeTruthy();
   const history = disclosure(/^View full history/);
   expect(history.open).toBe(false);
-  expect(within(history).getByText("Employee saved")).toBeTruthy();
+  expect(within(history).queryByText("Employee saved")).toBeNull();
   expect(within(history).getByText("Employee submitted")).toBeTruthy();
   const aiHistory = disclosure(/^AI history and provenance/);
   expect(aiHistory.open).toBe(false);
@@ -88,7 +88,28 @@ it("keeps submissions and audit records in closed disclosures and accepted coach
   await waitFor(() => expect(screen.queryByLabelText(/Reason for proceeding without AI/)).toBeNull());
   expect(screen.getAllByText(/No validated evidence was supplied/)).toHaveLength(1);
   history.open = true;
-  expect(within(history).getByText("Saved reflection")).toBeTruthy();
+  expect(within(history).queryByText("Saved reflection")).toBeNull();
+});
+
+it.each([true, false])("shows meaningful history without draft events or commitment JSON (oversight=%s)", async (oversight) => {
+  const metadata = JSON.stringify({ id: "commitment-1", previous: null, saved: { action: "Private payload" } });
+  review.history!.push(
+    { action: "manager.saved", version: 3, created_at: "2026-07-02", reason: "Draft appraisal" },
+    { action: "commitment.saved", version: 4, created_at: "2026-07-03", reason: metadata,
+      actor_id: "manager-member", actor__user__first_name: "Morgan", actor__user__last_name: "Manager" },
+    { action: "revision.requested", version: 5, created_at: "2026-07-04", reason: "Please clarify the outcome" },
+  );
+  render(<ReviewDetail oversight={oversight} />);
+  await screen.findByText("Workflow history");
+  expect(screen.queryByText("Employee saved")).toBeNull();
+  expect(screen.queryByText("Manager saved")).toBeNull();
+  expect(screen.queryByText(metadata)).toBeNull();
+  expect(screen.getByText("Commitment saved")).toBeTruthy();
+  expect(screen.getByText("By Morgan Manager")).toBeTruthy();
+  expect(screen.getByText("Please clarify the outcome")).toBeTruthy();
+  expect(screen.getByText("Employee submitted")).toBeTruthy();
+  if (oversight) expect(screen.getByText("View full history (3 events)")).toBeTruthy();
+  expect(review.history).toHaveLength(5);
 });
 
 it("offers HR refresh but keeps generation employee-owned", async () => {

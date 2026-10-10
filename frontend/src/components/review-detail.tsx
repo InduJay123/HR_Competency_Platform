@@ -258,6 +258,9 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
     }
   }
   if (!review) return error ? <Feedback error={error} /> : <Loading />;
+  const visibleHistory = review.history?.filter(
+    (event) => event.action !== "employee.saved" && event.action !== "manager.saved",
+  ) || [];
   const employee = member?.id === review.employee_member,
     manager = member?.id === review.manager_member,
     hr = member?.id === review.reviewer;
@@ -333,10 +336,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
       {showAcceptedCoaching && employee && (
         <EmployeeCoaching key={`${review.id}-${review.round}-${review.version}`} review={review} />
       )}
-{hr && <Card title={oversight ? "Evidence and source context" : "Authorised evidence"}>
-        {!review.evidence?.length && <p className="alert">No validated evidence was supplied for this review. The human assessment should consider this limitation.</p>}
-        {review.evidence?.map(item => <EvidenceValidation key={item.id} item={item} onSaved={reload} />)}
-      </Card>}
+
       {(employee || manager || hr || review.can_view_coaching) && <Coach review={review} oversight={oversight} onSummary={setCoachingSummary} onSaved={reload} />}
       <ReviewWorkflow key={`${review.id}-${review.round}`} review={review} role={employee ? "employee" : manager ? "manager" : null} hr={hr} onSaved={reload} />
 
@@ -469,13 +469,13 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
         <RecordContent value={review.submission_history} />
       </Card>}
       <Card title="Workflow history">
-        <HrDisclosure enabled={oversight} label={`View full history (${review.history?.length || 0} events)`}>
-        {review.history?.map((h) => (
+        <HrDisclosure enabled={oversight} label={`View full history (${visibleHistory.length} events)`}>
+        {visibleHistory.map((h) => (
           <div className={`history-row${oversight && /(?:^|[._])saved$/.test(h.action) ? ` ${hrReviewStyles.autosave}` : ""}`} key={h.version}>
             <strong>{human(h.action.replaceAll(".", "_"))}</strong>
             <time>{new Date(h.created_at).toLocaleString()}</time>
             {h.actor_id && <p>By {[h.actor__user__first_name, h.actor__user__last_name].filter(Boolean).join(" ") || h.actor_id}</p>}
-            {h.reason && <p>{h.reason}</p>}
+            {h.reason && h.action !== "commitment.saved" && <p>{h.reason}</p>}
           </div>
         ))}
         </HrDisclosure>

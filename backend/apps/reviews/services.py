@@ -181,7 +181,12 @@ def save_form(member, review, kind, content, evidence_ids, submit, version):
     review.state = (
         "SUBMITTED" if current_forms(review).filter(submitted_at__isnull=False).count() == 2 else "PREPARING"
     )
-    touch(member, review, f"{kind.lower()}.submitted" if submit else f"{kind.lower()}.saved")
+    if submit:
+        touch(member, review, f"{kind.lower()}.submitted")
+    else:
+        # Preserve draft state and optimistic locking without adding audit noise.
+        review.version += 1
+        review.save()
     if submit:
         notify(
             member.company,

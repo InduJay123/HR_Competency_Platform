@@ -46,6 +46,22 @@ async function show(value = review) {
   });
 }
 describe("Reflection draft safety", () => {
+  it.each(["EMPLOYEE", "MANAGER"] as const)("autosaves %s draft data without submitting", async (kind) => {
+    vi.mocked(post).mockResolvedValue({ ...review, version: 5 });
+    await act(async () => {
+      render(<ReviewForm review={review} kind={kind} onSubmitted={vi.fn()} />);
+    });
+    const field = screen.getAllByRole("textbox")[0];
+    fireEvent.change(field, { target: { value: "Preserved draft text" } });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    expect(post).toHaveBeenCalledOnce();
+    const [path, payload] = vi.mocked(post).mock.calls[0];
+    expect(path).toBe(`reviews/review-1/${kind === "EMPLOYEE" ? "employee-reflection" : "manager-assessment"}/`);
+    expect(payload).toMatchObject({ version: 4, submit: false });
+    expect(JSON.stringify(payload)).toContain("Preserved draft text");
+  });
   it("blocks navigation when the employee chooses to keep unsaved changes", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     await show();

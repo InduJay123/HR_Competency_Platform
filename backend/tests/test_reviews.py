@@ -3,9 +3,12 @@ from datetime import date
 from django.db import DatabaseError, connection, transaction
 from django.test import TestCase
 
+from apps.audit.models import AuditLog
 from apps.development.models import Commitment
 from apps.reviews.models import FinalSnapshot, Review, ReviewCycle
 from apps.reviews.schemas import PILLARS
+from apps.reviews.services import touch
+from apps.reviews.workflow import workflow_status
 
 from . import test_foundation as fixture
 
@@ -131,6 +134,55 @@ class ReviewTests(TestCase):
         )
         self.assertEqual(r.status_code, 200, r.data)
         review.refresh_from_db()
+
+    def test_drafts_save_without_events_and_preserve_submission_and_history(self):
+        review = self.launch()
+        for kind, actor, endpoint in [
+            ("EMPLOYEE", self.nimal, "employee-reflection"),
+            ("MANAGER", self.sarah, "manager-assessment"),
+        ]:
+            with self.subTest(kind=kind):
+                # Represent historical rows created before draft events were removed.
+                touch(actor, review, f"{kind.lower()}.saved")
+                history = list(review.events.values())
+                audit = list(AuditLog.objects.values())
+                for text in ("Autosaved draft", "Updated draft"):
+                    version = review.version
+                    content = {"outcomes" if kind == "EMPLOYEE" else "summary": text}
+                    response = self.acting(actor).post(
+                        f"/api/v1/reviews/{review.id}/{endpoint}/",
+                        {"version": version, "content": content, "submit": False},
+                        format="json",
+                    )
+                    self.assertEqual(response.status_code, 200, response.data)
+                    review.refresh_from_db()
+                    form = review.submissions.get(kind=kind, round=review.round)
+                    self.assertEqual(form.content, content)
+                    self.assertIsNone(form.submitted_at)
+                    self.assertEqual(review.version, version + 1)
+                    self.assertEqual(review.state, "PREPARING")
+                    self.assertEqual(list(review.events.values()), history)
+                    self.assertEqual(list(AuditLog.objects.values()), audit)
+                    self.assertFalse(workflow_status(review)[f"{kind.lower()}_submitted"])
+                self.submit(review, kind)
+                self.assertIsNotNone(review.submissions.get(kind=kind).submitted_at)
+                self.assertTrue(workflow_status(review)[f"{kind.lower()}_submitted"])
+                self.assertEqual(review.events.filter(action=f"{kind.lower()}.submitted").count(), 1)
+                self.assertEqual(AuditLog.objects.filter(
+                    object_id=str(review.id), action=f"review.{kind.lower()}.submitted"
+                ).count(), 1)
+        self.assertEqual(review.state, "SUBMITTED")
+        self.conversation(review)
+        self.finish(review)
+        actions = list(review.events.values_list("action", flat=True))
+        for action in (
+            "employee.saved", "manager.saved", "employee.participation_confirmed",
+            "manager.participation_confirmed", "commitment.saved",
+            "employee.commitments_confirmed", "manager.commitments_confirmed",
+            "assessment.saved", "finalised",
+        ):
+            self.assertIn(action, actions)
+        self.assertEqual(actions.count("acknowledged"), 2)
 
     def test_midyear_to_yearend(self):
         review = self.launch()

@@ -100,7 +100,6 @@ export function HrCoaching({ review, data, error, busy, notes, setNotes, refresh
     <HrDisclosure enabled={!!accepted} label="Coaching actions">
       <div className="actions">
         <p>The employee runs AI coaching after both submissions are complete.</p>
-        <Button variant="neutral" onClick={refresh}>Refresh status</Button>
       </div>
     </HrDisclosure>
     <details>
@@ -114,7 +113,6 @@ export function HrCoaching({ review, data, error, busy, notes, setNotes, refresh
         </dl>
         {analysis.output?.strengths && <details>
           <summary>View recorded guidance and source provenance</summary>
-          <Guidance analysis={analysis} review={review} />
           <h4>Source references</h4>
           {(["strengths", "gaps", "support_options"] as const).flatMap((key) =>
             analysis.output![key].map((item, index) => <p className={styles.provenance} key={`${key}-${index}`}>
