@@ -21,6 +21,18 @@ class Company(Entity):
     website = models.URLField(blank=True)
     approved_at = models.DateTimeField(null=True)
     logo_data = models.BinaryField(null=True, editable=False)
+    logo_storage_path = models.CharField(max_length=200, blank=True, default="", editable=False)
+
+    @property
+    def display_logo_url(self):
+        from urllib.parse import urlsplit
+
+        path = f"/api/v1/company-logo/{self.id}/"
+        if self.logo_storage_path or self.logo_data:
+            return path
+        if urlsplit(self.logo_url).path.rstrip("/") == path.rstrip("/"):
+            return path
+        return self.logo_url
 
     def save(self, *args, **kwargs):
         from django.db import transaction

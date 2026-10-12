@@ -191,7 +191,31 @@
   justify-content: space-between;
 }
 .workspace-company {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   min-width: 0;
+}
+.workspace-company-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.workspace-company .company-logo {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  margin-right: 0;
+}
+.company-logo-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--tint);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
 }
 .workspace-company strong {
   font-size: 14px;
@@ -199,9 +223,6 @@
 .workspace header small {
   margin-top: 5px;
   font-size: 10px;
-}
-.company-logo {
-  float: left;
 }
 .header-tools {
   display: flex;

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import Image from "next/image";
+import { CompanyLogo } from "@/components/company-logo";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, post, session } from "@/lib/api";
@@ -61,14 +61,12 @@ export default function Login() {
       <AuthHero />
       <div className="signin-form">
         {brand?.logo_url && (
-          <Image
+          <CompanyLogo
             className="signin-company-logo"
             src={brand.logo_url}
             width={130}
             height={56}
-            alt={`${brand.name} logo`}
-            unoptimized
-            referrerPolicy="no-referrer"
+            name={brand.name}
           />
         )}
         <div className="signin-wordmark">

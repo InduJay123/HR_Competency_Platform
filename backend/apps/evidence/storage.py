@@ -1,4 +1,4 @@
-"""Private storage only. Never returns a public object URL or fetches user links."""
+"""Backend storage access. Never returns a public object URL or fetches user links."""
 
 from pathlib import Path
 from urllib.parse import quote
@@ -21,15 +21,15 @@ def local_path(key):
     return path
 
 
-def endpoint(key):
+def endpoint(key, *, bucket=None):
     base = settings.SUPABASE_URL.rstrip("/")
     if not base.startswith("https://") or not settings.SUPABASE_SERVICE_KEY:
         raise StorageUnavailable()
-    return f"{base}/storage/v1/object/{quote(settings.SUPABASE_STORAGE_BUCKET)}/{quote(key)}"
+    return f"{base}/storage/v1/object/{quote(bucket or settings.SUPABASE_STORAGE_BUCKET)}/{quote(key)}"
 
 
-def put(key, content, mime):
-    if settings.PRIVATE_STORAGE_BACKEND == "local" and settings.DEBUG:
+def put(key, content, mime, *, bucket=None):
+    if bucket is None and settings.PRIVATE_STORAGE_BACKEND == "local" and settings.DEBUG:
         path = local_path(key)
         path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("xb") as stream:
@@ -37,7 +37,7 @@ def put(key, content, mime):
         return
     try:
         response = requests.post(
-            endpoint(key),
+            endpoint(key, bucket=bucket),
             data=content,
             headers={
                 "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
@@ -53,15 +53,15 @@ def put(key, content, mime):
         raise StorageUnavailable()
 
 
-def get(key):
-    if settings.PRIVATE_STORAGE_BACKEND == "local" and settings.DEBUG:
+def get(key, *, bucket=None):
+    if bucket is None and settings.PRIVATE_STORAGE_BACKEND == "local" and settings.DEBUG:
         try:
             return local_path(key).read_bytes()
         except OSError:
             raise StorageUnavailable()
     try:
         response = requests.get(
-            endpoint(key),
+            endpoint(key, bucket=bucket),
             headers={"Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}"},
             timeout=(5, 30),
             allow_redirects=False,

@@ -278,6 +278,7 @@ class PlatformAccessTests(TestCase):
 
     def test_company_logo_preserves_transparency_and_rejects_foreign_upload(self):
         import io
+        from unittest.mock import patch
 
         from django.core.files.uploadedfile import SimpleUploadedFile
         from PIL import Image
@@ -291,10 +292,19 @@ class PlatformAccessTests(TestCase):
         self.assertEqual(
             self.acting(self.other_hr).post(endpoint, {"logo": photo()}, format="multipart").status_code, 403
         )
-        r = self.acting(self.hr).post(endpoint, {"logo": photo()}, format="multipart")
+        with patch("apps.companies.logo.storage.put") as upload:
+            r = self.acting(self.hr).post(endpoint, {"logo": photo()}, format="multipart")
         self.assertEqual(r.status_code, 200, r.data)
-        response = self.public.get(endpoint)
+        self.company.refresh_from_db()
+        stored_logo = upload.call_args.args[1]
+        stored_url = self.company.logo_url
+        with patch("apps.companies.logo.storage.get", return_value=stored_logo):
+            response = self.public.get(endpoint)
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, stored_logo)
+        self.company.refresh_from_db()
+        self.assertIsNone(self.company.logo_data)
+        self.assertEqual(self.company.logo_url, stored_url)
         image = Image.open(io.BytesIO(response.content))
         self.assertEqual(image.mode, "RGBA")
         self.assertEqual(image.getpixel((0, 0))[3], 0)

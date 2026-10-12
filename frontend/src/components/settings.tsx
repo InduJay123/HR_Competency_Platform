@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
 import { useSession } from "./shell";
 import { Button, Card, Feedback } from "./ui";
+import { CompanyLogo } from "./company-logo";
 type Company = {
   id: string;
   name: string;
@@ -22,7 +23,11 @@ export function Settings() {
   const s = useSession(),
     [data, setData] = useState<Company | null>(null),
     [error, setError] = useState(""),
-    [success, setSuccess] = useState("");
+    [success, setSuccess] = useState(""),
+    [logo, setLogo] = useState<File | null>(null),
+    [busy, setBusy] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const saving = useRef(false);
   useEffect(() => {
     api<Company>(`companies/${s.company_id}/`)
       .then(setData)
@@ -30,15 +35,48 @@ export function Settings() {
   }, [s.company_id]);
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (saving.current || !data) return;
+    saving.current = true;
+    setBusy(true);
+    setError("");
+    setSuccess("");
+    const fields = Object.fromEntries(new FormData(e.currentTarget));
+    let detailsSaved = false;
     try {
-      await api(`companies/${s.company_id}/`, {
+      const saved = await api<Company>(`companies/${data.id}/`, {
         method: "PATCH",
-        body: JSON.stringify(Object.fromEntries(new FormData(e.currentTarget))),
+        body: JSON.stringify(fields),
       });
+      detailsSaved = true;
+      if (logo) {
+        const upload = new FormData();
+        upload.set("logo", logo);
+        const result = await api<{ logo_url: string }>(
+          `company-logo/${data.id}/`,
+          {
+            method: "POST",
+            body: upload,
+          },
+        );
+        setData({ ...saved, logo_url: result.logo_url });
+        setLogo(null);
+        if (fileInput.current) fileInput.current.value = "";
+      } else {
+        setData(saved);
+      }
       window.dispatchEvent(new Event("bfl-profile-updated"));
-      setSuccess("Company details saved.");
+      setSuccess(
+        logo ? "Company details and logo saved." : "Company details saved.",
+      );
     } catch (e) {
-      setError((e as Error).message);
+      setError(
+        detailsSaved
+          ? `Company details were saved, but the logo upload failed. Your selected file is retained; click Save company details to retry. ${(e as Error).message}`
+          : (e as Error).message,
+      );
+    } finally {
+      saving.current = false;
+      setBusy(false);
     }
   }
   return (
@@ -104,11 +142,9 @@ export function Settings() {
               Website
               <input name="website" type="url" defaultValue={data.website} />
             </label>
-            <label>
-              Company logo URL
-              <input name="logo_url" type="url" defaultValue={data.logo_url} />
-            </label>
-            <Button>Save company details</Button>
+            <Button disabled={busy}>
+              {busy ? "Saving…" : "Save company details"}
+            </Button>
           </form>
           <hr />
           <p>
@@ -122,32 +158,31 @@ export function Settings() {
           <label>
             Upload company logo
             <input
+              ref={fileInput}
               type="file"
+              disabled={busy}
               accept="image/png,image/jpeg"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                const f = new FormData();
-                f.set("logo", file);
-                try {
-                  const result = await api<{ logo_url: string }>(
-                    `company-logo/${data.id}/`,
-                    { method: "POST", body: f },
-                  );
-                  setData({ ...data, logo_url: result.logo_url });
-                  setSuccess(
-                    "Company logo uploaded. It appears in your workspace and branded sign-in page.",
-                  );
-                  window.dispatchEvent(new Event("bfl-profile-updated"));
-                } catch (err) {
-                  setError((err as Error).message);
-                }
+              onChange={(e) => {
+                setLogo(e.target.files?.[0] || null);
+                setSuccess("");
+                setError("");
               }}
             />
             <small>
-              Transparent PNG recommended. PNG or JPEG, maximum 2 MB.
+              Transparent PNG recommended. PNG or JPEG, maximum 2 MB. Select a
+              file, then click Save company details.
             </small>
           </label>
+          {logo && <p>Selected logo: {logo.name}</p>}
+          {data.logo_url && (
+            <CompanyLogo
+              src={data.logo_url}
+              name={data.name}
+              className="company-logo"
+              width={36}
+              height={36}
+            />
+          )}
         </Card>
       )}
     </>

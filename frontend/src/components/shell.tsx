@@ -15,6 +15,7 @@ import { confirmLeaveDraft } from "@/lib/draft-guard";
 import type { Session, Employee, Context } from "@/lib/types";
 import { Button, Feedback, Loading } from "./ui";
 import { Brand } from "./brand";
+import { CompanyLogo } from "./company-logo";
 import { Trainer } from "./trainer";
 import { Tours } from "./tours";
 import { NavIcon, routeIcon } from "./nav-icon";
@@ -348,18 +349,18 @@ export function Shell({ children }: { children: ReactNode }) {
               </Button>
               <div className="workspace-company">
                 {company?.logo_url && (
-                  <Image
+                  <CompanyLogo
                     className="company-logo"
                     src={company.logo_url}
                     width={36}
                     height={36}
-                    unoptimized
-                    alt={`${company.name} logo`}
-                    referrerPolicy="no-referrer"
+                    name={company.name}
                   />
                 )}
-                <strong>{company?.name}</strong>
-                <small>{company?.tagline}</small>
+                <div className="workspace-company-copy">
+                  <strong>{company?.name}</strong>
+                  <small>{company?.tagline}</small>
+                </div>
               </div>
               <div className="header-tools">
                 <div className="workspace-search">

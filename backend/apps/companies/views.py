@@ -8,6 +8,18 @@ from .models import Company
 
 
 class CompanySerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data["logo_url"] = instance.display_logo_url
+        return data
+
+    def to_internal_value(self, data):
+        # The generated endpoint is a display value, not an editable external URL.
+        if self.instance and data.get("logo_url") == f"/api/v1/company-logo/{self.instance.id}/":
+            data = data.copy()
+            data.pop("logo_url")
+        return super().to_internal_value(data)
+
     class Meta:
         model = Company
         fields = [

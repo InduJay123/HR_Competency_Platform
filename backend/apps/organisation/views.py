@@ -22,7 +22,9 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         member = membership(self.request)
-        qs = EmployeeProfile.objects.select_related("membership__user", "reporting").filter(
+        qs = EmployeeProfile.objects.select_related(
+            "membership__user", "reporting__manager__membership__user"
+        ).filter(
             company=member.company, membership__user__is_superuser=False
         )
         if not member.is_hr or (

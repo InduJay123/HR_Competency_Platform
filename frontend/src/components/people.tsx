@@ -218,8 +218,7 @@ export function People({ manage = false }: { manage?: boolean }) {
                               </Button>
                             </form>
                           ) : (
-                            data.results.find((m) => m.id === p.manager_id)
-                              ?.first_name || "Outside this view"
+                            p.manager_name || "Outside this view"
                           )}
                         </td>
                       </tr>

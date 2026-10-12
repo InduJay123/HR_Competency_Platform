@@ -90,7 +90,7 @@ class SessionView(APIView):
                         "company_id": m.company_id,
                         "name": m.company.name,
                         "tagline": m.company.tagline,
-                        "logo_url": m.company.logo_url,
+                        "logo_url": m.company.display_logo_url,
                         "stewardship_code": m.company.stewardship_code,
                         "mission": m.company.mission,
                         "vision": m.company.vision,

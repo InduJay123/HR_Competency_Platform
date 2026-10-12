@@ -41,6 +41,7 @@ export type Employee = {
   is_manager: boolean;
   senior_leader: boolean;
   manager_id: string | null;
+  manager_name?: string;
   version: number;
   onboarding_completed_at: string | null;
 };

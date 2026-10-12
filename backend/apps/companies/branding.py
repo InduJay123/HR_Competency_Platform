@@ -18,7 +18,7 @@ class BrandingView(APIView):
             {
                 "name": company.name,
                 "tagline": company.tagline,
-                "logo_url": company.logo_url,
+                "logo_url": company.display_logo_url,
                 "slug": company.slug,
             }
         )

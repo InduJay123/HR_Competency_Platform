@@ -28,9 +28,23 @@ class EmployeeSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(source="membership.user.email", read_only=True)
     is_manager = serializers.BooleanField(source="membership.is_manager", read_only=True)
     manager_id = serializers.SerializerMethodField()
+    manager_name = serializers.SerializerMethodField()
 
     def get_manager_id(self, obj):
         return str(obj.reporting.manager_id) if hasattr(obj, "reporting") else None
+
+    def get_manager_name(self, obj):
+        if not hasattr(obj, "reporting"):
+            return ""
+        relationship = obj.reporting
+        manager = relationship.manager
+        if (
+            relationship.company_id != obj.company_id
+            or manager.company_id != obj.company_id
+            or manager.membership.company_id != obj.company_id
+        ):
+            return ""
+        return manager.membership.user.get_full_name()
 
     def get_photo_url(self, obj):
         has_avatar = obj.has_avatar if hasattr(obj, "has_avatar") else bool(obj.avatar_data)
@@ -55,6 +69,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "senior_leader",
             "is_manager",
             "manager_id",
+            "manager_name",
             "version",
             "onboarding_completed_at",
         ]
@@ -80,10 +95,6 @@ class ReportingSerializer(serializers.Serializer):
 class SelfProfileSerializer(EmployeeSerializer):
     company_name = serializers.CharField(source="company.name", read_only=True)
     department_name = serializers.CharField(source="department.name", read_only=True, default="")
-    manager_name = serializers.SerializerMethodField()
-
-    def get_manager_name(self, obj):
-        return obj.reporting.manager.membership.user.get_full_name() if hasattr(obj, "reporting") else ""
 
     class Meta(EmployeeSerializer.Meta):
         fields = EmployeeSerializer.Meta.fields + [
@@ -95,6 +106,5 @@ class SelfProfileSerializer(EmployeeSerializer):
             "skills",
             "company_name",
             "department_name",
-            "manager_name",
             "notification_digest",
         ]

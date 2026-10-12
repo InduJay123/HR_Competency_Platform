@@ -1,4 +1,6 @@
 import io
+import re
+import uuid
 import warnings
 
 from django.http import Http404, HttpResponse
@@ -10,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import membership, require_hr
+from apps.evidence import storage
 
 from .models import Company
 
@@ -19,9 +22,18 @@ class CompanyLogoView(APIView):
 
     def get(self, request, pk):
         company = get_object_or_404(Company, pk=pk, active=True)
-        if not company.logo_data:
+        if company.logo_storage_path:
+            # Never let a corrupted reference turn this public route into a storage proxy.
+            if not re.fullmatch(
+                rf"{company.id}/logo-[0-9a-f]{{32}}\.png", company.logo_storage_path
+            ):
+                raise Http404()
+            content = storage.get(company.logo_storage_path, bucket="company-logos")
+        elif company.logo_data:
+            content = bytes(company.logo_data)
+        else:
             raise Http404()
-        result = HttpResponse(bytes(company.logo_data), content_type="image/png")
+        result = HttpResponse(content, content_type="image/png")
         result["X-Content-Type-Options"] = "nosniff"
         result["Cache-Control"] = "no-cache"
         return result
@@ -50,11 +62,8 @@ class CompanyLogoView(APIView):
                 "The image could not be read. Use a PNG or JPEG up to 10 megapixels."
             ) from None
         company = member.company
-        company.logo_data = output.getvalue()
-        # Same-origin URL; the public image is also used on this company's sign-in screen.
-        from django.conf import settings
-
-        origin = settings.FRONTEND_URL.rstrip("/")
-        company.logo_url = f"{origin}/api/v1/company-logo/{company.id}/"
-        company.save(update_fields=["logo_data", "logo_url", "updated_at"])
-        return Response({"logo_url": company.logo_url})
+        key = f"{company.id}/logo-{uuid.uuid4().hex}.png"
+        storage.put(key, output.getvalue(), "image/png", bucket="company-logos")
+        company.logo_storage_path = key
+        company.save(update_fields=["logo_storage_path", "updated_at"])
+        return Response({"logo_url": company.display_logo_url})
