@@ -180,7 +180,7 @@ export function Shell({ children }: { children: ReactNode }) {
             ["My development", "/employee/development"],
           ];
   links.push(
-    ["Growth tools", "/employee/growth"],
+    ["Growth tools", role === "manager" ? "/manager/growth" : "/employee/growth"],
     ["Review history", "/employee/review-history"],
   );
   return (

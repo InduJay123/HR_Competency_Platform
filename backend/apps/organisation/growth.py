@@ -93,8 +93,16 @@ class GrowthViewSet(viewsets.ModelViewSet):
             | Q(owner=member)
             | Q(shared=True, subject__reporting__manager__membership=member)
         )
+        team = self.request.query_params.get("scope") == "team"
+        if team:
+            # Team reads must never fall back to personal records or author access.
+            qs = qs.filter(
+                shared=True,
+                subject__reporting__company=member.company,
+                subject__reporting__manager__membership=member,
+            )
         if self.action == "list":
-            subject = self.request.query_params.get("subject", str(member.profile.id))
+            subject = self.request.query_params.get("subject", "" if team else str(member.profile.id))
             try:
                 subject = serializers.UUIDField().run_validation(subject)
             except serializers.ValidationError:

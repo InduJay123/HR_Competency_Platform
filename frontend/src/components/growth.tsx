@@ -55,7 +55,91 @@ const specs = {
     categories: ["People", "Knowledge", "Systems", "Culture"],
   },
 };
-export function GrowthHub() {
+export function TeamGrowth({
+  initialSubject = "",
+}: {
+  initialSubject?: string;
+}) {
+  const session = useSession();
+  const [people, setPeople] = useState<Employee[] | null>(null);
+  const [subject, setSubject] = useState(initialSubject);
+  const [kind, setKind] = useState<Kind | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let alive = true;
+    Promise.all([
+      api<Employee>("auth/profile/"),
+      allPages<Employee>("employees/"),
+    ])
+      .then(([me, employees]) => {
+        if (alive) setPeople(employees.filter((p) => p.manager_id === me.id));
+      })
+      .catch((e) => {
+        if (alive) setError(e.message);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [session.company_id]);
+  const employee = people?.find((p) => p.id === subject);
+  return (
+    <>
+      <Link className="growth-back" href="/manager/team">
+        ← My team
+      </Link>
+      <Feedback error={error} />
+      {!people ? (
+        error ? null : (
+          <Loading />
+        )
+      ) : (
+        <>
+          <label className="filter-label">
+            Employee
+            <select
+              value={employee ? subject : ""}
+              onChange={(e) => {
+                setSubject(e.target.value);
+                setKind(null);
+              }}
+            >
+              <option value="">Select an employee</option>
+              {people.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.first_name} {p.last_name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {employee ? (
+            kind ? (
+              <GrowthPage
+                key={`${subject}:${kind}`}
+                kind={kind}
+                teamSubject={subject}
+                onBack={() => setKind(null)}
+              />
+            ) : (
+              <GrowthHub onSelect={setKind} />
+            )
+          ) : (
+            <Card title="Growth tools">
+              <p>
+                {people.length
+                  ? "Select an employee to view their shared Growth Tools."
+                  : "No employees currently report to you."}
+              </p>
+            </Card>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+export function GrowthHub({
+  onSelect,
+}: { onSelect?: (kind: Kind) => void } = {}) {
   return (
     <>
       <div className="page-heading">
@@ -71,37 +155,55 @@ export function GrowthHub() {
         {(Object.keys(specs) as Kind[]).map((k, i) => (
           <Card key={k} title={specs[k].title}>
             <p>{specs[k].copy}</p>
-            <Link
-              className="button neutral"
-              href={
-                [
-                  "/employee/contributions",
-                  "/employee/capability",
-                  "/employee/legacy",
-                ][i]
-              }
-            >
-              Open {specs[k].title}
-            </Link>
+            {onSelect ? (
+              <Button variant="neutral" onClick={() => onSelect(k)}>
+                Open {specs[k].title}
+              </Button>
+            ) : (
+              <Link
+                className="button neutral"
+                href={
+                  [
+                    "/employee/contributions",
+                    "/employee/capability",
+                    "/employee/legacy",
+                  ][i]
+                }
+              >
+                Open {specs[k].title}
+              </Link>
+            )}
           </Card>
         ))}
       </div>
-      <div className="review-banner">
-        <strong>Bring your examples into the review conversation</strong>
-        <p>
-          These are living records. Use relevant examples in your formal
-          reflection; Head of HR validates evidence before AI analysis.
-        </p>
-        <Link href="/employee/reviews">Open My Review →</Link>
-      </div>
-      <Link href="/employee/review-history">
-        Review History and Mid-Year / Year-End comparison →
-      </Link>
+      {!onSelect && (
+        <>
+          <div className="review-banner">
+            <strong>Bring your examples into the review conversation</strong>
+            <p>
+              These are living records. Use relevant examples in your formal
+              reflection; Head of HR validates evidence before AI analysis.
+            </p>
+            <Link href="/employee/reviews">Open My Review →</Link>
+          </div>
+          <Link href="/employee/review-history">
+            Review History and Mid-Year / Year-End comparison →
+          </Link>
+        </>
+      )}
     </>
   );
 }
 
-export function GrowthPage({ kind }: { kind: Kind }) {
+export function GrowthPage({
+  kind,
+  teamSubject,
+  onBack,
+}: {
+  kind: Kind;
+  teamSubject?: string;
+  onBack?: () => void;
+}) {
   const session = useSession(),
     spec = specs[kind];
   const [data, setData] = useState<Page<Entry> | null>(null),
@@ -114,11 +216,12 @@ export function GrowthPage({ kind }: { kind: Kind }) {
     [page, setPage] = useState(1),
     [archived, setArchived] = useState(false),
     [people, setPeople] = useState<Employee[]>([]),
-    [subject, setSubject] = useState(""),
+    [subject, setSubject] = useState(teamSubject || ""),
     [self, setSelf] = useState(""),
     [revision, setRevision] = useState(0);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
+    if (teamSubject) return;
     api<Employee>("auth/profile/")
       .then(async (me) => {
         const all = await allPages<Employee>("employees/");
@@ -127,12 +230,12 @@ export function GrowthPage({ kind }: { kind: Kind }) {
         setSelf(me.id);
       })
       .catch((e) => setError(e.message));
-  }, [session.company_id]);
+  }, [session.company_id, teamSubject]);
   useEffect(() => {
     if (!subject) return;
     let alive = true;
     api<Page<Entry>>(
-      `growth/?kind=${kind}&subject=${subject}&page=${page}&archived=${archived}&category=${encodeURIComponent(category)}&perspective=${kind === "CAPABILITY" ? perspective : ""}`,
+      `growth/?kind=${kind}&subject=${subject}&page=${page}&archived=${archived}&category=${encodeURIComponent(category)}&perspective=${kind === "CAPABILITY" ? perspective : ""}${teamSubject ? "&scope=team" : ""}`,
     )
       .then((x) => {
         if (alive) setData(x);
@@ -141,7 +244,16 @@ export function GrowthPage({ kind }: { kind: Kind }) {
     return () => {
       alive = false;
     };
-  }, [kind, subject, page, archived, revision, category, perspective]);
+  }, [
+    kind,
+    subject,
+    page,
+    archived,
+    revision,
+    category,
+    perspective,
+    teamSubject,
+  ]);
   useEffect(() => {
     if (editing !== undefined) dialog.current?.showModal();
     else dialog.current?.close();
@@ -200,6 +312,7 @@ export function GrowthPage({ kind }: { kind: Kind }) {
       (!category || x.category === category) &&
       (kind !== "CAPABILITY" || x.perspective === perspective),
   );
+  const canAdd = !teamSubject || kind === "CAPABILITY";
   function item(x: Entry) {
     return (
       <article key={x.id} className="growth-entry">
@@ -262,23 +375,31 @@ export function GrowthPage({ kind }: { kind: Kind }) {
   }
   return (
     <>
-      <Link className="growth-back" href="/employee/growth">
-        ← Growth tools
-      </Link>
+      {onBack ? (
+        <Button variant="neutral" onClick={onBack}>
+          ← Growth tools
+        </Button>
+      ) : (
+        <Link className="growth-back" href="/employee/growth">
+          ← Growth tools
+        </Link>
+      )}
       <div className="page-heading">
         <div>
           <h1>{spec.title}</h1>
           <p className="subtitle">{spec.copy}</p>
         </div>
-        <Button
-          disabled={!subject}
-          onClick={() => {
-            setError("");
-            setEditing(null);
-          }}
-        >
-          {spec.action}
-        </Button>
+        {canAdd && (
+          <Button
+            disabled={!subject}
+            onClick={() => {
+              setError("");
+              setEditing(null);
+            }}
+          >
+            {spec.action}
+          </Button>
+        )}
       </div>
       {kind === "CAPABILITY" && people.length > 1 && (
         <label className="filter-label">
@@ -379,15 +500,25 @@ export function GrowthPage({ kind }: { kind: Kind }) {
           {entries.map(item)}
         </div>
       ) : (
-        <Card title="Your next contribution starts here">
+        <Card
+          title={
+            teamSubject
+              ? "Shared Growth Tools"
+              : "Your next contribution starts here"
+          }
+        >
           <p>
-            {data.count
-              ? "No records match this view."
-              : "There are no saved records yet. Capture an example, the difference it made and any support needed."}
+            {teamSubject
+              ? "No Growth Tools records have been shared with you yet."
+              : data.count
+                ? "No records match this view."
+                : "There are no saved records yet. Capture an example, the difference it made and any support needed."}
           </p>
-          <Button variant="neutral" onClick={() => setEditing(null)}>
-            {spec.action}
-          </Button>
+          {canAdd && (
+            <Button variant="neutral" onClick={() => setEditing(null)}>
+              {spec.action}
+            </Button>
+          )}
         </Card>
       )}
       {!!data && (data.previous || data.next) && (

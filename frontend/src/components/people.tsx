@@ -172,6 +172,11 @@ export function People({ manage = false }: { manage?: boolean }) {
                           </strong>
                           <small>{p.email}</small>
                           <small>{p.stewardship_code}</small>
+                          {!manage && (
+                            <Link href={`/manager/growth?subject=${p.id}`}>
+                              Growth tools
+                            </Link>
+                          )}
                           {manage && (
                             <Link href={`/hr/employees/${p.id}`}>
                               Profile and invitation →
