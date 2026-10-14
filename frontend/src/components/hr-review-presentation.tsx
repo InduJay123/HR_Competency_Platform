@@ -26,7 +26,7 @@ export function HrDisclosure({ enabled, label, children }: {
 export function HrWorkflow({ review, coaching }: { review: Review; coaching?: CoachingSummary }) {
   const rows = [
     ["Employee reflection", (review.workflow?.employee_submitted ?? review.forms?.some((f) => f.kind === "EMPLOYEE" && f.submitted_at)) ? "Complete" : "Pending"],
-    ["Manager appraisal", (review.workflow?.manager_submitted ?? review.forms?.some((f) => f.kind === "MANAGER" && f.submitted_at)) ? "Complete" : "Pending"],
+    [review.cycle_detail?.workflow_version === 2 ? "Head of HR appraisal" : "Manager appraisal", (review.workflow?.manager_submitted ?? review.forms?.some((f) => f.kind === "MANAGER" && f.submitted_at)) ? "Complete" : "Pending"],
     ["AI coaching", (review.workflow?.ai_coaching || coaching?.status) === "Complete" ? "Complete" : "Pending"],
     ["Commitments", review.workflow?.commitments_complete ? "Complete" : "Pending"],
     ["Acknowledgement", `Employee: ${review.employee_ack ? "acknowledged" : "pending"} · Manager: ${review.manager_ack ? "acknowledged" : "pending"}`],

@@ -1,0 +1,133 @@
+Growth Tools removed from formal review linkage
+
+Frontend files changed
+  frontend/src/components/growth.tsx
+  frontend/src/components/pillar-targets.tsx
+  frontend/src/components/pillar-review.tsx
+  frontend/src/components/pillar-review.test.tsx
+  frontend/src/components/review-form.tsx
+  frontend/src/components/review-detail.tsx
+  frontend/src/components/review-list.tsx
+  frontend/src/lib/reviews.ts
+Pillar review and reflection now show only targets, success measures, notes,
+reflections and appraisals/outcomes/judgements. Removed evidence sections,
+validation controls, linking selectors and evidence types. Own targets now live
+on My evaluation, not inside Growth Tools.
+
+Backend files changed
+  backend/apps/organisation/models.py
+  backend/apps/organisation/growth.py
+  backend/apps/organisation/migrations/0007_remove_growthentry_pillar_target.py
+  backend/apps/reviews/targets.py
+  backend/apps/reviews/services.py
+  backend/apps/reviews/views.py
+  backend/apps/reviews/workflow.py
+  backend/apps/reviews/migrations/0007_archive_growth_evidence.py
+  backend/apps/ai_coach/schema.py
+  backend/apps/ai_coach/services.py
+  backend/apps/ai_coach/views.py
+  backend/tests/test_pillar_cycles.py
+  backend/tests/test_reporting_migrations.py
+Documentation: growth-unlink-audit.txt, this report, review-workflow.md, and the
+superseded-implementation notice in pillar-workflow-report.txt.
+
+Schema and history
+  Tables removed: NONE.
+  Column removed: organisation_growthentry.pillar_target_id, including its FK
+  and Django-managed index through RemoveField. All other Growth fields/rows remain.
+  Keep reviews_pillartarget: canonical Head of HR target setup.
+  Keep reviews_review.pillar_context: required original targets/success measures/
+  notes. New captures contain no Growth evidence. The data migration archives
+  existing evidence-bearing context from unfinished reviews into immutable
+  ReviewEvent history, removes only the evidence keys, and advances the version
+  to invalidate stale clients. Invalid context shape aborts migration atomically.
+  Finalised Review rows, FinalSnapshot hashes/content and old AI/audit histories
+  are untouched. Old AI source labels remain display-only historical compatibility.
+  Separate task EvidenceItem validation/submission associations remain: they are
+  unrelated to Growth Tools linkage and were not removed.
+  Migrations: reviews.0007_archive_growth_evidence, then
+  organisation.0007_remove_growthentry_pillar_target.
+  Data archival is deliberately irreversible through migrate; restore a verified
+  backup if a rollback is required. Do not reverse old migrations or --fake them.
+
+APIs and workflow
+  Removed POST reviews/{id}/pillar-evidence/ (404).
+  Growth POST/PATCH/list no longer expose/store pillar_target or lock cycles.
+  Review opening captures targets only. Pending Growth validation no longer gates
+  AI or finalisation. AI prompt v4/input uses targets, measures, notes and both
+  pillar submissions/outcomes/judgements; no new Growth source is sent.
+  Existing historical AI outputs remain archival records and are not rewritten.
+  Commitments, acknowledgements and finalisation are unchanged.
+  Contributions & Evidence, Capability Map, Legacy Tracker, author editing,
+  private/shared visibility and tenant isolation remain intact.
+
+Pre-migration read-only production audit
+  Seven Growth rows; zero non-null target links. Review state counts: one FINAL,
+  two OPEN, one SUBMITTED. One open review has evidence metadata to archive/clean.
+  No live schema changes, review edits or deployments were performed.
+
+Verification
+  28 focused backend tests passed, including real PostgreSQL migration tests
+  preserving Growth rows, targets, final context and snapshot content/hash.
+  21 focused frontend tests passed. TypeScript and production build passed.
+  Full backend: 160 tests, same 3 pre-existing trainer assertion failures.
+  Full frontend: 78 tests, 72 passed / same 6 existing failures (HR detail,
+  purpose journey and settings logo). No new failures.
+  Django system check, migration drift, changed-backend Ruff and diff checks pass.
+  Runtime removed-field references: none. Remaining names occur in historical
+  migrations, migration fixtures, negative regression assertions, and display-only
+  historical AI citation labels. No active Growth linking action remains.
+  Logs: tmp/unlink-{backend,frontend,full-backend,full-frontend,types,build}.log.
+
+Local commands (PowerShell, repository root)
+  & backend/.venv/Scripts/python.exe backend/manage.py check --settings=config.settings.test
+  & backend/.venv/Scripts/python.exe backend/manage.py makemigrations --check --dry-run --settings=config.settings.test
+  & 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D 'C:/Users/Induni/Desktop/BTFL Final/tmp/reporting-postgres' -l 'C:/Users/Induni/Desktop/BTFL Final/tmp/reporting-postgres.log' -o '-h 127.0.0.1 -p 55439' -w start
+  & backend/.venv/Scripts/python.exe backend/manage.py test tests.test_pillar_cycles tests.test_reporting_migrations tests.test_participant_workflow --settings=config.settings.test_postgres --noinput
+  Push-Location backend
+  & .venv/Scripts/python.exe manage.py test tests --settings=config.settings.test_postgres --noinput
+  Pop-Location
+  & 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D 'C:/Users/Induni/Desktop/BTFL Final/tmp/reporting-postgres' -m fast -w stop
+  Push-Location frontend
+  npm.cmd test
+  npm.cmd run typecheck
+  npm.cmd run build
+  Pop-Location
+  # After backup and stopping application writers; defaults use the configured DB:
+  & backend/.venv/Scripts/python.exe backend/manage.py migrate --plan
+  & backend/.venv/Scripts/python.exe backend/manage.py migrate --noinput
+
+Git commands (not executed)
+The earlier pillar feature is also uncommitted in this workspace. Preserve and
+commit its required 0006 migrations along with these 0007 migrations; do not
+delete or rewrite migration history already applied in the configured DB.
+  $btflGit = 'C:/Users/Induni/AppData/Local/GitHubDesktop/app-3.6.7/resources/app/git/cmd/git.exe'
+  & $btflGit status --short
+  & $btflGit diff --check
+  & $btflGit add -- backend/apps/reviews backend/apps/organisation/growth.py backend/apps/organisation/models.py backend/apps/organisation/migrations/0006_growthentry_pillar_target.py backend/apps/organisation/migrations/0007_remove_growthentry_pillar_target.py backend/apps/ai_coach/schema.py backend/apps/ai_coach/services.py backend/apps/ai_coach/views.py backend/config/urls.py backend/tests/test_pillar_cycles.py backend/tests/test_reporting_migrations.py backend/tests/test_reviews.py backend/tests/test_extended_workflow.py backend/tests/test_review_reporting.py backend/tests/test_evidence.py backend/tests/test_platform_access.py frontend/src/lib/reviews.ts frontend/src/components/cycles.tsx frontend/src/components/growth.tsx frontend/src/components/pillar-targets.tsx frontend/src/components/pillar-review.tsx frontend/src/components/pillar-review.test.tsx frontend/src/components/review-form.tsx frontend/src/components/review-detail.tsx frontend/src/components/review-list.tsx frontend/src/components/hr-review-presentation.tsx docs/review-workflow.md docs/pillar-workflow-audit.txt docs/pillar-workflow-report.txt docs/growth-unlink-audit.txt docs/growth-unlink-report.txt
+  & $btflGit diff --cached --stat
+  & $btflGit commit -m 'Keep pillar reviews independent of Growth Tools'
+  & $btflGit push origin main
+
+VPS commands (Bash from existing checkout; not executed)
+Resolve known failing release checks before rollout. Use the existing SSH path,
+reverse proxy and tested backup process. Stop all old application writers before
+the column removal; deploy frontend/backend together.
+  set -euo pipefail
+  git pull --ff-only origin main
+  docker compose -f docker-compose.prodtest.yml build backend worker beat frontend
+  docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py audit_pillar_cycles
+  docker compose -f docker-compose.prodtest.yml stop frontend backend worker beat
+  mkdir -p backups
+  backup="backups/before-growth-unlink-$(date -u +%Y%m%dT%H%M%SZ).dump"
+  docker run --rm --env-file .env postgres:18 sh -c 'exec pg_dump --dbname="$DATABASE_URL" --format=custom' > "$backup"
+  test -s "$backup"
+  docker run --rm -i postgres:18 pg_restore --list < "$backup" > "$backup.contents.txt"
+  docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py migrate --plan
+  docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py migrate --noinput
+  docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py check
+  docker compose -f docker-compose.prodtest.yml up -d --force-recreate backend worker beat frontend
+  docker compose -f docker-compose.prodtest.yml logs --tail=100 backend worker beat frontend
+Smoke-test target setup, reflection/appraisal/AI without Growth data, finalisation,
+historical final records and independent private/shared Growth editing. Listing
+the backup verifies its archive structure, not a complete restore drill.

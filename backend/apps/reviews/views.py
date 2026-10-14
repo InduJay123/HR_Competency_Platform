@@ -24,6 +24,7 @@ from .serializers import (
     SaveFormSerializer,
     VersionSerializer,
 )
+from .targets import TargetActions, require_head
 
 
 def validated(cls, request):
@@ -32,7 +33,7 @@ def validated(cls, request):
     return data.validated_data
 
 
-class CycleViewSet(viewsets.ReadOnlyModelViewSet):
+class CycleViewSet(TargetActions, viewsets.ReadOnlyModelViewSet):
     serializer_class = CycleSerializer
 
     def get_queryset(self):
@@ -42,7 +43,7 @@ class CycleViewSet(viewsets.ReadOnlyModelViewSet):
 
     def create(self, request):
         member = membership(request)
-        require_hr(member)
+        require_head(member)
         data = CycleSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         obj = data.save(company=member.company)
@@ -145,6 +146,7 @@ class ReviewViewSet(CoachingActions, ComparisonActions, viewsets.ReadOnlyModelVi
         ids = forms.filter(submitted_at__isnull=False).values_list("evidence__id", flat=True)
         data["evidence"] = EvidenceSerializer(EvidenceItem.objects.filter(id__in=ids), many=True).data
         if participant:
+            data["pillar_context"] = obj.pillar_context
             data["conversation"] = obj.conversation
             data["hr_assessment"] = obj.hr_assessment
             data["commitments"] = list(

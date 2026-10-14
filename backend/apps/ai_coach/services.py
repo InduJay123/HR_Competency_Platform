@@ -32,6 +32,9 @@ def make_input(review):
         {"id": str(e.id), "type": "VALIDATED_EVIDENCE", "content": e.authorised_excerpt}
         for e in evidence.order_by("id")
     ]
+    for pillar in review.pillar_context:
+        sources.append({"id": pillar["id"], "type": "PILLAR_TARGET", "content": {
+            key: pillar[key] for key in ("pillar", "target", "success_measure", "notes")}})
     # No names, contact details, file URLs, private workbook or raw file contents.
     return {
         "period": {"year": review.cycle.year, "kind": review.cycle.kind,

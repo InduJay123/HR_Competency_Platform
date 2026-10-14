@@ -13,6 +13,7 @@ import { Button, Card, Feedback, Loading, Badge } from "./ui";
 import { useSession } from "./shell";
 import { ReviewForm } from "./review-form";
 import { ReviewWorkflow } from "./review-workflow";
+import { PillarReview } from "./pillar-review";
 import { Coach } from "./review-coach";
 import { HrDisclosure, HrReviewFrame, HrWorkflow, hrReviewStyles, type CoachingSummary } from "./hr-review-presentation";
 
@@ -306,6 +307,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
       </div>
       <Feedback error={error} success={success} />
       <HrWorkflow review={review} coaching={currentCoaching} />
+      <PillarReview review={review} />
       {own && review.state !== "FINALISED" && (
         <ReviewForm
           key={`${review.id}-${review.round}`}

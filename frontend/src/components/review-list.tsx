@@ -6,6 +6,7 @@ import type { Page, Employee } from "@/lib/types";
 import { human, type Review } from "@/lib/reviews";
 import { useSession } from "./shell";
 import { Badge, Button, Card, Feedback, Loading } from "./ui";
+import { OwnTargets } from "./pillar-targets";
 
 export function ReviewList({
   scope = "employee",
@@ -37,6 +38,7 @@ export function ReviewList({
   }, [page, state, scope, session.company_id]);
   return (
     <>
+      {scope === "employee" && !history && <OwnTargets />}
       <p className="eyebrow">STEWARDSHIP EVALUATION</p>
       <div className="page-heading">
         <div>

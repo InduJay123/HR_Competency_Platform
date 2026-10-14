@@ -1,6 +1,8 @@
 export type Json =
   string | number | boolean | null | Json[] | { [key: string]: Json };
 export type Cycle = {
+  workflow_version?: number;
+  started_at?: string | null;
   id: string;
   year: number;
   kind: "MID_YEAR" | "YEAR_END";
@@ -43,6 +45,7 @@ export type Form = {
   submitted_at: string | null;
 };
 export type Review = {
+  pillar_context?: PillarContext[];
   can_view_coaching?: boolean;
   workflow?: {
     employee_submitted: boolean;
@@ -94,12 +97,22 @@ export type Review = {
   midyear_baseline?: Json;
 };
 export const PILLARS = [
-  "character",
-  "contribution",
-  "capability",
   "context",
+  "character",
+  "capability",
   "continuity",
+  "contribution",
 ];
+export const TARGET_OUTCOMES = ["Not achieved", "Partially achieved", "Achieved", "Exceeded"];
+export type PillarTarget = {
+  id: string; cycle: string; cycle_name: string; employee: string; employee_name: string;
+  pillar: string; target: string; success_measure: string; notes: string;
+  version: number; completed_at: string | null;
+};
+export type PillarContext = {
+  id: string; pillar: string; target: string; success_measure: string; notes: string;
+
+};
 export const DESCRIPTORS = [
   "Exceptional",
   "Strong",

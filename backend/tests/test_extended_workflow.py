@@ -31,6 +31,7 @@ class ExtendedWorkflowTests(TestCase):
 
     def year_end(self, prior):
         cycle = ReviewCycle.objects.create(
+            workflow_version=1,
             company=self.company,
             year=2026,
             kind="YEAR_END",

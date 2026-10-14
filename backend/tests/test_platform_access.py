@@ -246,6 +246,7 @@ class PlatformAccessTests(TestCase):
         from apps.reviews.models import FinalSnapshot, Review, ReviewCycle
 
         cycle = ReviewCycle.objects.create(
+            workflow_version=1,
             company=self.company,
             year=2026,
             kind="MID_YEAR",

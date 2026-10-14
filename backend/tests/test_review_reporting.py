@@ -17,7 +17,7 @@ class ReviewReportingTests(TestCase):
 
     def setUp(self):
         FoundationTests.setUp(self)
-        self.cycle = ReviewCycle.objects.create(company=self.company, year=2026, kind='MID_YEAR',
+        self.cycle = ReviewCycle.objects.create(workflow_version=1, company=self.company, year=2026, kind='MID_YEAR',
             starts_on=date(2026, 1, 1), ends_on=date(2026, 6, 30), due_on=date(2026, 7, 15))
 
     def test_preview_and_launch_resolve_head_hr(self):

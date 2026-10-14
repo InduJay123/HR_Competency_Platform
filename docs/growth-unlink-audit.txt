@@ -1,0 +1,17 @@
+Dependency audit before removing Growth linkage
+
+organisation_growthentry.pillar_target_id is used only by GrowthSerializer,
+GrowthViewSet link validation/locking, capture_pillars and GrowthTargetLink UI.
+No independent Growth feature requires it. Remove this nullable FK and its index
+with a new migration; preserve every Growth row and all its other fields.
+
+Review.pillar_context is NOT redundant: preserves original targets, success
+measures and notes. Keep the column, stop capturing Growth evidence, and remove
+evidence keys from unfinished reviews after archiving that metadata in the
+existing immutable ReviewEvent history. Do not rewrite finalised review rows,
+FinalSnapshot content/hashes, old AI input/output or historical audit events.
+
+Remove pillar-evidence action, Growth evidence AI source generation/prompt,
+pending-source gates, frontend selectors and evidence sections/types. Keep
+PillarTarget and cycle setup. Keep task EvidenceItem and its existing validation
+and submission links: separate work/evidence feature, not Growth linkage.

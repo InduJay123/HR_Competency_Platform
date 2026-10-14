@@ -1,9 +1,31 @@
 from rest_framework.exceptions import ValidationError
 
-PILLARS = ["character", "contribution", "capability", "context", "continuity"]
+PILLARS = ["context", "character", "capability", "continuity", "contribution"]
+TARGET_OUTCOMES = ["Not achieved", "Partially achieved", "Achieved", "Exceeded"]
 DESCRIPTORS = ["Exceptional", "Strong", "Developing", "Needs Attention"]
 ECP = ["Stars", "Growers", "Workhorses", "Under-Supported"]
 OVERALL = ["Exceptional Steward", "Strong Steward", "Developing Steward", "Stewardship at Risk"]
+
+
+def validate_pillar_form(kind, content):
+    pillars = content.get("pillars", {})
+    if not isinstance(pillars, dict) or set(pillars) != set(PILLARS):
+        raise ValidationError("Provide all five Stewardship pillars exactly once.")
+    for pillar in PILLARS:
+        if kind == "EMPLOYEE":
+            text(pillars, pillar)
+        else:
+            row = pillars[pillar]
+            text(row, "narrative")
+            if row.get("outcome") not in TARGET_OUTCOMES or row.get("descriptor") not in DESCRIPTORS:
+                raise ValidationError({pillar: "Choose a target outcome and Steward pillar judgement."})
+            refs = row.get("evidence_ids", [])
+            if not isinstance(refs, list) or any(not isinstance(v, str) for v in refs):
+                raise ValidationError("Evidence references must be selected source IDs.")
+    if kind == "MANAGER":
+        if content.get("overall") not in OVERALL:
+            raise ValidationError("Choose the overall human Steward assessment.")
+        text(content, "summary")
 
 
 def text(data, key):

@@ -1,8 +1,9 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
-import { api, post } from "@/lib/api";
+import { api, allPages, post } from "@/lib/api";
 import type { Page } from "@/lib/types";
-import { human, type Cycle } from "@/lib/reviews";
+import { human, type Cycle, type PillarTarget } from "@/lib/reviews";
+import { TargetSetup } from "./pillar-targets";
 import { Button, Card, Feedback, Loading } from "./ui";
 type Preview = {
   people: { id: string; name: string; has_manager: boolean }[];
@@ -48,7 +49,8 @@ export function Cycles() {
       const result = await api<Preview>(`review-cycles/${c.id}/preview/`);
       setPreview(result);
       setSelected(c);
-      setIds([]);
+      const targets = c.workflow_version === 2 ? await allPages<PillarTarget>(`pillar-targets/?cycle=${c.id}`) : [];
+      setIds([...new Set(targets.map(t => t.employee))]);
       setReviewer(result.reviewers.length === 1 ? result.reviewers[0].id : "");
     } catch (e) {
       setError((e as Error).message);
@@ -72,6 +74,15 @@ export function Cycles() {
     } finally {
       setBusy(false);
     }
+  }
+  async function start() {
+    if (!selected) return;
+    setBusy(true); setError("");
+    try {
+      const cycle = await post<Cycle>(`review-cycles/${selected.id}/start/`, {});
+      await inspect(cycle); await reload(); setSuccess("Cycle started. Employees can link Growth Tools evidence to their targets.");
+    } catch (e) { setError((e as Error).message); }
+    finally { setBusy(false); }
   }
   return (
     <>
@@ -119,13 +130,15 @@ export function Cycles() {
         </form>
       </Card>
       {preview && selected && (
-        <Card title={`Launch ${human(selected.kind)} ${selected.year}`}>
+        <Card title={`${human(selected.kind)} ${selected.year} — target setup and review opening`}>
+          {selected.workflow_version === 2 && <TargetSetup cycle={selected} people={preview.people} onSaved={() => inspect(selected)} />}
+          {selected.workflow_version !== 2 && <p>This existing cycle keeps its original review forms. New cycles use individual pillar targets.</p>}
           <p>
             Head of HR appraises every participant. Year-End also requires
             their final Mid-Year record. Head of HR cannot appraise themselves.
           </p>
           <p>Appointed Head of HR: {preview.reviewers.find((r) => r.id === reviewer)?.name || "Unavailable"}</p>
-          <fieldset>
+          {selected.workflow_version !== 2 && <fieldset>
             <legend>Choose participants</legend>
             {preview.people.map((p) => (
               <label className="check-label" key={p.id}>
@@ -145,14 +158,15 @@ export function Cycles() {
                 {!p.has_manager ? " · Reporting manager required" : ""}
               </label>
             ))}
-          </fieldset>
+          </fieldset>}
           <div className="actions">
-            <Button
+            {selected.workflow_version === 2 && !selected.started_at && <Button disabled={busy || !ids.length} onClick={start}>Start cycle</Button>}
+            {!selected.launched_at && (selected.workflow_version !== 2 || selected.started_at) && <Button
               disabled={busy || !ids.length || !reviewer}
               onClick={launch}
             >
-              Launch for {ids.length} employees
-            </Button>
+              Open formal reviews for {ids.length} employees
+            </Button>}
             <Button variant="neutral" onClick={() => setPreview(null)}>
               Cancel
             </Button>
@@ -185,13 +199,9 @@ export function Cycles() {
                       </td>
                       <td>{c.due_on}</td>
                       <td>
-                        {c.launched_at ? (
-                          "Launched"
-                        ) : (
-                          <Button variant="neutral" onClick={() => inspect(c)}>
-                            Preview and launch
-                          </Button>
-                        )}
+                        <Button variant="neutral" onClick={() => inspect(c)}>
+                          {c.launched_at ? "Reviews open — view targets" : c.started_at ? "Cycle active — targets / open reviews" : "Set targets and start"}
+                        </Button>
                       </td>
                     </tr>
                   ))}

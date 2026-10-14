@@ -120,6 +120,7 @@ class GrowthViewSet(viewsets.ModelViewSet):
                 qs = qs.filter(kind=self.request.query_params["kind"])
         return qs.order_by("-updated_at", "id")
 
+    @transaction.atomic
     def perform_create(self, serializer):
         member = membership(self.request)
         obj = serializer.save(company=member.company, owner=member)

@@ -25,6 +25,7 @@ from apps.notifications.views import NotificationViewSet
 from apps.organisation.growth import GrowthViewSet
 from apps.organisation.views import DepartmentViewSet, EmployeeViewSet, JobRoleViewSet
 from apps.reports.views import OverviewView, ReviewExportView
+from apps.reviews.targets import TargetViewSet
 from apps.reviews.views import CycleViewSet, ReviewViewSet
 from apps.tasks.views import WorkViewSet
 
@@ -34,6 +35,7 @@ router.register("platform/companies", PlatformCompanyViewSet, basename="platform
 router.register("growth", GrowthViewSet, basename="growth")
 router.register("trainer/conversations", TrainerViewSet, basename="trainer-conversation")
 router.register("review-cycles", CycleViewSet, basename="review-cycle")
+router.register("pillar-targets", TargetViewSet, basename="pillar-target")
 router.register("reviews", ReviewViewSet, basename="review")
 router.register("development", CommitmentViewSet, basename="development")
 router.register("evidence", EvidenceViewSet, basename="evidence")

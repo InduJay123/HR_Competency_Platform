@@ -83,7 +83,12 @@ class ReportingMigrationTests(TestCase):
         before = {(app, model): list(self.rows(app, model).order_by('id').values()) for app, model in models}
         final = self.migrate()
         for app, model in models:
-            self.assertEqual(list(final.get_model(app, model).objects.using(self.alias).order_by('id').values()), before[(app, model)])
+            original_fields = list(before[(app, model)][0])
+            self.assertEqual(list(final.get_model(app, model).objects.using(self.alias).order_by('id').values(*original_fields)), before[(app, model)])
+        self.assertEqual(final.get_model('reviews', 'ReviewCycle').objects.using(self.alias).get(pk=cycle.pk).workflow_version, 1)
+        self.assertEqual(final.get_model('reviews', 'Review').objects.using(self.alias).get(pk=review.pk).pillar_context, [])
+        self.assertEqual(final.get_model('reviews', 'PillarTarget').objects.using(self.alias).count(), 0)
+        self.assertNotIn('pillar_target', [field.name for field in final.get_model('organisation', 'GrowthEntry')._meta.fields])
         self.assertNotIn('organisation_reportingrelationship', self.connection.introspection.table_names())
         with self.connection.cursor() as cursor:
             columns = self.connection.introspection.get_table_description(cursor, 'companies_membership')
@@ -111,6 +116,37 @@ class ReportingMigrationTests(TestCase):
     def test_empty_database_migrates(self):
         self.migrate()
         self.assertNotIn('organisation_reportingrelationship', self.connection.introspection.table_names())
+
+    def test_growth_unlink_preserves_records_and_sealed_history(self):
+        company = self.rows('companies', 'Company').create(name='Unlink', slug='unlink')
+        head = self.person(company, 'head', True)
+        employee = self.person(company, 'employee')
+        second = self.person(company, 'second')
+        targets = [('organisation', '0006_growthentry_pillar_target'), ('reviews', '0006_review_pillar_context_reviewcycle_started_at_and_more')]
+        executor = MigrationExecutor(self.connection)
+        executor.migrate(targets)
+        apps = executor.loader.project_state(targets).apps
+        def rows(app, model):
+            return apps.get_model(app, model).objects.using(self.alias)
+        cycle = rows('reviews', 'ReviewCycle').create(company_id=company.id, year=2027, kind='MID_YEAR', starts_on=date(2027,1,1), ends_on=date(2027,6,30), due_on=date(2027,7,1))
+        target = rows('reviews', 'PillarTarget').create(company_id=company.id, cycle=cycle, employee_id=employee.id, created_by_id=head.membership_id, pillar='CONTEXT', target='Original target', success_measure='Success')
+        growth = rows('organisation', 'GrowthEntry').create(company_id=company.id, owner_id=employee.membership_id, subject_id=employee.id, pillar_target=target, kind='CONTRIBUTION', category='Other contribution', title='Preserved', details='Original Growth content', shared=True)
+        context = [{'id': str(target.id), 'pillar': 'CONTEXT', 'target': 'Original target', 'success_measure': 'Success', 'notes': '', 'evidence': [{'id': str(growth.id), 'details': 'Historical source', 'validation': 'PENDING'}]}]
+        active = rows('reviews', 'Review').create(company_id=company.id, cycle=cycle, employee_id=employee.id, manager_id=head.id, reviewer_id=head.membership_id, pillar_context=context)
+        final = rows('reviews', 'Review').create(company_id=company.id, cycle=cycle, employee_id=second.id, manager_id=head.id, reviewer_id=head.membership_id, state='FINALISED', pillar_context=context)
+        snapshot = rows('reviews', 'FinalSnapshot').create(company_id=company.id, review=final, content={'pillar_context': context}, sha256='b'*64)
+        before = rows('organisation', 'GrowthEntry').values().get(pk=growth.id)
+        before.pop('pillar_target_id')
+        latest = self.migrate()
+        def migrated(app, model):
+            return latest.get_model(app, model).objects.using(self.alias)
+        self.assertEqual(migrated('organisation', 'GrowthEntry').values().get(pk=growth.id), before)
+        self.assertNotIn('evidence', migrated('reviews', 'Review').get(pk=active.id).pillar_context[0])
+        self.assertEqual(migrated('reviews', 'Review').get(pk=final.id).pillar_context, context)
+        self.assertEqual(migrated('reviews', 'FinalSnapshot').get(pk=snapshot.id).content, {'pillar_context': context})
+        self.assertEqual(migrated('reviews', 'FinalSnapshot').get(pk=snapshot.id).sha256, 'b'*64)
+        self.assertTrue(migrated('reviews', 'ReviewEvent').filter(review_id=active.id, action='growth_evidence.archived').exists())
+        self.assertEqual(migrated('reviews', 'PillarTarget').get(pk=target.id).target, 'Original target')
 
     def test_external_view_dependency_blocks_postgres_drop(self):
         if self.connection.vendor != 'postgresql':

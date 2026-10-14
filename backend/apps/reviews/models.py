@@ -4,6 +4,8 @@ from common.models import TenantEntity
 
 
 class ReviewCycle(TenantEntity):
+    workflow_version = models.PositiveSmallIntegerField(default=2, editable=False)
+    started_at = models.DateTimeField(null=True, editable=False)
     year = models.PositiveIntegerField()
     kind = models.CharField(max_length=8, choices=[("MID_YEAR", "Mid-Year"), ("YEAR_END", "Year-End")])
     starts_on = models.DateField()
@@ -23,7 +25,33 @@ class ReviewCycle(TenantEntity):
         ]
 
 
+class PillarTarget(TenantEntity):
+    class Pillar(models.TextChoices):
+        CONTEXT = "CONTEXT", "Context"
+        CHARACTER = "CHARACTER", "Character"
+        CAPABILITY = "CAPABILITY", "Capability"
+        CONTINUITY = "CONTINUITY", "Continuity"
+        CONTRIBUTION = "CONTRIBUTION", "Contribution"
+
+    cycle = models.ForeignKey(ReviewCycle, on_delete=models.PROTECT, related_name="targets")
+    employee = models.ForeignKey("organisation.EmployeeProfile", on_delete=models.PROTECT)
+    pillar = models.CharField(max_length=12, choices=Pillar.choices)
+    target = models.TextField(max_length=6000, blank=True)
+    success_measure = models.TextField(max_length=6000, blank=True)
+    notes = models.TextField(max_length=6000, blank=True)
+    created_by = models.ForeignKey("companies.Membership", on_delete=models.PROTECT)
+    completed_at = models.DateTimeField(null=True)
+    version = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["cycle", "employee", "pillar"], name="one_target_per_cycle_employee_pillar"),
+            models.CheckConstraint(condition=models.Q(pillar__in=["CONTEXT", "CHARACTER", "CAPABILITY", "CONTINUITY", "CONTRIBUTION"]), name="five_stewardship_pillars"),
+        ]
+
+
 class Review(TenantEntity):
+    pillar_context = models.JSONField(default=list, editable=False)
     cycle = models.ForeignKey(ReviewCycle, on_delete=models.PROTECT)
     employee = models.ForeignKey(
         "organisation.EmployeeProfile", on_delete=models.PROTECT, related_name="employee_reviews"

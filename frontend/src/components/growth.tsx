@@ -179,10 +179,10 @@ export function GrowthHub({
       {!onSelect && (
         <>
           <div className="review-banner">
-            <strong>Bring your examples into the review conversation</strong>
+            <strong>Capture your growth and contribution</strong>
             <p>
-              These are living records. Use relevant examples in your formal
-              reflection; Head of HR validates evidence before AI analysis.
+              Use these independent tools to record your development. Private records
+              remain private unless you choose to share them.
             </p>
             <Link href="/employee/reviews">Open My Review →</Link>
           </div>

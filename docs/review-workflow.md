@@ -1,5 +1,37 @@
 # Review workflow and developer instructions
 
+## Canonical pillar cycles (workflow version 2)
+
+New cycles use individual Context, Character, Capability, Continuity and
+Contribution targets. Head of HR creates five target/success-measure pairs per
+employee in Review cycles, saves drafts, completes target setup and starts the
+cycle. Target edits retain before/after audit history and remain available until
+Head of HR opens formal reviews. Participants are fixed at cycle start.
+
+Employees read their active targets on My evaluation. Growth Tools remain an
+independent development feature with their existing private/shared behavior;
+they have no cycle, pillar or target linkage. At review opening, original targets,
+success measures and expected behaviour/notes are preserved for that review.
+
+Formal flow: Employee reflection -> Head of HR appraisal -> AI coaching ->
+Commitments -> Acknowledgements -> Final record. Each pillar shows its target,
+success measure, expected behaviour/notes, reflection, assessment notes, target outcome
+and existing qualitative Steward judgement. Appraisal submission waits for the
+employee reflection. Overall assessment is human judgement across all pillars,
+never a numeric average. AI receives targets, both forms and authorised evidence;
+it advises and cannot change human assessments. Growth records are not AI inputs
+or prerequisites for the review. Commitments unlock immediately
+after completed coaching. Existing shared-plan, acknowledgement and finalisation
+rules remain. Final snapshots contain pillar context as well as full history.
+
+See `pillar-workflow-report.txt` for schema, migration, preflight and deployment.
+
+## Existing cycles (workflow version 1, compatibility only)
+
+The migration marks existing cycles as version 1. Their existing submissions and
+final records remain valid; do not fabricate targets or retrofit sealed forms.
+The following form contract remains only for these existing cycles:
+
 1. HR sets company details, departments, job roles, people and acyclic reporting lines. Invitations activate individual accounts. The employee's `joined_on` is their joining date, not a company founding date.
 2. Managers assign direct-report work with expected outcome, priority and deadline. Employees record progress, blockers, next steps, results and evidence. Delegation creates a child task and preserves parent accountability.
 3. HR creates a Mid-Year (January–June) or Year-End (July–December) cycle, previews participants and appoints an independent Head of HR. Each participant must have an active reporting manager. Year-End additionally requires their final Mid-Year record.

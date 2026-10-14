@@ -1,0 +1,29 @@
+Dependency map before schema changes
+
+ReviewCycle -> launch_cycle -> Review -> Submission JSON -> AI make_input ->
+workflow_status -> commitments/acknowledgements -> immutable FinalSnapshot.
+GrowthEntry -> growth serializer/viewset -> private/shared Growth Tools UI;
+currently no cycle/target linkage. Task EvidenceItem has its own source validation,
+file security, work-item provenance and sealed submission links; keep it.
+
+Add normalized PillarTarget (cycle, employee, uppercase five-pillar enum, target,
+success measure, notes, creator, completion timestamp, version). GrowthEntry gets
+one nullable target FK; cycle/pillar are derived, never duplicated columns.
+ReviewCycle gets workflow_version and started_at, while launched_at continues to
+mean formal reviews opened. Review gets pillar_context, a frozen source snapshot
+at opening, with explicit Head validation before AI. FinalSnapshot includes it.
+
+Keep Submission.content: already canonical pillar reflection/assessment JSON and
+legacy fields needed for existing records. No numeric rating column exists.
+Keep Review.hr_assessment, acknowledgements, conversation JSON (current commitment
+agreement plus history), comparison, responsible-party FKs and all audit events.
+Keep development.Commitment: post-review action plan, not cycle targets.
+Keep GrowthEntry categories and all unlinked records; not duplicate pillar goals.
+Arbitrary reporting mapping was already removed by guarded earlier migrations.
+No dedicated obsolete stage schema or superseded target table exists to drop.
+
+Migration policy: existing cycles marked workflow_version=1 without fabricating
+targets. New cycles default to version 2. Existing reviews remain unchanged.
+Old active cycles finish under their original form contract. A new cycle uses
+the pillar workflow; no automatic conversion of submitted/sealed historical data.
+No destructive schema operation or production data mutation is planned.

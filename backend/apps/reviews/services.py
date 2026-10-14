@@ -18,6 +18,7 @@ from common.permissions import require_hr
 
 from .models import FinalSnapshot, Review, ReviewCycle, ReviewEvent, Submission
 from .schemas import OVERALL, validate_form
+from .targets import capture_pillars
 from .workflow import confirmations, require_participant, workflow_status
 
 
@@ -69,6 +70,13 @@ def launch_cycle(member, cycle, employee_ids, reviewer_id):
     cycle = ReviewCycle.objects.select_for_update().get(pk=cycle.pk, company=member.company)
     if cycle.launched_at:
         raise ValidationError("This cycle has already been launched.")
+    if cycle.workflow_version == 2:
+        from .targets import require_head, validate_setup
+        require_head(member)
+        if not cycle.started_at:
+            raise ValidationError("Complete target setup and start the cycle before opening formal reviews.")
+        if set(employee_ids) != validate_setup(cycle):
+            raise ValidationError("Open reviews for exactly the participants whose targets were set at cycle start.")
     reviewer = Membership.objects.filter(
         id=reviewer_id, company=member.company, is_head_hr=True, active=True
     ).first()
@@ -107,6 +115,7 @@ def launch_cycle(member, cycle, employee_ids, reviewer_id):
             manager=manager,
             reviewer=reviewer,
             prior_midyear=prior,
+            pillar_context=capture_pillars(cycle, employee) if cycle.workflow_version == 2 else [],
         )
         notify(
             member.company,
@@ -152,7 +161,13 @@ def save_form(member, review, kind, content, evidence_ids, submit, version):
     if evidence.count() != len(set(evidence_ids)):
         raise ValidationError("Some evidence is outside the employee, tenant or review period.")
     if submit:
-        validate_form(kind, content)
+        if review.cycle.workflow_version == 2:
+            from .schemas import validate_pillar_form
+            validate_pillar_form(kind, content)
+            if kind == "MANAGER" and not current_forms(review).filter(kind="EMPLOYEE", submitted_at__isnull=False).exists():
+                raise ValidationError("The employee must submit their reflection before Head of HR submits the appraisal.")
+        else:
+            validate_form(kind, content)
         if review.employee.senior_leader:
             from .schemas import text
 
@@ -176,6 +191,8 @@ def save_form(member, review, kind, content, evidence_ids, submit, version):
     if submit:
         form.submitted_at = timezone.now()
         form.save(update_fields=["submitted_at", "updated_at"])
+        if kind == "MANAGER" and review.cycle.workflow_version == 2:
+            review.hr_assessment = {"overall": content["overall"], "rationale": content["summary"]}
     review.state = (
         "SUBMITTED" if current_forms(review).filter(submitted_at__isnull=False).count() == 2 else "PREPARING"
     )
@@ -424,6 +441,7 @@ def finalise(member, review, version):
         ),
         "hr_assessment": review.hr_assessment,
         "conversation": review.conversation,
+        "pillar_context": review.pillar_context,
         "midyear_comparison": review.comparison,
         "commitments": commitments,
         "evidence": list(

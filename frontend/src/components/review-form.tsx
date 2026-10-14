@@ -7,6 +7,7 @@ import {
   ECP,
   OVERALL,
   PILLARS,
+  TARGET_OUTCOMES,
   human,
   type Evidence,
   type Json,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/reviews";
 import { Button, Card, Feedback } from "./ui";
 import { Help, pillarHelp } from "./help";
+import { PillarTargetDetails } from "./pillar-review";
 
 type Answers = Record<string, string>;
 const employeeFields = [
@@ -139,6 +141,7 @@ function flatten(content: Record<string, Json>): Answers {
       else if (v && typeof v === "object" && !Array.isArray(v)) {
         a[`pillar_${p}`] = String(v.narrative || "");
         a[`descriptor_${p}`] = String(v.descriptor || "");
+        a[`outcome_${p}`] = String(v.outcome || "");
         a[`sources_${p}`] = Array.isArray(v.evidence_ids)
           ? v.evidence_ids.join("|")
           : "";
@@ -154,6 +157,7 @@ function pack(a: Answers, manager: boolean): Record<string, Json> {
       !k.startsWith("pillar_") &&
       !k.startsWith("descriptor_") &&
       !k.startsWith("sources_") &&
+      !k.startsWith("outcome_") &&
       k !== "causes"
     )
       out[k] = v;
@@ -164,6 +168,7 @@ function pack(a: Answers, manager: boolean): Record<string, Json> {
         ? {
             narrative: a[`pillar_${p}`] || "",
             descriptor: a[`descriptor_${p}`] || "",
+            outcome: a[`outcome_${p}`] || "",
             evidence_ids: (a[`sources_${p}`] || "").split("|").filter(Boolean),
           }
         : a[`pillar_${p}`] || "",
@@ -184,6 +189,7 @@ export function ReviewForm({
 }) {
   const saved = review.forms?.find((f) => f.kind === kind),
     manager = kind === "MANAGER";
+  const pillarBased = review.cycle_detail.workflow_version === 2;
   const [answers, setAnswers] = useState<Answers>(() =>
       flatten(saved?.content || {}),
     ),
@@ -317,7 +323,7 @@ export function ReviewForm({
             {manager ? "E03 · MANAGER APPRAISAL" : "E02 · EMPLOYEE REFLECTION"}
           </p>
           <h2>
-            {manager ? "Manager appraisal" : "Your contribution, in your words"}
+            {manager ? (pillarBased ? "Head of HR appraisal" : "Manager appraisal") : "Your contribution, in your words"}
           </h2>
         </div>
         <span role="status">{locked ? "Read-only submission" : status}</span>
@@ -339,7 +345,7 @@ export function ReviewForm({
           </p>
         )}
       </Card>
-      {manager && (
+      {manager && !pillarBased && (
         <Card title="02 · ECP position">
           <label>
             Human ECP assessment
@@ -363,9 +369,17 @@ export function ReviewForm({
             <h3>
               {human(p)} <Help label={human(p)}>{pillarHelp[p]}</Help>
             </h3>
+            {review.pillar_context?.filter(t => t.pillar.toLowerCase() === p).map(t => <PillarTargetDetails key={t.id} pillar={t} />)}
+            {manager && pillarBased && <>
+              <h4>Employee reflection</h4>
+              <p>{String((review.forms?.find(f => f.kind === "EMPLOYEE")?.content.pillars as Record<string, Json> | undefined)?.[p] || "Awaiting employee submission")}</p>
+              <label>{human(p)} — Outcome against target<select disabled={locked || submitting} value={answers[`outcome_${p}`] || ""} onChange={e => update(`outcome_${p}`, e.target.value)}>
+                <option value="">Choose outcome</option>{TARGET_OUTCOMES.map(o => <option key={o}>{o}</option>)}
+              </select></label>
+            </>}
             {manager && (
               <label>
-                Qualitative descriptor
+                {pillarBased ? "Steward pillar judgement" : "Qualitative descriptor"}
                 <select
                   value={answers[`descriptor_${p}`] || ""}
                   disabled={locked || submitting}
@@ -386,7 +400,7 @@ export function ReviewForm({
           </div>
         ))}
       </Card>
-      <Card
+      {!pillarBased && <Card
         title={
           manager
             ? "04 · Stewardship tools and context"
@@ -432,7 +446,7 @@ export function ReviewForm({
             ))}
           </fieldset>
         )}
-      </Card>
+      </Card>}
       {review.senior_leader && (
         <Card title="Senior leadership perspective">
           {field(
@@ -489,6 +503,7 @@ export function ReviewForm({
       </Card>*/}
       {manager && (
         <Card title="Overall human assessment">
+          {pillarBased && field("summary", "Overall Steward assessment rationale", "Consider all five pillars. Use human judgement, not a numeric average.")}
           <label>
             Overall stewardship descriptor
             <select
@@ -510,6 +525,7 @@ export function ReviewForm({
       )}
       {!locked && (
         <Card title="Save and submit">
+          {pillarBased && manager && !review.forms?.some(f => f.kind === "EMPLOYEE" && f.submitted_at) && <p>Save your draft now. The employee must submit their reflection before you submit the appraisal.</p>}
           <p>
             Submitting seals this version. Head of HR can open a new revision
             round without changing the submitted history.
@@ -518,7 +534,7 @@ export function ReviewForm({
             <Button variant="neutral" disabled={busy} onClick={() => save()}>
               Save draft
             </Button>
-            <Button disabled={busy} onClick={() => setConfirm(true)}>
+            <Button disabled={busy || (pillarBased && manager && !review.forms?.some(f => f.kind === "EMPLOYEE" && f.submitted_at))} onClick={() => setConfirm(true)}>
               Review submission
             </Button>
           </div>

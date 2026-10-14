@@ -90,6 +90,7 @@ class EvidenceTests(TestCase):
         # A Head of HR role alone does not authorise access to the validation action.
         self.assertEqual(self.acting(self.hr).post(url, body, format="json").status_code, 403)
         cycle = ReviewCycle.objects.create(
+            workflow_version=1,
             company=self.company,
             year=2026,
             kind="MID_YEAR",

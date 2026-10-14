@@ -6,8 +6,8 @@ from .models import Review, ReviewCycle
 class CycleSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReviewCycle
-        fields = ["id", "year", "kind", "starts_on", "ends_on", "due_on", "launched_at"]
-        read_only_fields = ["launched_at"]
+        fields = ["id", "year", "kind", "starts_on", "ends_on", "due_on", "launched_at", "started_at", "workflow_version"]
+        read_only_fields = ["launched_at", "started_at", "workflow_version"]
 
     def validate(self, data):
         start, end, due = data["starts_on"], data["ends_on"], data["due_on"]

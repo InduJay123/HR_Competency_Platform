@@ -64,6 +64,9 @@ class CoachingActions:
             "EMPLOYEE_SUBMISSION": "Employee reflection",
             "MANAGER_SUBMISSION": "Manager appraisal",
             "VALIDATED_EVIDENCE": "Validated evidence",
+            "PILLAR_TARGET": "Individual pillar target",
+            # Display-only compatibility for immutable historical AI citations.
+            "VALIDATED_GROWTH_EVIDENCE": "Historical source",
         }
         cited = {
             source_id

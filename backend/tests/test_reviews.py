@@ -20,6 +20,7 @@ class ReviewTests(TestCase):
     def setUp(self):
         fixture.FoundationTests.setUp(self)
         self.cycle = ReviewCycle.objects.create(
+            workflow_version=1,
             company=self.company,
             year=2026,
             kind="MID_YEAR",
@@ -198,6 +199,7 @@ class ReviewTests(TestCase):
         self.assertEqual(result.status_code, 200)
         self.assertEqual(FinalSnapshot.objects.get(review=review).content, before)
         end = ReviewCycle.objects.create(
+            workflow_version=1,
             company=self.company,
             year=2026,
             kind="YEAR_END",

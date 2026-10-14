@@ -1,0 +1,244 @@
+BTFL pillar-based review cycles
+
+Historical implementation report. Growth-to-review linking described below was
+subsequently removed; see growth-unlink-report.txt for current behavior/migrations.
+
+1. Previous implementation
+   Cycle launch immediately opened generic review forms. Both forms already had
+   five pillar narratives and qualitative descriptors, but no individual targets,
+   target success measures, target outcomes or Growth-to-cycle linkage existed.
+   Manager responsibilities already resolve to company Head of HR. The removed
+   participation stage remains absent. Dependency audit: pillar-workflow-audit.txt.
+
+2. Architecture implemented
+   New cycles default to workflow version 2. Head creates individual targets,
+   saves drafts, completes all five pillars and starts the cycle. Starting fixes
+   participants and notifies them. Targets can be edited with before/after audit
+   history and optimistic versions until Head opens formal reviews. Opening is an
+   explicit Head action; it captures targets and shared linked Growth evidence.
+   It does not depend on a scheduled job. Targets then lock for all review rounds.
+   One uppercase enum: CONTEXT, CHARACTER, CAPABILITY, CONTINUITY, CONTRIBUTION.
+   No Accountability pillar or numeric aggregate score was added.
+
+   Existing patterns extended:
+   POST review-cycles/{id}/targets/ -- all five rows, employee, complete flag,
+     per-row version (0 for a new row); drafts may contain blank target text.
+   POST review-cycles/{id}/start/ -- verifies complete target setup.
+   POST review-cycles/{id}/launch/ -- opens reviews for the started participants.
+   GET pillar-targets/ and /{id}/ -- Head's company targets or employee's own
+     completed targets; filters cycle, employee, active=true, own=true.
+   Existing growth POST/PATCH accepts nullable pillar_target.
+   Existing reflection/appraisal/review/AI/commitment endpoints remain canonical.
+   POST reviews/{id}/pillar-evidence/ -- Head validates/excludes a captured source
+     with authorised excerpt, reason, review version and immutable audit event.
+   Existing review retrieval returns pillar_context; final snapshot includes it.
+
+3. Backend files changed/added (paths relative to repository root)
+   backend/apps/reviews/models.py
+   backend/apps/reviews/targets.py
+   backend/apps/reviews/schemas.py
+   backend/apps/reviews/serializers.py
+   backend/apps/reviews/services.py
+   backend/apps/reviews/views.py
+   backend/apps/reviews/workflow.py
+   backend/apps/reviews/management/__init__.py
+   backend/apps/reviews/management/commands/__init__.py
+   backend/apps/reviews/management/commands/audit_pillar_cycles.py
+   backend/apps/reviews/migrations/0006_review_pillar_context_reviewcycle_started_at_and_more.py
+   backend/apps/organisation/models.py
+   backend/apps/organisation/growth.py
+   backend/apps/organisation/migrations/0006_growthentry_pillar_target.py
+   backend/apps/ai_coach/schema.py
+   backend/apps/ai_coach/services.py
+   backend/apps/ai_coach/views.py
+   backend/config/urls.py
+   backend/tests/test_pillar_cycles.py
+   backend/tests/test_reporting_migrations.py
+   backend/tests/test_reviews.py
+   backend/tests/test_extended_workflow.py
+   backend/tests/test_review_reporting.py
+   backend/tests/test_evidence.py
+   backend/tests/test_platform_access.py
+   Existing workflow fixtures explicitly use version 1 to test legacy behavior.
+
+4. Frontend files changed/added
+   frontend/src/lib/reviews.ts
+   frontend/src/components/cycles.tsx
+   frontend/src/components/growth.tsx
+   frontend/src/components/pillar-targets.tsx
+   frontend/src/components/pillar-review.tsx
+   frontend/src/components/pillar-review.test.tsx
+   frontend/src/components/review-form.tsx
+   frontend/src/components/review-detail.tsx
+   frontend/src/components/hr-review-presentation.tsx
+   Documentation: docs/review-workflow.md, docs/pillar-workflow-audit.txt,
+   docs/pillar-workflow-report.txt.
+
+5. Models added: reviews.PillarTarget.
+   Models extended: reviews.ReviewCycle, reviews.Review, organisation.GrowthEntry.
+6. Models removed: none; none were proven redundant.
+7. DB tables added: reviews_pillartarget.
+8. DB tables removed: none.
+9. DB columns added:
+   reviews_pillartarget: id, created_at, updated_at, company_id, cycle_id,
+     employee_id, pillar, target, success_measure, notes, created_by_id,
+     completed_at, version.
+   reviews_reviewcycle: workflow_version, started_at.
+   reviews_review: pillar_context.
+   organisation_growthentry: pillar_target_id (nullable, protected FK).
+   Unique constraint: one_target_per_cycle_employee_pillar.
+   Check constraint: five_stewardship_pillars.
+   Django creates the normal PK/FK indexes. Cycle and pillar on Growth records
+   are derived from the target FK, not duplicated in separate columns.
+10. DB columns removed: none.
+   Submission.content is still the canonical form storage, and renders historical
+   generic questions. New forms require only pillars and overall human rationale
+   (plus existing senior-leader fields where relevant).
+   Keep Review.conversation: current shared commitment confirmations and history.
+   Keep hr_assessment, acknowledgement/finalisation timestamps, comparison and
+   responsible-party FKs: all have active or historical business responsibilities.
+   Keep task EvidenceItem/submission associations: separate validated task evidence.
+   Keep development.Commitment: post-review action plan, not a duplicate target.
+   No old target model, standalone participation table or generic numeric-rating
+   column exists to remove. Earlier two-level cleanup already removed arbitrary
+   reporting relationships; its historical migrations remain intact.
+
+11. Migrations added
+   reviews.0006_review_pillar_context_reviewcycle_started_at_and_more
+   organisation.0006_growthentry_pillar_target
+12. Migration/data behavior
+   Add workflow_version with temporary default 1 for existing rows, then change
+   model default to 2 for new cycles. This identifies the old form contract without
+   inventing targets. Other new fields are null/empty for existing records.
+   No business-record deletion or backfill of invented content. No production
+   migrations were applied during implementation. Do not reverse these additions
+   after recording targets without a full backup: reversal would remove new data.
+13. Historical handling
+   Existing active cycles finish using their original forms. No automatic conversion
+   of existing drafts/submissions or final records. New cycles use version 2.
+   FinalSnapshot hashes/content, sealed forms, review state and general audit rows
+   remain unchanged. Migration tests verify original column values survive.
+   New snapshots preserve target text/version, success measures, source content and
+   validation, both forms with pillar outcomes/judgements, overall human assessment,
+   AI history/output, commitments, acknowledgements and finalisation provenance.
+
+14. Growth integration and privacy
+   All three existing Growth tools allow optional cycle/pillar/target selection
+   for the employee's own active completed targets. Unlinked entries still work.
+   New links require cycle start, current cycle dates and reviews not yet opened.
+   Linking never changes private/shared visibility. Only shared non-archived
+   linked records are captured when formal reviews open. Later edits/unsharing
+   affect living Growth records, not evidence already captured in the formal review;
+   UI explains that boundary. Head validates/excludes captured sources before AI.
+   AI receives only authorised excerpts, not private records or evidence URLs.
+   Target setup and Growth-link writes serialize against cycle opening.
+
+15. Before/after formal workflow
+   Before: generic reflection and appraisal with separate five-pillar narratives.
+   After: target setup -> cycle start -> ongoing optionally linked Growth evidence
+   -> formal review opening -> five-pillar employee reflection -> five-pillar
+   Head of HR appraisal -> AI coaching -> shared commitments -> acknowledgements
+   -> Head finalisation -> locked final record.
+   Appraisal submission requires employee submission. Each pillar uses the existing
+   Exceptional / Strong / Developing / Needs Attention vocabulary and a separate
+   Not achieved / Partially achieved / Achieved / Exceeded target outcome.
+   Overall uses existing Steward descriptors and a human rationale, not averaging.
+   AI is advisory; prompt version v3 explicitly compares targets and both accounts.
+   Commitments unlock directly after completed AI; the six-step progress display
+   has no participation stage. Source validation and existing evidence safeguards
+   remain prerequisites for AI/finalisation, not a new progress stage.
+
+16. Tests and checks
+   Focused backend: 40 passed (pillar lifecycle, permissions/privacy, snapshots,
+   both-submission AI gate and payload, legacy reviews, commitments/acknowledgements,
+   finalisation and migration preservation on PostgreSQL).
+   Focused frontend: 22 passed (target setup, Growth linking, five-pillar forms,
+   final record and existing workflow/autosave).
+   Full backend: 158 tests; 3 existing failing assertions across two trainer
+   methods, with no new failures. One additional pillar AI test was then added
+   and passed in the final focused run.
+   Existing failures: test_profiles_trainer live adapter (502 vs 200), and two
+   test_trainer_documents retrieval-argument assertions. These were previously
+   reproduced against baseline with the same environment; unrelated logic unchanged.
+   Full frontend: 79 tests; 73 passed, the same 6 existing failures (three
+   hr-review-detail, two purpose-journey, one settings external-logo case).
+   TypeScript and final Next production build: passed.
+   Django checks, migration drift check, changed-backend Ruff: passed.
+   Runtime source search: no removed participation-stage strings/actions/state.
+   Logs: tmp/pillar-{final-backend,final-frontend,full-backend,full-frontend,
+   final-typecheck,final-build,production-audit}.log.
+   Full release checks are not green because of the documented baseline failures.
+
+17. Production-data findings / remediation
+   Read-only configured DB preflight found one Mid-Year 2026 cycle, with one
+   FINALISED, one OPEN and one SUBMITTED review; four submitted forms and seven
+   Growth records (zero private). Legacy reporting table absent.
+   Existing cycle: c9c252ac-f0ee-4542-8e52-6f8cda797478.
+   Do not retrofit that active cycle with guessed targets. The migration preserves
+   it as version 1; finish those reviews with the existing form contract. Create
+   the next cycle through the normal API/UI for version 2. No destructive conflict
+   or data-loss remediation is necessary. VPS data was not separately accessed;
+   rerun the read-only preflight there. Provider calls in tests are mocked.
+
+18. Exact local commands (PowerShell from repository root)
+   & backend/.venv/Scripts/python.exe backend/manage.py audit_reporting
+   & backend/.venv/Scripts/python.exe backend/manage.py audit_pillar_cycles
+   & backend/.venv/Scripts/python.exe backend/manage.py check --settings=config.settings.test
+   & backend/.venv/Scripts/python.exe backend/manage.py makemigrations --check --dry-run --settings=config.settings.test
+   & 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D 'C:/Users/Induni/Desktop/BTFL Final/tmp/reporting-postgres' -l 'C:/Users/Induni/Desktop/BTFL Final/tmp/reporting-postgres.log' -o '-h 127.0.0.1 -p 55439' -w start
+   & backend/.venv/Scripts/python.exe backend/manage.py test tests.test_pillar_cycles tests.test_reviews tests.test_participant_workflow tests.test_reporting_migrations --settings=config.settings.test_postgres --noinput
+   Push-Location backend
+   & .venv/Scripts/python.exe manage.py test tests --settings=config.settings.test_postgres --noinput
+   Pop-Location
+   & 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D 'C:/Users/Induni/Desktop/BTFL Final/tmp/reporting-postgres' -m fast -w stop
+   Push-Location frontend
+   npm.cmd test
+   npm.cmd run typecheck
+   npm.cmd run build
+   Pop-Location
+
+   Default settings below use the configured database, not the isolated test DB.
+   After a verified backup and stopping application writers:
+   & backend/.venv/Scripts/python.exe backend/manage.py migrate --plan
+   & backend/.venv/Scripts/python.exe backend/manage.py migrate --noinput
+   & backend/.venv/Scripts/python.exe backend/manage.py audit_pillar_cycles
+
+19. Exact Git commands (not executed)
+   $btflGit = 'C:/Users/Induni/AppData/Local/GitHubDesktop/app-3.6.7/resources/app/git/cmd/git.exe'
+   & $btflGit status --short
+   & $btflGit diff --check
+   & $btflGit diff --stat
+   & $btflGit add -- backend/apps/reviews backend/apps/organisation/growth.py backend/apps/organisation/models.py backend/apps/organisation/migrations/0006_growthentry_pillar_target.py backend/apps/ai_coach/schema.py backend/apps/ai_coach/services.py backend/apps/ai_coach/views.py backend/config/urls.py backend/tests/test_pillar_cycles.py backend/tests/test_reporting_migrations.py backend/tests/test_reviews.py backend/tests/test_extended_workflow.py backend/tests/test_review_reporting.py backend/tests/test_evidence.py backend/tests/test_platform_access.py frontend/src/lib/reviews.ts frontend/src/components/cycles.tsx frontend/src/components/growth.tsx frontend/src/components/pillar-targets.tsx frontend/src/components/pillar-review.tsx frontend/src/components/pillar-review.test.tsx frontend/src/components/review-form.tsx frontend/src/components/review-detail.tsx frontend/src/components/hr-review-presentation.tsx docs/review-workflow.md docs/pillar-workflow-audit.txt docs/pillar-workflow-report.txt
+   & $btflGit diff --cached --stat
+   & $btflGit commit -m 'Add individual pillar targets and cycle-linked Growth evidence to reviews'
+   & $btflGit push origin main
+
+20. Exact VPS deployment commands (Bash from existing checkout; not executed)
+   Use the deployment's existing SSH identity/directory/reverse proxy. Resolve
+   known failing release checks before rollout. Keep the established tested full
+   database/storage backup procedure; the archive listing below is not a restore drill.
+
+   set -euo pipefail
+   git pull --ff-only origin main
+   git rev-parse HEAD
+   docker compose -f docker-compose.prodtest.yml build backend worker beat frontend
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py audit_reporting
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py audit_pillar_cycles
+   docker compose -f docker-compose.prodtest.yml stop frontend backend worker beat
+   mkdir -p backups
+   backup="backups/before-pillar-cycles-$(date -u +%Y%m%dT%H%M%SZ).dump"
+   docker run --rm --env-file .env postgres:18 sh -c 'exec pg_dump --dbname="$DATABASE_URL" --format=custom' > "$backup"
+   test -s "$backup"
+   docker run --rm -i postgres:18 pg_restore --list < "$backup" > "$backup.contents.txt"
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py migrate --plan
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py migrate --noinput
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py check
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py audit_pillar_cycles
+   docker compose -f docker-compose.prodtest.yml up -d --force-recreate backend worker beat frontend
+   docker compose -f docker-compose.prodtest.yml logs --tail=100 backend worker beat frontend
+
+   If migration/preflight fails, inspect the failure and keep writers stopped;
+   do not --fake migrations. Smoke-test new target setup, private/shared links,
+   review opening, Head appraisal, validated AI input, immediate commitments,
+   acknowledgements, finalisation and an existing finalised review. Reload browser
+   tabs after the coordinated frontend/backend deployment.
