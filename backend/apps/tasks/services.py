@@ -114,7 +114,7 @@ def progress_work(member, task, data):
 def edit_work(member, task, data):
     task = WorkItem.objects.select_for_update().get(pk=task.pk, company_id=member.company_id)
     if not is_direct_report(member, task.assigned_to):
-        raise PermissionDenied("Only the company Head of HR can change this assignment.")
+        raise PermissionDenied("Only the company Chief Steward can change this assignment.")
     if task.version != data.pop("version"):
         raise Conflict()
     if task.status in ["DONE", "CANCELLED"]:

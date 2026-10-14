@@ -72,7 +72,7 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
         require_hr(member)
         obj = self.get_object()
         if not obj.membership.active:
-            raise ValidationError("Restore employee access before sending an invitation.")
+            raise ValidationError("Restore Steward Guy access before sending an invitation.")
         if not queue_access_email(str(obj.membership.user_id)):
             raise ValidationError("Email delivery is unavailable. Try again when the worker is healthy.")
         record(member, "employee.invitation_queued", obj)
@@ -117,7 +117,7 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
             if values["version"] != obj.version:
                 raise Conflict()
             if values.get("active") is False and obj.membership.is_head_hr:
-                raise ValidationError("Transfer Head of HR responsibility before deactivation.")
+                raise ValidationError("Transfer Chief Steward responsibility before deactivation.")
             if values.get("active") is False:
                 from apps.reviews.models import Review
 

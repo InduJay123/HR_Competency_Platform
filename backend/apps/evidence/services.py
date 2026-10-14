@@ -56,7 +56,7 @@ def add_evidence(member, task, data, file=None):
 @transaction.atomic
 def validate_evidence(member, obj, data):
     if not member.is_head_hr or obj.task.assigned_to.membership_id == member.id:
-        raise PermissionDenied("An independent appointed Head of HR must validate evidence.")
+        raise PermissionDenied("An independent appointed Chief Steward must validate evidence.")
     if not Submission.objects.filter(
         company=member.company,
         review__reviewer=member,

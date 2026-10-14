@@ -110,13 +110,13 @@ class ReviewExportView(APIView):
         writer = csv.writer(response)
         writer.writerow(
             [
-                "Employee",
+                "Steward Guy",
                 "Manager",
                 "Year",
                 "Cycle",
                 "Status",
                 "Due",
-                "Employee acknowledged",
+                "Steward Guy acknowledged",
                 "Manager acknowledged",
                 "Finalised",
             ]

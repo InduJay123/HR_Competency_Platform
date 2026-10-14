@@ -80,11 +80,11 @@ export default function Login() {
         <form onSubmit={submit}>
           <label>
             Sign in as
-            <select name="role" defaultValue="auto">
-              <option value="auto">Automatic · my assigned access</option>
+            <select name="role" defaultValue="" required>
+              <option value="" disabled>Choose your role</option>
               <option value="platform">Platform super admin</option>
-              <option value="hr">Company HR administrator</option>
-              <option value="employee">Employee</option>
+              <option value="hr">Chief Steward</option>
+              <option value="employee">Steward Guy</option>
             </select>
           </label>
           <label>

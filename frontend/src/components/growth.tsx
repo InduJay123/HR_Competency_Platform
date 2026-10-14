@@ -95,7 +95,7 @@ export function TeamGrowth({
       ) : (
         <>
           <label className="filter-label">
-            Employee
+            Steward Guy
             <select
               value={employee ? subject : ""}
               onChange={(e) => {
@@ -103,7 +103,7 @@ export function TeamGrowth({
                 setKind(null);
               }}
             >
-              <option value="">Select an employee</option>
+              <option value="">Select a Steward Guy</option>
               {people.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.first_name} {p.last_name}
@@ -126,8 +126,8 @@ export function TeamGrowth({
             <Card title="Growth tools">
               <p>
                 {people.length
-                  ? "Select an employee to view their shared Growth Tools."
-                  : "No employees currently report to you."}
+                  ? "Select a Steward Guy to view their shared Growth Tools."
+                  : "No Steward Guys currently report to you."}
               </p>
             </Card>
           )}
@@ -347,8 +347,8 @@ export function GrowthPage({
           <small>
             {x.shared
               ? x.perspective === "MANAGER"
-                ? "Shared with the employee"
-                : "Shared with Head of HR"
+                ? "Shared with the Steward Guy"
+                : "Shared with Chief Steward"
               : "Personal record"}{" "}
             ·{" "}
             {x.perspective === "MANAGER"
@@ -429,7 +429,7 @@ export function GrowthPage({
                 setPage(1);
               }}
             >
-              Employee perspective
+              Steward Guy perspective
             </button>
             <button
               aria-current={perspective === "MANAGER" ? "page" : undefined}
@@ -642,9 +642,9 @@ export function GrowthPage({
                 name="shared"
                 defaultChecked={editing?.shared}
               />
-              Share with Head of HR
+              Share with Chief Steward
             </label>
-            <small>Manager observations are visible to the employee.</small>
+            <small>Manager observations are visible to the Steward Guy.</small>
             <div className="actions">
               <Button disabled={busy}>
                 {busy ? "Saving…" : "Save record"}

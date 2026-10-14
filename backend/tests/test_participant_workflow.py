@@ -10,6 +10,7 @@ from apps.ai_coach.services import make_input
 from apps.reviews.models import FinalSnapshot
 
 from . import test_reviews as fixture
+from .coaching_fixtures import context_coaching
 
 
 @override_settings(
@@ -53,19 +54,19 @@ class ParticipantWorkflowTests(TestCase):
             input_snapshot=make_input(self.review),
             model="historical-model",
             state="SUCCEEDED",
-            output={
+            output=context_coaching({
                 "strengths": [
                     {
                         "observation": "Existing coaching",
                         "question": "What helped?",
-                        "source_ids": [],
+                        "source_ids": [make_input(self.review)["sources"][0]["id"]],
                         "uncertainty": "Reported",
                     }
                 ],
                 "gaps": [],
                 "support_options": [],
                 "limitations": [],
-            },
+            }),
         )
 
     def plan(self, **changes):
@@ -89,7 +90,7 @@ class ParticipantWorkflowTests(TestCase):
         self.act(self.nimal, "ai-coaching", expected=400)
         self.submit(self.review, "EMPLOYEE")
         self.act(self.nimal, "ai-coaching", expected=400)
-        self.assertEqual(self.status()["ai_coaching"], "Waiting for manager appraisal")
+        self.assertEqual(self.status()["ai_coaching"], "Waiting for Chief Steward appraisal")
         self.submit(self.review, "MANAGER")
         with patch("apps.ai_coach.tasks.enqueue") as enqueue, self.captureOnCommitCallbacks(execute=True):
             self.act(self.nimal, "ai-coaching", expected=202)
@@ -203,7 +204,7 @@ class ParticipantWorkflowTests(TestCase):
         self.act(self.nimal, "acknowledge", comments="Reviewed; I disagree with one statement.")
         self.assertIsNone(self.review.manager_ack)
         response = self.act(self.hr, "complete", expected=400)
-        self.assertIn("Manager acknowledgement", str(response.data))
+        self.assertIn("Chief Steward acknowledgement", str(response.data))
         self.act(self.hr, "acknowledge")
         self.act(self.nimal, "complete", expected=403)
         self.act(self.hr, "complete")

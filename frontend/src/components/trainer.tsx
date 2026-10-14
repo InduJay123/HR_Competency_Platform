@@ -48,6 +48,7 @@ export function Trainer() {
     [composing, setComposing] = useState(false);
   const panel = useRef<HTMLDivElement>(null),
     fileInput = useRef<HTMLInputElement>(null),
+    messageInput = useRef<HTMLTextAreaElement>(null),
     launcher = useRef<HTMLButtonElement>(null),
     end = useRef<HTMLDivElement>(null),
     restoreFocus = useRef(false);
@@ -70,6 +71,13 @@ export function Trainer() {
   useEffect(() => {
     end.current?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [messages, busy]);
+  useEffect(() => {
+    const input = messageInput.current;
+    if (input) {
+      input.style.height = "auto";
+      input.style.height = `${Math.min(120, Math.max(40, input.scrollHeight))}px`;
+    }
+  }, [draft, open]);
   function close() {
     restoreFocus.current = true;
     setOpen(false);
@@ -178,31 +186,20 @@ export function Trainer() {
           <div className="trainer-motion-control">
             <MotionToggle />
           </div>
-          <div className="trainer-mode">
-            <span className={available ? "online-dot" : "offline-dot"} />
-            {available ? "Live AI training" : "Learning guides"}
-            <button disabled={busy} onClick={() => choose("")}>
-              New chat
-            </button>
-          </div>
-          {conversations.length > 0 && (
+          <div className="trainer-conversation-row">
             <label className="trainer-history">
-              Conversations
-              <select
-                aria-label="Saved training conversations"
-                value={selected}
-                disabled={busy}
-                onChange={(e) => choose(e.target.value)}
-              >
+              <select aria-label="Saved training conversations" value={selected} disabled={busy}
+                onChange={(e) => choose(e.target.value)}>
                 <option value="">New conversation</option>
-                {conversations.map((c) => (
-                  <option value={c.id} key={c.id}>
-                    {c.title}
-                  </option>
-                ))}
+                {conversations.map((c) => <option value={c.id} key={c.id}>{c.title}</option>)}
               </select>
             </label>
-          )}
+            <button className="trainer-new-chat" type="button" aria-label="New chat" title="New chat" disabled={busy} onClick={() => choose("")}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+              <span>New chat</span>
+            </button>
+          </div>
+          <p className="trainer-availability"><span className={available ? "online-dot" : "offline-dot"} />{available ? "Live AI training" : "Learning guides"}</p>
           <div className="trainer-scroll">
             {!messages.length && (
               <>
@@ -281,61 +278,7 @@ export function Trainer() {
               explore the learning guides now.
             </p>
           )}
-          <div className="trainer-attachments">
-            <div className="trainer-attachment-toolbar">
-              <button
-                className="trainer-attachment-trigger"
-                type="button"
-                aria-describedby="trainer-attachment-help"
-                disabled={!available || busy}
-                onClick={() => fileInput.current?.click()}
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  focusable="false"
-                >
-                  <path d="m21 11-8.5 8.5a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8L15 6" />
-                </svg>
-                Attach document
-              </button>
-              <span
-                id="trainer-attachment-help"
-                className="trainer-attachment-help"
-              >
-                PDF, DOCX, TXT · max 10 MB
-              </span>
-            </div>
-            <input
-              ref={fileInput}
-              className="sr-only trainer-attachment-input"
-              tabIndex={-1}
-              type="file"
-              aria-label="Attach document"
-              aria-describedby="trainer-attachment-help"
-              accept=".pdf,.docx,.txt"
-              disabled={!available || busy}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                e.target.value = "";
-                if (!file) return;
-                if (!/\.(pdf|docx|txt)$/i.test(file.name)) {
-                  setError("Upload a PDF, DOCX or TXT file.");
-                } else if (file.size > 10 * 1024 * 1024) {
-                  setError("Document must be 10 MB or smaller.");
-                } else if (!file.size) {
-                  setError("The uploaded document is empty.");
-                } else {
-                  setAttachment(file);
-                  setError("");
-                }
-              }}
-            />
+          <div className="trainer-composer-shell">
             {attachment && (
               <div className="trainer-attachment-card">
                 <svg
@@ -387,19 +330,73 @@ export function Trainer() {
               </div>
             )}
             
-          </div>
-          <form className="trainer-compose" onSubmit={send}>
+          <form className="trainer-compose trainer-compose-row" onSubmit={send}>
+            <input
+              ref={fileInput}
+              className="sr-only trainer-attachment-input"
+              tabIndex={-1}
+              type="file"
+              aria-label="Document file"
+              aria-describedby="trainer-attachment-help"
+              accept=".pdf,.docx,.txt"
+              disabled={!available || busy}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (!file) return;
+                if (!/\.(pdf|docx|txt)$/i.test(file.name)) {
+                  setError("Upload a PDF, DOCX or TXT file.");
+                } else if (file.size > 10 * 1024 * 1024) {
+                  setError("Document must be 10 MB or smaller.");
+                } else if (!file.size) {
+                  setError("The uploaded document is empty.");
+                } else {
+                  setAttachment(file);
+                  setError("");
+                }
+              }}
+            />
+              <button
+                className="trainer-attachment-trigger"
+                type="button"
+                aria-label="Attach document"
+                title="Attach document"
+                aria-describedby="trainer-attachment-help"
+                disabled={!available || busy}
+                onClick={() => fileInput.current?.click()}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d="m21 11-8.5 8.5a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.8-2.8L15 6" />
+                </svg>
+              </button>
             <label className="sr-only" htmlFor="trainer-draft">
               Message Steward
             </label>
             <textarea
               id="trainer-draft"
+              className="trainer-message-input"
+              ref={messageInput}
               onFocus={() => setComposing(true)}
               onBlur={() => setComposing(false)}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               maxLength={4000}
-              rows={2}
+              rows={1}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+                  e.preventDefault();
+                  if (available && !busy && (draft.trim() || attachment)) e.currentTarget.form?.requestSubmit();
+                }
+              }}
               disabled={!available || busy}
               placeholder={
                 available
@@ -410,13 +407,17 @@ export function Trainer() {
             <Button
               disabled={!available || busy || (!draft.trim() && !attachment)}
               aria-label="Send training message"
+              title="Send"
+              className="trainer-send-button"
             >
-              Send
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m21 3-7 18-4-7-7-4 18-7ZM10 14 21 3" /></svg>
             </Button>
           </form>
+            <span id="trainer-attachment-help" className="sr-only">PDF, DOCX, TXT · max 10 MB</span>
+          </div>
           <p className="trainer-note">
             AI can make mistakes. Use your judgement and avoid sharing
-            confidential employee information.{" "}
+            confidential Steward Guy information.{" "}
             <Link href="/employee/guide" onClick={close}>
               Stewardship Guide
             </Link>

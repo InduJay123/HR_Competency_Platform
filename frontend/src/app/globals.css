@@ -162,15 +162,6 @@ button:disabled {
   line-height: 26px;
   color: var(--ink);
 }
-.context-label {
-  font-size: 11px;
-  color: var(--muted);
-}
-.context-label select {
-  margin-top: 8px;
-  width: 100%;
-  padding: 10px 8px;
-}
 .sidebar nav {
   display: flex;
   flex-direction: column;

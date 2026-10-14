@@ -1,0 +1,562 @@
+{
+  "type": "object",
+  "properties": {
+    "pillar_coaching": {
+      "type": "object",
+      "properties": {
+        "context": {
+          "type": "object",
+          "properties": {
+            "strengths": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "gaps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "support_options": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "limitations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "strengths",
+            "gaps",
+            "support_options",
+            "limitations"
+          ],
+          "additionalProperties": false
+        },
+        "character": {
+          "type": "object",
+          "properties": {
+            "strengths": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "gaps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "support_options": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "limitations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "strengths",
+            "gaps",
+            "support_options",
+            "limitations"
+          ],
+          "additionalProperties": false
+        },
+        "capability": {
+          "type": "object",
+          "properties": {
+            "strengths": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "gaps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "support_options": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "limitations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "strengths",
+            "gaps",
+            "support_options",
+            "limitations"
+          ],
+          "additionalProperties": false
+        },
+        "continuity": {
+          "type": "object",
+          "properties": {
+            "strengths": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "gaps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "support_options": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "limitations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "strengths",
+            "gaps",
+            "support_options",
+            "limitations"
+          ],
+          "additionalProperties": false
+        },
+        "contribution": {
+          "type": "object",
+          "properties": {
+            "strengths": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "gaps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "support_options": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "observation": {
+                    "type": "string"
+                  },
+                  "source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "uncertainty": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "observation",
+                  "source_ids",
+                  "question",
+                  "uncertainty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "limitations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "strengths",
+            "gaps",
+            "support_options",
+            "limitations"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "context",
+        "character",
+        "capability",
+        "continuity",
+        "contribution"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "pillar_coaching"
+  ],
+  "additionalProperties": false
+}

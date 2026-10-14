@@ -65,20 +65,6 @@
   flex-shrink: 0;
   margin-bottom: 26px;
 }
-.context-label {
-  border: 1px solid var(--border);
-  border-radius: 11px;
-  padding: 9px 12px;
-  margin: 0 2px;
-  font-size: 9px;
-}
-.context-label select {
-  border: 0;
-  padding: 3px 0 0;
-  margin: 0;
-  background: transparent;
-  font-size: 13px;
-}
 .sidebar nav {
   gap: 7px;
 }
@@ -530,4 +516,44 @@
   .auth-back {
     margin-bottom: 32px;
   }
+}
+
+/* Role identity is separate from the person's job title. */
+.identity-role {
+  justify-self: start;
+  color: var(--primary);
+  background: var(--tint);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .035em;
+}
+@media (min-width: 761px) {
+  .sidebar-steward-guy {
+    height: 100dvh;
+    min-height: 0;
+    overflow-y: hidden;
+    padding: 16px 12px 12px;
+    gap: 12px;
+  }
+  .sidebar-steward-guy > * { flex-shrink: 0; }
+  .sidebar-steward-guy .brand { margin-bottom: 4px; }
+  .sidebar-steward-guy nav { gap: 3px; }
+  .sidebar-steward-guy nav a,
+  .sidebar-steward-guy .sidebar-secondary {
+    min-height: 32px;
+    padding: 6px 10px;
+  }
+  .sidebar-steward-guy .sidebar-bottom { padding-top: 8px; }
+  .sidebar-steward-guy .guide-link { padding: 9px 10px; margin-bottom: 5px; }
+  .sidebar-steward-guy .guide-link small { margin-top: 4px; }
+  .sidebar-steward-guy .identity { margin-top: 0; padding-top: 10px; gap: 6px; }
+}
+@media (min-width: 761px) and (max-height: 650px) {
+  .sidebar-steward-guy { gap: 6px; padding-top: 10px; padding-bottom: 8px; }
+  .sidebar-steward-guy nav a,
+  .sidebar-steward-guy .sidebar-secondary { min-height: 28px; padding-top: 4px; padding-bottom: 4px; }
+  .sidebar-steward-guy .guide-link small { display: none; }
 }

@@ -17,7 +17,7 @@ from .models import PillarTarget, ReviewCycle
 
 def require_head(member):
     if not member.active or not member.is_head_hr:
-        raise PermissionDenied("Only the active Head of HR can set cycle targets.")
+        raise PermissionDenied("Only the active Chief Steward can set cycle targets.")
 
 
 class TargetSerializer(serializers.ModelSerializer):
@@ -93,7 +93,7 @@ def validate_setup(cycle):
     rows = list(cycle.targets.all())
     employees = {r.employee_id for r in rows}
     if not employees:
-        raise ValidationError("Set and complete five targets for at least one employee first.")
+        raise ValidationError("Set and complete five targets for at least one Steward Guy first.")
     for employee in employees:
         group = [r for r in rows if r.employee_id == employee]
         if {r.pillar for r in group} != set(PillarTarget.Pillar.values) or any(
@@ -126,7 +126,7 @@ class TargetActions:
             membership__is_head_hr=False,
         ).first()
         if not employee:
-            raise ValidationError("Choose an active employee in your company, excluding Head of HR.")
+            raise ValidationError("Choose an active Steward Guy in your company, excluding Chief Steward.")
         rows = values["targets"]
         if len(rows) != 5 or {r["pillar"] for r in rows} != set(PillarTarget.Pillar.values):
             raise ValidationError("Provide each of the five pillars exactly once.")

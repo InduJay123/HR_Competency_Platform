@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { pillarCoaching } from "./coaching-test-fixtures";
 import { api, post } from "@/lib/api";
 import type { Review } from "@/lib/reviews";
 import type { Analysis } from "./review-coach";
@@ -15,16 +16,16 @@ vi.mock("./shell", () => ({
 const baseReview = {
   id: "review-1", employee: "employee-1", employee_member: "employee-member",
   manager: "manager-1", manager_member: "manager-member", reviewer: "hr-1",
-  employee_name: "Alex Employee", manager_name: "Morgan Manager",
+  employee_name: "Alex Steward Guy", manager_name: "Morgan Manager",
   state: "SUBMITTED", round: 1, version: 7, employee_ack: null, manager_ack: null,
   cycle_detail: { kind: "MID_YEAR", year: 2026, starts_on: "2026-01-01", ends_on: "2026-06-30", due_on: "2026-07-07" },
   forms: [
-    { kind: "EMPLOYEE", submitted_at: "2026-07-01", content: { outcomes: "Original employee reflection" } },
-    { kind: "MANAGER", submitted_at: "2026-07-02", content: { overall: "Developing Steward", ecp: "Growers", summary: "Original manager appraisal" } },
+    { kind: "EMPLOYEE", submitted_at: "2026-07-01", content: { outcomes: "Original Steward Guy reflection" } },
+    { kind: "MANAGER", submitted_at: "2026-07-02", content: { overall: "Developing Steward", ecp: "Growers", summary: "Original Chief Steward appraisal" } },
   ],
   workflow: { employee_submitted: true, manager_submitted: true, ai_coaching: "Complete",
     commitments_available: false, commitments_complete: false, confirmations: { round: 1 },
-    missing: ["Commitments confirmation", "Manager acknowledgement"] },
+    missing: ["Commitments confirmation", "Chief Steward acknowledgement"] },
   evidence: [], history: [
     { action: "employee.saved", version: 1, created_at: "2026-07-01", reason: "Saved reflection" },
     { action: "employee.submitted", version: 2, created_at: "2026-07-02", reason: "Sealed reflection" },
@@ -35,10 +36,10 @@ const accepted = {
   model: "audit-model", prompt_version: "audit-prompt", input_hash: "secret-hash",
   error_code: "", decision_notes: "Human decision note", created_at: "2026-07-02T10:00:00Z",
   reviewed_at: "2026-07-02T11:00:00Z",
-  output: {
+  output: { pillar_coaching: pillarCoaching({
     strengths: [{ observation: "Accepted observation", question: "What helped?", uncertainty: "Reported claim", source_ids: ["source-uuid"] }],
     gaps: [], support_options: [], limitations: ["Limited source material"],
-  },
+  }) },
 } as Analysis;
 let review: Review;
 let analyses: Analysis[];
@@ -70,23 +71,24 @@ it("keeps submissions and audit records in closed disclosures and accepted coach
   expect(screen.getByText("Review progress")).toBeTruthy();
   expect(disclosure(/^View submission$/).open).toBe(false);
   expect(disclosure(/^View appraisal$/).open).toBe(false);
-  expect(within(disclosure(/^View submission$/)).getByText("Original employee reflection")).toBeTruthy();
-  expect(within(disclosure(/^View appraisal$/)).getByText("Original manager appraisal")).toBeTruthy();
+  expect(within(disclosure(/^View submission$/)).getByText("Original Steward Guy reflection")).toBeTruthy();
+  expect(within(disclosure(/^View appraisal$/)).getByText("Original Chief Steward appraisal")).toBeTruthy();
   const history = disclosure(/^View full history/);
   expect(history.open).toBe(false);
-  expect(within(history).queryByText("Employee saved")).toBeNull();
-  expect(within(history).getByText("Employee submitted")).toBeTruthy();
+  expect(within(history).queryByText("Steward Guy saved")).toBeNull();
+  expect(within(history).getByText("Steward Guy submitted")).toBeTruthy();
   const aiHistory = disclosure(/^AI history and provenance/);
   expect(aiHistory.open).toBe(false);
   expect(within(aiHistory).getByText("Failed")).toBeTruthy();
-  expect(screen.getByText("Accepted by Head of HR").closest("details")).toBeNull();
+  expect(screen.getByText("Accepted by Chief Steward").closest("details")).toBeNull();
   for (const element of screen.getAllByText("Accepted observation")) {
     if (!aiHistory.contains(element)) expect(element.closest("details")).toBeNull();
   }
   expect(screen.getByText(/source-uuid/).closest("details")).toBeTruthy();
   expect(screen.queryByText(/secret-hash|INTERNAL_FAILURE/)).toBeNull();
   await waitFor(() => expect(screen.queryByLabelText(/Reason for proceeding without AI/)).toBeNull());
-  expect(screen.getAllByText(/No validated evidence was supplied/)).toHaveLength(1);
+  for (const pillar of ["Context", "Character", "Capability", "Continuity", "Contribution"])
+    expect(screen.getByRole("heading", { name: `${pillar} Coaching` })).toBeTruthy();
   history.open = true;
   expect(within(history).queryByText("Saved reflection")).toBeNull();
 });
@@ -101,18 +103,18 @@ it.each([true, false])("shows meaningful history without draft events or commitm
   );
   render(<ReviewDetail oversight={oversight} />);
   await screen.findByText("Workflow history");
-  expect(screen.queryByText("Employee saved")).toBeNull();
-  expect(screen.queryByText("Manager saved")).toBeNull();
+  expect(screen.queryByText("Steward Guy saved")).toBeNull();
+  expect(screen.queryByText("Chief Steward saved")).toBeNull();
   expect(screen.queryByText(metadata)).toBeNull();
   expect(screen.getByText("Commitment saved")).toBeTruthy();
   expect(screen.getByText("By Morgan Manager")).toBeTruthy();
   expect(screen.getByText("Please clarify the outcome")).toBeTruthy();
-  expect(screen.getByText("Employee submitted")).toBeTruthy();
+  expect(screen.getByText("Steward Guy submitted")).toBeTruthy();
   if (oversight) expect(screen.getByText("View full history (3 events)")).toBeTruthy();
   expect(review.history).toHaveLength(5);
 });
 
-it("offers HR refresh but keeps generation employee-owned", async () => {
+it("offers HR refresh but keeps generation Steward Guy-owned", async () => {
   analyses = [];
   await show();
   expect(screen.queryByRole("button", { name: /Generate coaching|Run AI Coaching/ })).toBeNull();
@@ -135,7 +137,7 @@ it.each(["ACCEPTED", "REJECTED"])("preserves the %s decision payload", async (de
     analysis_id: "analysis-1", decision, notes: "Human judgement only",
   }));
   if (decision === "ACCEPTED") {
-    expect(await screen.findByText("Accepted by Head of HR")).toBeTruthy();
+    expect(await screen.findByText("Accepted by Chief Steward")).toBeTruthy();
     expect(screen.queryByLabelText(/Reason for proceeding without AI/)).toBeNull();
   }
 });
@@ -158,7 +160,7 @@ it("saves human judgement separately and never edits participant commitments", a
 it("explains the missing finalisation prerequisites", async () => {
   await show();
   expect(screen.getByText("Cannot finalise review")).toBeTruthy();
-  expect(screen.getByText("Manager acknowledgement")).toBeTruthy();
+  expect(screen.getByText("Chief Steward acknowledgement")).toBeTruthy();
   expect(screen.getByText("Commitments confirmation")).toBeTruthy();
 });
 

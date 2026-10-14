@@ -24,7 +24,7 @@ def validate_pillar_form(kind, content):
                 raise ValidationError("Evidence references must be selected source IDs.")
     if kind == "MANAGER":
         if content.get("overall") not in OVERALL:
-            raise ValidationError("Choose the overall human Steward assessment.")
+            raise ValidationError("Choose the overall huma Steward assessment.")
         text(content, "summary")
 
 

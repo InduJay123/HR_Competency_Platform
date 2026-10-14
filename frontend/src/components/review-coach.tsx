@@ -12,6 +12,13 @@ type Observation = {
   question: string;
   uncertainty: string;
 };
+type PillarCoaching = {
+  strengths: Observation[];
+  gaps: Observation[];
+  support_options: Observation[];
+  limitations: string[];
+};
+
 export type Analysis = {
   id: string;
   round: number;
@@ -25,10 +32,13 @@ export type Analysis = {
   decision_notes: string;
   error_code: string;
   output?: {
-    strengths: Observation[];
-    gaps: Observation[];
-    support_options: Observation[];
-    limitations: string[];
+    pillar_coaching: {
+      context: PillarCoaching;
+      character: PillarCoaching;
+      capability: PillarCoaching;
+      continuity: PillarCoaching;
+      contribution: PillarCoaching;
+    };
   };
 };
 export type State = { configured: boolean; analyses: Analysis[] };
@@ -129,19 +139,20 @@ export function Coach({ review, oversight = false, onSummary, onSaved }: {
       </button>
       <Card title="AI Coaching">
         <p>
-          Advisory questions and support options, grounded in the submitted
-          forms and Head of HR’s authorised excerpts. AI does not assign ratings
-          or make employment decisions.
+          Pillar-based coaching grounded in the original targets, Steward Guy
+          reflection and Chief Steward appraisal. AI provides advisory questions
+          and development support only and does not assign ratings or make
+          employment decisions.
         </p>
         {data && !data.configured && (
           <p className="alert">
-            AI connection is not configured. Contact Head of HR to configure it.
+            AI connection is not configured. Contact Chief Steward to configure it.
           </p>
         )}
         <Feedback error={error} />
         <p role="status">{review.workflow?.ai_coaching || "Loading coaching status…"}</p>
         {review.workflow?.ai_blocked_reason && <p className="alert">{review.workflow.ai_blocked_reason}</p>}
-        {!employee && <p>The employee runs AI coaching after both submissions are complete.</p>}
+        {!employee && <p>The Steward Guy runs AI coaching after both submissions are complete.</p>}
         <div className="actions">
           {employee && <Button
             disabled={
@@ -173,30 +184,75 @@ export function Coach({ review, oversight = false, onSummary, onSaved }: {
             </small>
             {a.error_code && (
               <p>
-                Analysis failed. The employee can retry; contact Head of HR if retries are exhausted.
+                Analysis failed. The Steward Guy can retry; contact Chief Steward if retries are exhausted.
               </p>
             )}
-            {a.output?.strengths &&
-              (["strengths", "gaps", "support_options"] as const).map(
-                (group) => (
-                  <section key={group}>
-                    <h3>{human(group)}</h3>
-                    {a.output![group].map((item, i) => (
-                      <div className="coaching-observation" key={i}>
-                        <p>{item.observation}</p>
-                        <p>
-                          <strong>Discuss:</strong> {item.question}
-                        </p>
-                        <small>{item.uncertainty}</small>
-                        <small>Sources: {item.source_ids.join(", ")}</small>
-                      </div>
-                    ))}
-                  </section>
-                ),
-              )}
-            {a.output?.limitations?.map((x, i) => (
-              <p key={i}>Limitation: {x}</p>
+            {a.output?.pillar_coaching &&
+  (
+    [
+      ["context", "Context"],
+      ["character", "Character"],
+      ["capability", "Capability"],
+      ["continuity", "Continuity"],
+      ["contribution", "Contribution"],
+    ] as const
+  ).map(([pillarKey, pillarTitle]) => {
+    const pillar = a.output!.pillar_coaching[pillarKey];
+
+    return (
+      <section key={pillarKey} className="pillar-coaching">
+        <h3>{pillarTitle} Coaching</h3>
+
+        {(
+          [
+            ["strengths", "Strengths"],
+            ["gaps", "Development focus"],
+            ["support_options", "Support options"],
+          ] as const
+        ).map(([groupKey, groupTitle]) => (
+          <div key={groupKey}>
+            <h4>{groupTitle}</h4>
+
+            {pillar[groupKey].length === 0 && (
+              <p>No coaching observations for this section.</p>
+            )}
+
+            {pillar[groupKey].map((item, i) => (
+              <div className="coaching-observation" key={i}>
+                <p>{item.observation}</p>
+
+                {item.question && (
+                  <p>
+                    <strong>Discuss:</strong> {item.question}
+                  </p>
+                )}
+
+                {item.uncertainty && (
+                  <small>{item.uncertainty}</small>
+                )}
+
+                {item.source_ids.length > 0 && (
+                  <small>
+                    Sources: {item.source_ids.join(", ")}
+                  </small>
+                )}
+              </div>
             ))}
+          </div>
+        ))}
+
+        {pillar.limitations.length > 0 && (
+          <div>
+            <h4>Limitations</h4>
+
+            {pillar.limitations.map((item, i) => (
+              <p key={i}>Limitation: {item}</p>
+            ))}
+          </div>
+        )}
+      </section>
+    );
+  })}
             {a.decision ? (
               <p>
                 Human review: {a.decision} · {a.decision_notes}

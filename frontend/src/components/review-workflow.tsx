@@ -9,6 +9,10 @@ export function ReviewWorkflow({ review, role, hr, onSaved }: {
 }) {
   const workflow = review.workflow;
   const marks = workflow?.confirmations;
+  const submittedAppraisal = review.forms?.find(f => f.kind === "MANAGER" && f.submitted_at)?.content;
+  const sameAssessment = !!review.pillar_context?.length && !!submittedAppraisal &&
+    !!review.hr_assessment?.overall && review.hr_assessment.overall === submittedAppraisal.overall &&
+    review.hr_assessment.rationale === submittedAppraisal.summary;
   const locked = review.state === "FINALISED";
   const editable = !!role && !locked && !!workflow?.commitments_available && !workflow.commitments_complete && !review.employee_ack && !review.manager_ack;
   const empty = { owner: review.employee, action: "", due_date: "", success_measure: "", manager_support: "" };
@@ -35,7 +39,7 @@ export function ReviewWorkflow({ review, role, hr, onSaved }: {
   return <>
     <Feedback error={error} />
     <Card title="Commitments">
-      <p>One shared action plan, agreed by the employee and assigned manager.</p>
+      <p>One shared action plan, agreed by the Steward Guy and assigned manager.</p>
       <Badge>{workflow?.commitments_complete ? "Complete" : "Pending"}</Badge>
       {!workflow?.commitments_available && <p className="alert">Editing unlocks after both submissions and AI coaching are complete.</p>}
       {review.commitments?.map(item => <div className="evidence-row" key={item.id}>
@@ -56,22 +60,25 @@ export function ReviewWorkflow({ review, role, hr, onSaved }: {
             {editing && <Button type="button" variant="neutral" onClick={() => { setEditing(undefined); setDraft(empty); }}>Cancel edit</Button>}</div>
         </fieldset>
       </form>}
-      <p>Employee: {marks?.employee_commitments ? "Confirmed" : "Pending"} · Manager: {marks?.manager_commitments ? "Confirmed" : "Pending"}</p>
+      <p>Steward Guy: {marks?.employee_commitments ? "Confirmed" : "Pending"} · Chief Steward: {marks?.manager_commitments ? "Confirmed" : "Pending"}</p>
       {editable && <p>Save changes before confirming. Any edit clears prior agreement so both people confirm the same plan.</p>}
       {role && !locked && !marks?.[`${role}_commitments`] && <Button disabled={busy || !editable || !review.commitments?.length || !!editing || !!draft.action}
         onClick={() => act("confirm-commitments")}>Confirm Commitments</Button>}
-      {workflow?.commitments_complete && <p>The agreed plan is locked. Contact Head of HR to request a revision.</p>}
+      {workflow?.commitments_complete && <p>The agreed plan is locked. Contact Chief Steward to request a revision.</p>}
     </Card>
     <Card title="Final human assessment">
+      {sameAssessment && <p>Recorded · Overall assessment: {review.hr_assessment?.overall}</p>}
+      <details open={!sameAssessment}><summary>{sameAssessment ? "Assessment controls" : "View final assessment"}</summary>
       {hr && !locked && !review.employee_ack && !review.manager_ack ? <>
-        <p>Head of HR records this assessment. AI coaching is advisory only.</p>
+        <p>Chief Steward records this assessment. AI coaching is advisory only.</p>
         <label>Overall assessment<select value={overall} onChange={e => setOverall(e.target.value)}>
           <option value="">Choose descriptor</option>{OVERALL.map(value => <option key={value}>{value}</option>)}
         </select></label>
         <label>Human assessment rationale<textarea maxLength={20000} value={rationale} onChange={e => setRationale(e.target.value)} /></label>
         <Button disabled={busy || !overall || !rationale.trim() || !workflow?.employee_submitted || !workflow.manager_submitted}
           onClick={() => act("human-assessment", { assessment: { overall, rationale } })}>Save human assessment</Button>
-      </> : <><h3>{review.hr_assessment?.overall || "Pending"}</h3><p>{review.hr_assessment?.rationale}</p></>}
+      </> : <><h3>{review.hr_assessment?.overall || "Pending"}</h3>{!sameAssessment && <p>{review.hr_assessment?.rationale}</p>}</>}
+      </details>
     </Card>
   </>;
 }

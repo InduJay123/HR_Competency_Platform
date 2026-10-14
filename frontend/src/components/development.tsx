@@ -161,7 +161,7 @@ function Action({ item, reload }: { item: Commitment; reload: () => void }) {
                   </label>
                 ))
               ) : (
-                <p>Add evidence to the employee’s work item first.</p>
+                <p>Add evidence to the Steward Guy’s work item first.</p>
               )}
             </fieldset>
             <Button disabled={busy || !notes.trim()} onClick={save}>

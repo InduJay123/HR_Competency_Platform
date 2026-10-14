@@ -81,7 +81,7 @@ export function Registration() {
             <li>
               <strong>A person verifies your request</strong>
               <span>
-                Bradley approves companies. Company HR approves employees.
+                Bradley approves companies. Company HR approves Steward Guys.
               </span>
             </li>
             <li>
@@ -168,7 +168,7 @@ export function Registration() {
                     required
                     maxLength={160}
                     placeholder={
-                      kind === "COMPANY" ? "Head of HR" : "Your role title"
+                      kind === "COMPANY" ? "Chief Steward" : "Your role title"
                     }
                   />
                 </label>
@@ -190,7 +190,7 @@ export function Registration() {
                       />
                     </label>
                     <label>
-                      Employee count
+                      Steward Guy count
                       <input
                         name="employee_count"
                         type="number"
@@ -217,7 +217,7 @@ export function Registration() {
                     <input name="website" type="url" placeholder="https://" />
                   </label>
                   <p className="field-hint">
-                    You are requesting company administrator / Head of HR
+                    You are requesting company administrator / Chief Steward
                     access. Bradley will verify your authority before approving.
                   </p>
                 </>
@@ -428,7 +428,7 @@ export function RequestQueue({
     <>
       <div className="page-heading">
         <div>
-          <h1>{platform ? "Company requests" : "Employee join requests"}</h1>
+          <h1>{platform ? "Company requests" : "Steward Guy join requests"}</h1>
           <p>
             Verify{" "}
             {platform
@@ -507,9 +507,9 @@ export function RequestQueue({
                 <label>
                   Approved responsibility
                   <select name="role">
-                    <option value="EMPLOYEE">Employee</option>
+                    <option value="EMPLOYEE">Steward Guy</option>
                     <option value="HR">
-                      HR administrator (Head of HR approval required)
+                      HR administrator (Chief Steward approval required)
                     </option>
                   </select>
                 </label>

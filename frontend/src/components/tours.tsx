@@ -51,7 +51,7 @@ export const tourSteps: Record<
     },
     {
       title: "Build a considered assessment",
-      copy: "Use ECP, all five pillars and evidence. AI coaching is requested by the appointed Head of HR after both submissions.",
+      copy: "Use ECP, all five pillars and evidence. AI coaching is requested by the appointed Chief Steward after both submissions.",
       path: "/manager/reviews",
     },
     {
@@ -68,12 +68,12 @@ export const tourSteps: Record<
     },
     {
       title: "View reporting lines",
-      copy: "Every employee reports directly to the company's Head of HR. The people directory shows this automatically.",
+      copy: "Every Steward Guy reports directly to the company's Chief Steward. The people directory shows this automatically.",
       path: "/hr/employees",
     },
     {
       title: "Prepare before you launch",
-      copy: "Preview participants, dates and the appointed Head of HR. Launch is a separate, deliberate action.",
+      copy: "Preview participants, dates and the appointed Chief Steward. Launch is a separate, deliberate action.",
       path: "/hr/review-cycles",
     },
     {

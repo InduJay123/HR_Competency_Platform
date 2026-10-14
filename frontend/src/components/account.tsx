@@ -298,12 +298,12 @@ export function Account() {
                 <dt>Department</dt>
                 <dd>{profile.department_name || "Not assigned"}</dd>
                 <dt>Reporting manager</dt>
-                <dd>{profile.is_head_hr ? "No reporting manager" : `${profile.manager_name} — Head of HR`}</dd>
+                <dd>{profile.is_head_hr ? "No reporting manager" : `${profile.manager_name} — Chief Steward`}</dd>
                 <dt>Joining date</dt>
                 <dd>{profile.joined_on || "Not recorded"}</dd>
               </dl>
               <small>
-                All employees report directly to Head of HR. HR manages joining dates and access.
+                All Steward Guys report directly to Chief Steward. HR manages joining dates and access.
               </small>
             </Card>
             <Card title="Security and notifications">

@@ -576,7 +576,7 @@ function Pricing({
               </select>
             </label>
             <label>
-              Licensed employee count
+              Licensed Steward Guy count
               <input
                 type="number"
                 name="employees"
@@ -590,7 +590,7 @@ function Pricing({
               <small>
                 {company.people} active memberships;{" "}
                 {company.declared_employees ?? "Not recorded"} declared
-                employees
+                Steward Guys
               </small>
             </label>
             <label>
@@ -682,7 +682,7 @@ function Pricing({
             </>
           )}
           <small>
-            1,001+ employees require a custom proposal. Industry has no
+            1,001+ Steward Guys require a custom proposal. Industry has no
             automatic multiplier. Book + Tool Bundle (LKR 25,000 / USD 83) is a
             separate offer requiring scope confirmation.
           </small>

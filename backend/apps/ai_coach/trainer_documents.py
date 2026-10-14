@@ -28,7 +28,7 @@ When the uploaded document is a structured self-reflection or stewardship form:
 - Use phrases such as "Based on your document", "Your reflection states",
   "This appears to suggest", or "This may indicate" when making interpretations.
 - Treat any self-selected labels or categories as the user's own self-assessment,
-  not as an official Steward or HR rating.
+  not as an official Steward Guy or HR rating.
 - Identify important development actions already written by the user before
   proposing additional generic actions.
 - If the user wrote a question they want answered, address that question directly

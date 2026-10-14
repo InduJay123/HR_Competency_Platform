@@ -30,13 +30,13 @@ const slides = [
   {
     label: "A fairer conversation",
     title: "Bring your perspective. Bring the context.",
-    copy: "At Mid-Year and Year-End, reflect on contribution, capability and stewardship. Your manager brings a separate perspective. Head of HR validates the evidence.",
-    steps: ["Your reflection", "Manager appraisal", "Evidence validation"],
+    copy: "At Mid-Year and Year-End, reflect on contribution, capability and stewardship. Your manager brings a separate perspective. Chief Steward validates the evidence.",
+    steps: ["Your reflection", "Chief Steward appraisal", "Evidence validation"],
   },
   {
     label: "AI assists. People decide.",
     title: "A thoughtful coach, with a human in charge.",
-    copy: "AI can suggest questions and support options from authorised sources. Head of HR reviews its suggestions and makes the formal assessment.",
+    copy: "AI can suggest questions and support options from authorised sources. Chief Steward reviews its suggestions and makes the formal assessment.",
     steps: [
       "Authorised sources only",
       "Suggestions with source references",

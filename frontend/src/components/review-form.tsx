@@ -320,16 +320,16 @@ export function ReviewForm({
       <div className="section-heading">
         <div>
           <p className="eyebrow">
-            {manager ? "E03 · MANAGER APPRAISAL" : "E02 · EMPLOYEE REFLECTION"}
+            {manager ? "E03 · CHIEF STEWARD APPRAISAL" : "E02 · STEWARD GUY REFLECTION"}
           </p>
           <h2>
-            {manager ? (pillarBased ? "Head of HR appraisal" : "Manager appraisal") : "Your contribution, in your words"}
+            {manager ? (pillarBased ? "Chief Steward appraisal" : "Chief Steward appraisal") : "Your contribution, in your words"}
           </h2>
         </div>
         <span role="status">{locked ? "Read-only submission" : status}</span>
       </div>
       <Feedback error={error} />
-      <Card title="01 · Employee context">
+      <Card title="01 · Steward Guy context">
         <p>
           {review.employee_name} · {human(review.cycle_detail.kind)}{" "}
           {review.cycle_detail.year}
@@ -371,8 +371,8 @@ export function ReviewForm({
             </h3>
             {review.pillar_context?.filter(t => t.pillar.toLowerCase() === p).map(t => <PillarTargetDetails key={t.id} pillar={t} />)}
             {manager && pillarBased && <>
-              <h4>Employee reflection</h4>
-              <p>{String((review.forms?.find(f => f.kind === "EMPLOYEE")?.content.pillars as Record<string, Json> | undefined)?.[p] || "Awaiting employee submission")}</p>
+              <h4>Steward Guy reflection</h4>
+              <p>{String((review.forms?.find(f => f.kind === "EMPLOYEE")?.content.pillars as Record<string, Json> | undefined)?.[p] || "Awaiting Steward Guy submission")}</p>
               <label>{human(p)} — Outcome against target<select disabled={locked || submitting} value={answers[`outcome_${p}`] || ""} onChange={e => update(`outcome_${p}`, e.target.value)}>
                 <option value="">Choose outcome</option>{TARGET_OUTCOMES.map(o => <option key={o}>{o}</option>)}
               </select></label>
@@ -472,7 +472,7 @@ export function ReviewForm({
           not make its private storage public.
         </Help>
         <p>
-          Select evidence for Head of HR validation. Unselected files and
+          Select evidence for Chief Steward validation. Unselected files and
           private notes are not included in this review.
         </p>
         {evidence.length === 0 ? (
@@ -518,16 +518,16 @@ export function ReviewForm({
             </select>
           </label>
           <p>
-            This is your appraisal. Head of HR validates evidence and records
+            This is your appraisal. Chief Steward validates evidence and records
             the final human assessment.
           </p>
         </Card>
       )}
       {!locked && (
         <Card title="Save and submit">
-          {pillarBased && manager && !review.forms?.some(f => f.kind === "EMPLOYEE" && f.submitted_at) && <p>Save your draft now. The employee must submit their reflection before you submit the appraisal.</p>}
+          {pillarBased && manager && !review.forms?.some(f => f.kind === "EMPLOYEE" && f.submitted_at) && <p>Save your draft now. The Steward Guy must submit their reflection before you submit the appraisal.</p>}
           <p>
-            Submitting seals this version. Head of HR can open a new revision
+            Submitting seals this version. Chief Steward can open a new revision
             round without changing the submitted history.
           </p>
           <div className="actions">

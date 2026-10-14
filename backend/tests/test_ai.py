@@ -4,12 +4,15 @@ from unittest.mock import Mock, patch
 
 from django.test import TestCase, override_settings
 from django.utils import timezone
+from jsonschema import ValidationError
 
 from apps.ai_coach.models import Analysis
+from apps.ai_coach.schema import INSTRUCTIONS, OUTPUT_SCHEMA
 from apps.ai_coach.services import make_input, request_analysis, validate_output
 from apps.ai_coach.tasks import reconcile_interrupted_runs, run_analysis
 
 from . import test_reviews as fixture
+from .coaching_fixtures import context_coaching
 
 
 @override_settings(
@@ -33,7 +36,7 @@ class CoachingTests(TestCase):
         self.submit(self.review, "MANAGER")
 
     def output(self, source):
-        return {
+        return context_coaching({
             "strengths": [
                 {
                     "observation": "A reported outcome",
@@ -45,7 +48,7 @@ class CoachingTests(TestCase):
             "gaps": [],
             "support_options": [],
             "limitations": ["No validated evidence supplied."],
-        }
+        })
 
     def test_incomplete_submissions_block_ai(self):
         result = self.acting(self.nimal).post(
@@ -92,16 +95,38 @@ class CoachingTests(TestCase):
             validate_output(self.output("knowledge:0:book"), {"allowed"})
         invalid = self.output("allowed")
         invalid["rating"] = "Strong"
-        with self.assertRaises(Exception):
+        with self.assertRaises(ValidationError):
             validate_output(invalid, {"allowed"})
         invalid = self.output("allowed")
-        invalid["strengths"][0]["steward_judgement"] = "Exceptional"
-        with self.assertRaises(Exception):
+        invalid["pillar_coaching"]["context"]["strengths"][0]["steward_judgement"] = "Exceptional"
+        with self.assertRaises(ValidationError):
             validate_output(invalid, {"allowed"})
+
+    def test_all_pillars_and_observation_citations_are_required(self):
+        valid = self.output("allowed")
+        validate_output(valid, {"allowed"})
+        for pillar in ("context", "character", "capability", "continuity", "contribution"):
+            with self.subTest(pillar=pillar):
+                invalid = self.output("allowed")
+                del invalid["pillar_coaching"][pillar]
+                with self.assertRaises(ValidationError):
+                    validate_output(invalid, {"allowed"})
+        invalid = self.output("allowed")
+        invalid["pillar_coaching"]["context"]["strengths"][0]["source_ids"] = []
+        with self.assertRaises(ValueError):
+            validate_output(invalid, {"allowed"})
+        del invalid["pillar_coaching"]["context"]["strengths"][0]["source_ids"]
+        with self.assertRaises(ValidationError):
+            validate_output(invalid, {"allowed"})
+        with self.assertRaises(ValidationError):
+            validate_output(valid["pillar_coaching"]["context"], {"allowed"})
 
     @patch("apps.ai_coach.tasks.requests.post")
     def test_successful_coaching_never_changes_assessment(self, http):
         self.ready()
+        assessment = {"overall": "Strong Steward", "rationale": "Human assessment"}
+        self.review.hr_assessment = assessment
+        self.review.save(update_fields=["hr_assessment"])
         obj = request_analysis(self.nimal, self.review, self.review.version)
         output = self.output(obj.input_snapshot["sources"][0]["id"])
         http.return_value = Mock(
@@ -118,9 +143,20 @@ class CoachingTests(TestCase):
         obj.refresh_from_db()
         self.review.refresh_from_db()
         self.assertEqual(obj.state, "SUCCEEDED")
-        self.assertEqual(self.review.hr_assessment, {})
+        self.assertEqual(self.review.hr_assessment, assessment)
         self.assertEqual(self.review.state, "SUBMITTED")
         sent = http.call_args.kwargs["json"]["request"]
+        body = http.call_args.kwargs["json"]
+        self.assertEqual(body["run_id"], str(obj.id))
+        self.assertEqual(body["input_hash"], obj.input_hash)
+        self.assertEqual(json.loads(sent["input"]), obj.input_snapshot)
+        self.assertEqual(sent["model"], obj.model)
+        self.assertEqual(sent["instructions"], INSTRUCTIONS)
+        self.assertIn("Do not choose a winner or alter the human assessment.", sent["instructions"])
+        self.assertEqual(sent["text"]["format"], {
+            "type": "json_schema", "name": "stewardship_coaching",
+            "strict": True, "schema": OUTPUT_SCHEMA,
+        })
         self.assertFalse(sent["store"])
         self.assertNotIn("tools", sent)
 

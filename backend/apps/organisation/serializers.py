@@ -78,7 +78,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
 def reject_reporting_fields(data):
     forbidden = set(data) & {"manager", "manager_id", "reports_to", "reporting_manager", "is_manager"}
     if forbidden:
-        raise serializers.ValidationError("Reporting is automatic: all employees report to Head of HR.")
+        raise serializers.ValidationError("Reporting is automatic: all Steward Guys report to Chief Steward.")
 
 
 class EmployeeCreateSerializer(serializers.Serializer):

@@ -37,7 +37,7 @@ export function Hierarchy() {
           <strong>
             {person.first_name} {person.last_name}
           </strong>
-          <small>{person.is_head_hr ? "Head of HR" : person.designation}</small>
+          <small>{person.is_head_hr ? "Chief Steward" : person.designation}</small>
         </span>
       </Link>
     );
@@ -48,7 +48,7 @@ export function Hierarchy() {
         <div>
           <h1>Management Structure</h1>
           <p className="subtitle">
-            All employees report directly to the Head of HR.
+            All Steward Guys report directly to the Chief Steward.
           </p>
         </div>
         <Link className="button primary" href="/hr/employees">
@@ -81,7 +81,7 @@ export function Hierarchy() {
             </div>
           ) : (
             <p className="empty">
-              Head of HR is unavailable. Contact your administrator.
+              Chief Steward is unavailable. Contact your administrator.
             </p>
           )}
         </Card>

@@ -50,11 +50,11 @@ it("uses resolved manager names even when the manager is outside the visible row
     name: /Dinaya Nuu.*abc abc/,
   });
   expect(
-    within(dinaya).getByRole("cell", { name: "abc abc — Head of HR" }),
+    within(dinaya).getByRole("cell", { name: "abc abc — Chief Steward" }),
   ).toBeTruthy();
   const xyz = screen.getByRole("row", { name: /xyz xyz.*abc abc/ });
   expect(
-    within(xyz).getByRole("cell", { name: "abc abc — Head of HR" }),
+    within(xyz).getByRole("cell", { name: "abc abc — Chief Steward" }),
   ).toBeTruthy();
   const unassigned = screen.getByRole("row", { name: /Unassigned Person/ });
   expect(

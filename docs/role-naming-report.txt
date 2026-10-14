@@ -1,0 +1,92 @@
+Role naming and sidebar cleanup report
+
+Audit findings
+Membership.contexts derives employee/reviews for members, manager only for active
+is_head_hr, hr for is_hr and approvals for is_head_hr. No independent manager flag
+was added. HR administration is still a distinct permission flag; changing its
+visible login label does not grant Chief Steward assessment rights.
+Login accepts auto/employee/hr/platform; hr filters is_hr. These checks remain.
+Sidebar's workspace selector was the only role dropdown. Its change handler also
+serves guided tours. Mobile drawer state is not role-dropdown state.
+
+Sidebar
+Removed select, WORKSPACE label, options and names map from components/shell.tsx.
+Removed exclusive .context-label CSS from app/globals.css and app/responsive.css.
+Added static Steward/Chief Steward identity label (Company administrator for
+non-Chief HR administrators). Identity/avatar/company, mobile drawer, normal nav,
+organisation switching, guided tours and profile/account links remain.
+Chief Steward team links now appear directly in normal sidebar navigation when
+allowed, so they remain accessible without the workspace selector.
+
+Login
+Before: Automatic / my assigned access (auto), Platform super admin (platform),
+Company HR administrator (hr), Employee (employee).
+After: disabled Choose your role placeholder, Platform super admin (platform),
+Chief Steward (hr), Steward (employee). Selection is required; no auto option.
+Backend auto/default remains for existing API clients, not visible UI. The error
+that directed users to automatic login now directs them to Steward sign-in.
+
+Copy
+Employee(s) -> Steward(s); Head of HR -> Chief Steward.
+Review manager appraisal/acknowledgement labels -> Chief Steward equivalents.
+Internal employee/manager/hr/platform, EMPLOYEE/MANAGER, is_head_hr, routes,
+payload employee_reflection/head_of_hr_appraisal, field names and source types stay.
+No database model/column/role semantics changed; makemigrations check: no changes.
+Only exception messages changed in companies/models.py and reviews/models.py.
+No auth/permissions/workflow implementation changes; existing user edits preserved.
+
+Files changed in this task (paths relative to repository)
+Frontend core:
+frontend/src/app/auth/login/page.tsx
+frontend/src/app/globals.css
+frontend/src/app/responsive.css
+frontend/src/lib/reviews.ts (human-readable label conversion only)
+frontend/src/components/shell.tsx
+Frontend display-copy components:
+access.tsx, account.tsx, cycles.tsx, development.tsx, employee-detail.tsx,
+growth.tsx, guide.tsx, hierarchy.tsx, onboarding.tsx, people.tsx,
+pillar-targets.tsx, platform.tsx, purpose-journey.tsx, review-coach.tsx,
+review-detail.tsx, review-form.tsx, review-list.tsx, review-workflow.tsx,
+settings.tsx, tours.tsx, trainer.tsx, work.tsx
+(all under frontend/src/components).
+Backend exposed copy:
+backend/apps/accounts/views.py
+backend/apps/ai_coach/{schema,services,trainer,views}.py
+backend/apps/companies/{access,platform,models}.py
+backend/apps/development/views.py
+backend/apps/evidence/services.py
+backend/apps/organisation/{serializers,services,views}.py
+backend/apps/reports/views.py
+backend/apps/reviews/{models,services,targets,workflow}.py
+backend/apps/tasks/services.py
+backend/common/permissions.py
+Tests:
+frontend/src/components/role-access.test.tsx (new, 5 tests)
+frontend/src/components/{growth,hierarchy,hr-review-detail,people,pillar-review,
+review-detail,review-form,review-workflow}.test.tsx
+backend/tests/{test_accepted_coaching,test_foundation,test_platform_access,test_reviews}.py
+Report: docs/role-naming-report.txt
+Earlier work in other dirty files was not reverted or committed.
+
+Verification
+84 backend tests passed: foundation, platform_access, review_reporting,
+reporting_display, ai, accepted_coaching, pillar_cycles, reviews.
+Database: isolated local PostgreSQL; no production database modifications.
+Frontend: 87 passed / 4 existing unrelated failures, 91 total.
+All 5 new login/sidebar tests passed, including unchanged login payload values,
+explicit role choice, no auto option, static sidebar and retained navigation.
+Remaining failures: evidence editor expectation in hr-review-detail; two purpose
+journey carousel assertions; settings external-logo expectation.
+Production frontend build passed. No schema changes detected.
+
+Remaining old wording
+No old authored Employee/Head of HR display copy found in active frontend or
+API error messages after audit. Internal TypeScript Employee types, Python model
+names, database fields, endpoints, enums and source keys intentionally remain.
+Non-rendered model choice labels (CodeSequence/Submission), historical migrations,
+CLI/seed/audit commands and older repository documentation retain technical or
+historical names. No application call uses those model choice display labels.
+Stored user-authored text, historical snapshots, old AI outputs/audit narratives
+are not rewritten and may still contain old terminology. Raw historical API
+records keep original field names. RAG/n8n content is external to this task.
+No n8n edits, migrations, commits, pushes or deployment performed.

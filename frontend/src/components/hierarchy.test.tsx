@@ -7,11 +7,11 @@ import { Hierarchy } from "./hierarchy";
 vi.mock("@/lib/api", () => ({ allPages: vi.fn() }));
 afterEach(cleanup);
 
-it("renders only Head of HR and one level of employees without assignment controls", async () => {
+it("renders only Chief Steward and one level of Steward Guys without assignment controls", async () => {
   vi.mocked(allPages).mockResolvedValue([
     { id: "head", first_name: "Head", last_name: "HR", is_head_hr: true },
-    { id: "one", first_name: "Employee", last_name: "One", is_head_hr: false },
-    { id: "two", first_name: "Employee", last_name: "Two", is_head_hr: false },
+    { id: "one", first_name: "Steward Guy", last_name: "One", is_head_hr: false },
+    { id: "two", first_name: "Steward Guy", last_name: "Two", is_head_hr: false },
   ]);
   const { container } = render(<Hierarchy />);
   await screen.findByRole("link", { name: /Head HR/ });

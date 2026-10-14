@@ -36,7 +36,7 @@ class PlatformAccessTests(TestCase):
             "first_name": "Jamie",
             "last_name": "Example",
             "phone": "+94 77 123 4567",
-            "designation": "Head of HR",
+            "designation": "Chief Steward",
             "company_name": "New Company",
             "nature": "Manufacturing",
             "country": "Sri Lanka",

@@ -7,6 +7,7 @@ from django.utils import timezone
 from apps.ai_coach.models import Analysis
 
 from . import test_reviews as fixture
+from .coaching_fixtures import context_coaching
 
 
 class AcceptedCoachingTests(TestCase):
@@ -31,7 +32,7 @@ class AcceptedCoachingTests(TestCase):
             state="SUCCEEDED", decision="ACCEPTED", reviewed_at=timezone.now(),
             decision_notes="private decision", provider_response_id="private-provider",
             error_code="private-error",
-            output={
+            output=context_coaching({
                 "strengths": [{
                     "observation": "A reported outcome",
                     "source_ids": [source["id"] for source in sources],
@@ -40,7 +41,7 @@ class AcceptedCoachingTests(TestCase):
                 }],
                 "gaps": [], "support_options": [], "limitations": ["Limited evidence"],
                 "internal": "must not leak",
-            },
+            }),
         )
         values.update(overrides)
         return Analysis.objects.create(**values)
@@ -53,13 +54,20 @@ class AcceptedCoachingTests(TestCase):
         self.assertTrue(response.data["available"])
         self.assertEqual(response.data["reviewed_at"], analysis.reviewed_at)
         self.assertEqual(set(response.data["coaching"]), {
+            "context", "character", "capability", "continuity", "contribution",
+        })
+        self.assertEqual(set(response.data["coaching"]["context"]), {
             "strengths", "gaps", "support_options", "limitations",
         })
-        self.assertEqual(set(response.data["coaching"]["strengths"][0]), {
+        self.assertEqual(set(response.data["coaching"]["context"]["strengths"][0]), {
             "observation", "source_ids", "question", "uncertainty",
         })
+        self.assertEqual(
+            response.data["coaching"]["context"]["strengths"][0]["source_ids"],
+            [source["id"] for source in analysis.input_snapshot["sources"]],
+        )
         self.assertEqual(set(response.data["sources"].values()), {
-            "Employee reflection", "Manager appraisal", "Validated evidence",
+            "Steward Guy reflection", "Chief Steward appraisal", "Validated evidence",
         })
         self.assertNotIn("private", response.content.decode())
         self.assertNotIn("must not leak", response.content.decode())

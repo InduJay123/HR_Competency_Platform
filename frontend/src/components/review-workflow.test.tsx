@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { pillarCoaching } from "./coaching-test-fixtures";
 import { api, post } from "@/lib/api";
 import type { Review } from "@/lib/reviews";
 import { ReviewWorkflow } from "./review-workflow";
@@ -31,19 +32,19 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 it("shows exactly the six review stages for HR oversight", () => {
   const { container } = render(<HrWorkflow review={review} />);
   expect(Array.from(container.querySelectorAll("dt"), item => item.textContent)).toEqual([
-    "Employee reflection", "Manager appraisal", "AI coaching", "Commitments", "Acknowledgement", "Final record",
+    "Steward Guy reflection", "Chief Steward appraisal", "AI coaching", "Commitments", "Acknowledgement", "Final record",
   ]);
   expect(Array.from(container.querySelectorAll("dd"), item => item.textContent).slice(0, 4)).toEqual([
     "Complete", "Complete", "Complete", "Pending",
   ]);
 });
 
-it("blocks employee coaching until manager submission, then uses the existing endpoint", async () => {
+it("blocks Steward coaching until manager submission, then uses the existing endpoint", async () => {
   review.workflow!.manager_submitted = false;
-  review.workflow!.ai_coaching = "Waiting for manager appraisal";
+  review.workflow!.ai_coaching = "Waiting for Chief Steward appraisal";
   const page = render(<Coach review={review} onSaved={saved} />);
   await waitFor(() => expect(api).toHaveBeenCalled());
-  expect(screen.getByText("Waiting for manager appraisal")).toBeTruthy();
+  expect(screen.getByText("Waiting for Chief Steward appraisal")).toBeTruthy();
   expect((screen.getByRole("button", { name: "Run AI Coaching" }) as HTMLButtonElement).disabled).toBe(true);
   review = { ...review, workflow: { ...review.workflow!, manager_submitted: true, ai_coaching: "Ready" } };
   page.rerender(<Coach review={review} onSaved={saved} />);
@@ -55,11 +56,14 @@ it("blocks employee coaching until manager submission, then uses the existing en
 it.each(["employee-member", "manager-member", "head-hr"])("renders saved coaching for %s even without a configured provider", async member => {
   session.member = member;
   vi.mocked(api).mockResolvedValue({ configured: false, analyses: [{ id: "old-analysis", round: 1,
-    state: "SUCCEEDED", decision: "", created_at: "2026-01-01", output: { strengths: [{
+    state: "SUCCEEDED", decision: "", created_at: "2026-01-01", output: { pillar_coaching: pillarCoaching({ strengths: [{
       observation: "Preserved coaching result", question: "What helped?", uncertainty: "Reported", source_ids: [] }],
-      gaps: [], support_options: [], limitations: [] } }] });
+      gaps: [], support_options: [], limitations: [] }) } }] });
   render(<Coach review={review} />);
   expect(await screen.findByText("Preserved coaching result")).toBeTruthy();
+  for (const pillar of ["Context", "Character", "Capability", "Continuity", "Contribution"])
+    expect(screen.getByRole("heading", { name: `${pillar} Coaching` })).toBeTruthy();
+  expect(screen.queryAllByRole("button", { name: "Run AI Coaching" })).toHaveLength(member === "employee-member" ? 1 : 0);
   if (member !== "employee-member") expect(screen.queryByRole("button", { name: "Run AI Coaching" })).toBeNull();
   if (member !== "head-hr") expect(screen.queryByRole("button", { name: "Accept as coaching input" })).toBeNull();
 });

@@ -24,7 +24,7 @@ const stages = [
   {
     title: "Review",
     subtitle: "Human review",
-    description: "AI supports the analysis. Your Head of HR validates the evidence.",
+    description: "AI supports the analysis. Your Chief Steward validates the evidence.",
     icon: "⌕",
   },
 ];

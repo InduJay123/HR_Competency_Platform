@@ -91,7 +91,7 @@ class CommitmentViewSet(viewsets.ReadOnlyModelViewSet):
         obj = self.get_object()
         member = membership(request)
         if not is_direct_report(member, obj.employee):
-            raise PermissionDenied("Only Head of HR can assign development work.")
+            raise PermissionDenied("Only Chief Steward can assign development work.")
         obj = Commitment.objects.select_for_update().get(id=obj.id)
         if obj.work_item_id:
             return Response({"work_item": obj.work_item_id})
@@ -120,7 +120,7 @@ class CommitmentViewSet(viewsets.ReadOnlyModelViewSet):
             obj.employee.membership_id,
             obj.owner.membership_id,
         ]:
-            raise PermissionDenied("Only the employee, owner or assigned manager can record follow-up.")
+            raise PermissionDenied("Only the Steward Guy, owner or assigned manager can record follow-up.")
         data = ProgressSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         obj = Commitment.objects.select_for_update().get(id=obj.id)
@@ -136,7 +136,7 @@ class CommitmentViewSet(viewsets.ReadOnlyModelViewSet):
             id__in=ids, company=member.company, task__assigned_to=obj.employee
         )
         if evidence.count() != len(set(ids)):
-            raise ValidationError("Evidence must belong to this employee and organisation.")
+            raise ValidationError("Evidence must belong to this Steward Guy and organisation.")
         update = CommitmentUpdate.objects.create(
             company=member.company,
             commitment=obj,

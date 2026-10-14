@@ -88,7 +88,7 @@ class Review(TenantEntity):
 
         manager = effective_manager(self.employee)
         if manager is None:
-            raise ValidationError("Head of HR cannot appraise themselves.")
+            raise ValidationError("Chief Steward cannot appraise themselves.")
         return manager
 
     class Meta:

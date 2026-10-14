@@ -11,6 +11,7 @@ from apps.reviews.schemas import PILLARS
 from apps.reviews.workflow import workflow_status
 
 from . import test_reviews as fixture
+from .coaching_fixtures import context_coaching
 
 
 @override_settings(
@@ -218,17 +219,20 @@ class PillarCycleTests(TestCase):
         forms_before = list(review.submissions.values("id", "content"))
         analysis = request_analysis(self.nimal, review, review.version)
         source = analysis.input_snapshot["sources"][0]["id"]
-        output = {"strengths": [{"observation": "The reviewer reports achievement", "question": "What supported this?",
-                  "source_ids": [source], "uncertainty": "Reported account"}], "gaps": [], "support_options": [], "limitations": []}
+        output = context_coaching({"strengths": [{"observation": "The reviewer reports achievement", "question": "What supported this?",
+                  "source_ids": [source], "uncertainty": "Reported account"}], "gaps": [], "support_options": [], "limitations": []})
         with patch("apps.ai_coach.tasks.requests.post") as http:
             http.return_value = Mock(content=b"{}", json=lambda: {"status": "completed", "output": [
                 {"type": "message", "content": [{"type": "output_text", "text": json.dumps(output)}]}]})
             run_analysis.run(str(analysis.id))
             sent = json.loads(http.call_args.kwargs["json"]["request"]["input"])
             self.assertEqual(sent["pillar_reviews"], analysis.input_snapshot["pillar_reviews"])
+            self.assertIn("Targets are expectations, NOT evidence of achievement.", http.call_args.kwargs["json"]["request"]["instructions"])
         analysis.refresh_from_db()
         review.refresh_from_db()
         self.assertEqual(analysis.state, "SUCCEEDED")
+        self.assertEqual(set(analysis.output["pillar_coaching"]), set(PILLARS))
+        self.assertEqual(analysis.output, output)
         self.assertEqual(review.hr_assessment, before)
         self.assertEqual(list(review.submissions.values("id", "content")), forms_before)
 

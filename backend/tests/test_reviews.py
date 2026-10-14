@@ -11,6 +11,7 @@ from apps.reviews.services import touch
 from apps.reviews.workflow import workflow_status
 
 from . import test_foundation as fixture
+from .coaching_fixtures import context_coaching
 
 
 class ReviewTests(TestCase):
@@ -102,8 +103,8 @@ class ReviewTests(TestCase):
         review.refresh_from_db()
         Analysis.objects.create(company=self.company, review=review, round=review.round,
             requested_by=self.nimal, input_hash=uuid4().hex, input_snapshot=make_input(review),
-            model="test", state="SUCCEEDED", output={"strengths": [], "gaps": [],
-                "support_options": [], "limitations": ["Test coaching"]})
+            model="test", state="SUCCEEDED", output=context_coaching({"strengths": [], "gaps": [],
+                "support_options": [], "limitations": ["Test coaching"]}))
 
         def act(actor, action, **values):
             review.refresh_from_db()
@@ -250,7 +251,7 @@ class ReviewTests(TestCase):
         self.agree_commitments(r)
         url = f"/api/v1/reviews/{r.id}/acknowledge/"
         denied = self.acting(self.hr).post(
-            url, {"version": r.version, "comments": "Forged employee perspective"}, format="json"
+            url, {"version": r.version, "comments": "Forged Steward Guy perspective"}, format="json"
         )
         self.assertEqual(denied.status_code, 403)
         response = self.acting(self.nimal).post(

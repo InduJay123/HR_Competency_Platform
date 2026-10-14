@@ -73,10 +73,10 @@ def make_input(review):
 def request_analysis(member, review, version):
     review = lock(member, review, version)
     if member.id != review.employee.membership_id:
-        raise PermissionDenied("Only the employee can run AI coaching for their review.")
+        raise PermissionDenied("Only the Steward Guy can run AI coaching for their review.")
     if current_forms(review).filter(submitted_at__isnull=False).count() != 2:
         raise ValidationError(
-            "Submit both the employee reflection and manager appraisal before running AI coaching."
+            "Submit both the Steward Guy reflection and Chief Steward appraisal before running AI coaching."
         )
     existing = review.analyses.filter(company=member.company, round=review.round, state="SUCCEEDED").order_by("-created_at").first()
     if existing:
@@ -85,7 +85,7 @@ def request_analysis(member, review, version):
         raise ValidationError("Coaching requires both submitted forms.")
     if not configured():
         raise ValidationError(
-            "AI is not configured. Ask Head of HR to configure the server integration."
+            "AI is not configured. Ask Chief Steward to configure the server integration."
         )
     url = urlparse(settings.N8N_WEBHOOK_URL)
     if url.scheme != "https" and not (settings.DEBUG and url.hostname in ["localhost", "127.0.0.1", "n8n"]):
@@ -126,16 +126,29 @@ def request_analysis(member, review, version):
 
 def validate_output(output, source_ids):
     jsonschema.validate(output, OUTPUT_SCHEMA)
+
     if len(json.dumps(output)) > 100000:
         raise ValueError("Output too large")
-    for group in ["strengths", "gaps", "support_options"]:
-        if len(output[group]) > 12:
-            raise ValueError("Too many observations")
-        for item in output[group]:
-            if not item["source_ids"] or not set(item["source_ids"]).issubset(source_ids):
-                raise ValueError("Unknown or missing source citation")
 
+    pillar_coaching = output["pillar_coaching"]
 
+    for pillar in PILLARS:
+        coaching = pillar_coaching[pillar]
+
+        for group in ["strengths", "gaps", "support_options"]:
+            if len(coaching[group]) > 12:
+                raise ValueError(
+                    f"Too many {group} observations for {pillar}"
+                )
+
+            for item in coaching[group]:
+                if (
+                    not item["source_ids"]
+                    or not set(item["source_ids"]).issubset(source_ids)
+                ):
+                    raise ValueError(
+                        f"Unknown or missing source citation in {pillar}"
+                    )
 @transaction.atomic
 def decide(member, review, analysis_id, decision, notes):
     # Serialize against finalisation and revision.

@@ -133,11 +133,11 @@ class PlatformCompanyViewSet(viewsets.ViewSet):
                     "employment_joined_on": p.joined_on,
                     "platform_joined_at": p.membership.approved_at or p.membership.created_at,
                     "active": p.membership.active,
-                    "role": "Head of HR"
+                    "role": "Chief Steward"
                     if p.membership.is_head_hr
                     else "HR"
                     if p.membership.is_hr
-                    else "Employee",
+                    else "Steward Guy",
                 }
                 for p in page
             ]

@@ -63,7 +63,7 @@ class Membership(TenantEntity):
             previous = type(self).objects.filter(pk=self.pk, active=True, is_head_hr=True).first()
             if previous and (not self.active or not self.is_head_hr or self.company_id != previous.company_id):
                 from django.core.exceptions import ValidationError
-                raise ValidationError("Use the controlled Head of HR transfer command.")
+                raise ValidationError("Use the controlled Chief Steward transfer command.")
             if not self.stewardship_code:
                 company.employee_sequence += 1
                 company.save(update_fields=["employee_sequence"])

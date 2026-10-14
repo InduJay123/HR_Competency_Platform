@@ -56,7 +56,7 @@ def lock(member, review, version):
 
 def require_reviewer(member, review):
     if not member.is_head_hr or review.responsible_reviewer.id != member.id or review.employee.membership_id == member.id:
-        raise PermissionDenied("Only the company Head of HR can perform this action.")
+        raise PermissionDenied("Only the company Chief Steward can perform this action.")
 
 
 def current_forms(review):
@@ -81,7 +81,7 @@ def launch_cycle(member, cycle, employee_ids, reviewer_id):
         id=reviewer_id, company=member.company, is_head_hr=True, active=True
     ).first()
     if not reviewer:
-        raise ValidationError("Appoint an active Head of HR in this organisation.")
+        raise ValidationError("Appoint an active Chief Steward in this organisation.")
     if not employee_ids or len(employee_ids) != len(set(employee_ids)):
         raise ValidationError("Choose a non-empty set of distinct participants.")
     for employee_id in employee_ids:
@@ -89,11 +89,11 @@ def launch_cycle(member, cycle, employee_ids, reviewer_id):
             id=employee_id, company=member.company, membership__active=True
         ).first()
         if not employee:
-            raise ValidationError("Choose an active employee in this company.")
+            raise ValidationError("Choose an active Steward Guy in this company.")
         manager = effective_manager(employee)
         if employee.membership_id == reviewer.id:
             raise ValidationError(
-                "Head of HR cannot be a participant in their own review cycle."
+                "Chief Steward cannot be a participant in their own review cycle."
             )
         prior = None
         if cycle.kind == "YEAR_END":
@@ -159,13 +159,13 @@ def save_form(member, review, kind, content, evidence_ids, submit, version):
         created_at__date__gte=review.cycle.starts_on,
     )
     if evidence.count() != len(set(evidence_ids)):
-        raise ValidationError("Some evidence is outside the employee, tenant or review period.")
+        raise ValidationError("Some evidence is outside the Steward Guy, tenant or review period.")
     if submit:
         if review.cycle.workflow_version == 2:
             from .schemas import validate_pillar_form
             validate_pillar_form(kind, content)
             if kind == "MANAGER" and not current_forms(review).filter(kind="EMPLOYEE", submitted_at__isnull=False).exists():
-                raise ValidationError("The employee must submit their reflection before Head of HR submits the appraisal.")
+                raise ValidationError("The Steward Guy must submit their reflection before Chief Steward submits the appraisal.")
         else:
             validate_form(kind, content)
         if review.employee.senior_leader:
@@ -226,7 +226,7 @@ def save_commitment(member, review, version, commitment, commitment_id=None):
         raise ValidationError("The agreed plan is locked. Request a formal revision.")
     owner = commitment.pop("owner")
     if owner not in (review.employee_id, review.responsible_manager.id):
-        raise ValidationError("Commitment owner must be the employee or assigned manager.")
+        raise ValidationError("Commitment owner must be the Steward Guy or assigned manager.")
     previous = None
     if commitment_id:
         obj = review.commitments.filter(pk=commitment_id, company=member.company).first()
@@ -293,7 +293,7 @@ def acknowledge(member, review, version, comments=""):
     if not workflow_status(review)["commitments_complete"]:
         raise ValidationError("Both participants must confirm commitments before acknowledgement.")
     if not review.hr_assessment.get("overall") or not review.hr_assessment.get("rationale"):
-        raise ValidationError("Head of HR must record the final human assessment before acknowledgement.")
+        raise ValidationError("Chief Steward must record the final human assessment before acknowledgement.")
     if review.state != "ACKNOWLEDGEMENT_PENDING":
         raise ValidationError("Acknowledgement is not open.")
     if member.id == review.employee.membership_id:
@@ -305,12 +305,12 @@ def acknowledge(member, review, version, comments=""):
         review.employee_comments = comments
     elif member.id == review.responsible_manager.membership_id:
         if comments:
-            raise PermissionDenied("Only the employee can record employee comments.")
+            raise PermissionDenied("Only the Steward Guy can record Steward Guy comments.")
         if review.manager_ack:
             raise ValidationError("Your acknowledgement is already recorded.")
         review.manager_ack = timezone.now()
     else:
-        raise PermissionDenied("Only the employee and assigned manager acknowledge this record.")
+        raise PermissionDenied("Only the Steward Guy and assigned manager acknowledge this record.")
     touch(member, review, "acknowledged", comments)
     if review.employee_ack and review.manager_ack:
         notify(

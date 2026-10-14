@@ -24,13 +24,13 @@ const manager = {
 };
 const employee = {
   id: "employee",
-  first_name: "Employee",
+  first_name: "Steward Guy",
   last_name: "One",
   manager_id: "manager",
 };
 const teammate = {
   id: "teammate",
-  first_name: "Employee",
+  first_name: "Steward Guy",
   last_name: "Two",
   manager_id: "manager",
 };
@@ -78,7 +78,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 it.each(["Contributions and Evidence", "Capability Map", "Legacy Tracker"])(
-  "loads selected employee's shared %s in team context",
+  "loads selected Steward Guy's shared %s in team context",
   async (tool) => {
     render(<TeamGrowth initialSubject="employee" />);
     fireEvent.click(
@@ -111,7 +111,7 @@ it.each(["Contributions and Evidence", "Capability Map", "Legacy Tracker"])(
           name: /Add contribution|Record contribution/,
         }),
       ).toBeNull();
-    fireEvent.change(screen.getByLabelText("Employee"), {
+    fireEvent.change(screen.getByLabelText("Steward Guy"), {
       target: { value: "teammate" },
     });
     expect(screen.queryByText("employee record")).toBeNull();
@@ -120,7 +120,7 @@ it.each(["Contributions and Evidence", "Capability Map", "Legacy Tracker"])(
   },
 );
 
-it("shows an empty state for an employee with no shared records", async () => {
+it("shows an empty state for a Steward Guy with no shared records", async () => {
   empty = true;
   render(<TeamGrowth initialSubject="employee" />);
   fireEvent.click(
@@ -140,7 +140,7 @@ it.each([undefined, "manager", "unrelated"])(
   async (initialSubject) => {
     render(<TeamGrowth initialSubject={initialSubject} />);
     await screen.findByText(
-      "Select an employee to view their shared Growth Tools.",
+      "Select a Steward Guy to view their shared Growth Tools.",
     );
     expect(
       vi.mocked(api).mock.calls.some(([path]) => path.startsWith("growth/")),

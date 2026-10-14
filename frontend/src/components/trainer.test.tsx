@@ -114,6 +114,10 @@ it("reacts to real chat activity and renders the server reply", async () => {
     screen.getByRole("button", { name: "Send training message" }),
   );
   await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+  for (const name of ["Attach document", "New chat", "Send training message"]) {
+    expect((screen.getByRole("button", { name }) as HTMLButtonElement).disabled).toBe(true);
+  }
+  expect((screen.getByRole("combobox", { name: "Saved training conversations" }) as HTMLSelectElement).disabled).toBe(true);
   expect(screen.getByRole("status").textContent).toContain(
     "Steward is preparing a response",
   );
@@ -187,7 +191,7 @@ it.each(["", "What strengths does this show?"])(
     const file = new File(["I mentored colleagues."], "reflection.txt", {
       type: "text/plain",
     });
-    fireEvent.change(screen.getByLabelText("Attach document"), {
+    fireEvent.change(screen.getByLabelText("Document file"), {
       target: { files: [file] },
     });
     fireEvent.change(screen.getByLabelText("Message Steward"), {
@@ -218,7 +222,7 @@ it.each(["", "What strengths does this show?"])(
 
 it("preserves attachment and typed draft when document analysis fails", async () => {
   await openLiveTrainer();
-  fireEvent.change(screen.getByLabelText("Attach document"), {
+  fireEvent.change(screen.getByLabelText("Document file"), {
     target: { files: [new File(["Reflection"], "notes.txt")] },
   });
   fireEvent.change(screen.getByLabelText("Message Steward"), {
@@ -238,7 +242,7 @@ it("preserves attachment and typed draft when document analysis fails", async ()
 
 it("validates files and allows removal before sending", async () => {
   await openLiveTrainer();
-  const input = screen.getByLabelText("Attach document");
+  const input = screen.getByLabelText("Document file");
   for (const [file, error] of [
     [new File(["bad"], "bad.exe"), "Upload a PDF, DOCX or TXT file."],
     [new File([], "empty.txt"), "The uploaded document is empty."],
@@ -269,4 +273,46 @@ it("validates files and allows removal before sending", async () => {
       }) as HTMLButtonElement
     ).disabled,
   ).toBe(true);
+});
+
+it("keeps saved conversations and New chat in one row, including an empty history", async () => {
+  await openLiveTrainer();
+  const history = screen.getByRole("combobox", { name: "Saved training conversations" });
+  expect(history.closest(".trainer-conversation-row")).toContain(screen.getByRole("button", { name: "New chat" }));
+  expect(screen.getByRole("option", { name: "New conversation" })).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Message Steward"), { target: { value: "Draft" } });
+  fireEvent.click(screen.getByRole("button", { name: "New chat" }));
+  await waitFor(() => expect((screen.getByLabelText("Message Steward") as HTMLTextAreaElement).value).toBe(""));
+});
+
+it("loads a saved conversation and opens the file picker from the composer", async () => {
+  vi.mocked(allPages).mockResolvedValue([{ id: "saved", title: "Previous conversation" }]);
+  await openLiveTrainer();
+  vi.mocked(api).mockResolvedValueOnce([{ id: "old", role: "assistant", content: "Saved response" }]);
+  fireEvent.change(screen.getByRole("combobox"), { target: { value: "saved" } });
+  expect(await screen.findByText("Saved response")).toBeTruthy();
+  expect(api).toHaveBeenCalledWith("trainer/conversations/saved/messages/");
+  const input = screen.getByLabelText("Document file") as HTMLInputElement;
+  const click = vi.spyOn(input, "click");
+  fireEvent.click(screen.getByRole("button", { name: "Attach document" }));
+  expect(click).toHaveBeenCalledOnce();
+  fireEvent.change(input, { target: { files: [new File(["Notes"], "notes.txt")] } });
+  const card = screen.getByText("notes.txt").closest(".trainer-attachment-card")!;
+  expect(card.nextElementSibling?.classList.contains("trainer-compose-row")).toBe(true);
+});
+
+it("sends on Enter but preserves Shift+Enter and IME input", async () => {
+  await openLiveTrainer();
+  const input = screen.getByLabelText("Message Steward") as HTMLTextAreaElement;
+  const submit = vi.spyOn(input.form!, "requestSubmit").mockImplementation(() => {});
+  expect(input.rows).toBe(1); expect(input.maxLength).toBe(4000);
+  fireEvent.keyDown(input, { key: "Enter" });
+  expect(submit).not.toHaveBeenCalled();
+  fireEvent.change(input, { target: { value: "A question" } });
+  expect(fireEvent.keyDown(input, { key: "Enter", shiftKey: true })).toBe(true);
+  expect(fireEvent.keyDown(input, { key: "Enter", isComposing: true })).toBe(true);
+  expect(submit).not.toHaveBeenCalled();
+  fireEvent.keyDown(input, { key: "Enter" });
+  expect(submit).toHaveBeenCalledOnce();
+  submit.mockRestore();
 });

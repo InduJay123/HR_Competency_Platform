@@ -68,7 +68,7 @@ export function Cycles() {
       setSelected(null);
       setPreview(null);
       await reload();
-      setSuccess("Cycle launched. Employees have been notified.");
+      setSuccess("Cycle launched. Steward Guys have been notified.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -80,7 +80,7 @@ export function Cycles() {
     setBusy(true); setError("");
     try {
       const cycle = await post<Cycle>(`review-cycles/${selected.id}/start/`, {});
-      await inspect(cycle); await reload(); setSuccess("Cycle started. Employees can link Growth Tools evidence to their targets.");
+      await inspect(cycle); await reload(); setSuccess("Cycle started. Steward Guys can link Growth Tools evidence to their targets.");
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }
@@ -89,7 +89,7 @@ export function Cycles() {
       <h1>Review cycles</h1>
       <p className="subtitle">
         Mid-Year and Year-End. Confirm readiness, ownership and the appointed
-        Head of HR.
+        Chief Steward.
       </p>
       <Feedback error={error} success={success} />
       <Card title="Create a cycle">
@@ -134,10 +134,10 @@ export function Cycles() {
           {selected.workflow_version === 2 && <TargetSetup cycle={selected} people={preview.people} onSaved={() => inspect(selected)} />}
           {selected.workflow_version !== 2 && <p>This existing cycle keeps its original review forms. New cycles use individual pillar targets.</p>}
           <p>
-            Head of HR appraises every participant. Year-End also requires
-            their final Mid-Year record. Head of HR cannot appraise themselves.
+            Chief Steward appraises every participant. Year-End also requires
+            their final Mid-Year record. Chief Steward cannot appraise themselves.
           </p>
-          <p>Appointed Head of HR: {preview.reviewers.find((r) => r.id === reviewer)?.name || "Unavailable"}</p>
+          <p>Appointed Chief Steward: {preview.reviewers.find((r) => r.id === reviewer)?.name || "Unavailable"}</p>
           {selected.workflow_version !== 2 && <fieldset>
             <legend>Choose participants</legend>
             {preview.people.map((p) => (
@@ -165,7 +165,7 @@ export function Cycles() {
               disabled={busy || !ids.length || !reviewer}
               onClick={launch}
             >
-              Open formal reviews for {ids.length} employees
+              Open formal reviews for {ids.length} Steward Guys
             </Button>}
             <Button variant="neutral" onClick={() => setPreview(null)}>
               Cancel

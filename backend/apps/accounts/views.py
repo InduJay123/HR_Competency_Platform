@@ -192,7 +192,7 @@ class LoginView(APIView):
                 raise ValidationError(
                     "No approved workspace with this responsibility "
                     "is available. Check your request status using "
-                    "automatic sign-in."
+                    "Steward Guy sign-in."
                 )
 
         login(request, user)

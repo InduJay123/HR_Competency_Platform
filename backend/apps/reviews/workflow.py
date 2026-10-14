@@ -8,7 +8,7 @@ def require_participant(member, review):
         return "employee"
     if member.id == review.responsible_manager.membership_id:
         return "manager"
-    raise PermissionDenied("Only the employee or assigned manager can update this review.")
+    raise PermissionDenied("Only the Steward Guy or assigned manager can update this review.")
 
 
 def require_content_access(member, review):
@@ -17,7 +17,7 @@ def require_content_access(member, review):
         review.responsible_manager.membership_id,
         review.reviewer_id,
     ):
-        raise PermissionDenied("Review content is private to its participants and Head of HR.")
+        raise PermissionDenied("Review content is private to its participants and Chief Steward.")
 
 
 def confirmations(review):
@@ -37,9 +37,9 @@ def workflow_status(review):
     if complete:
         ai = "Complete"
     elif "EMPLOYEE" not in submitted:
-        ai = "Waiting for employee reflection"
+        ai = "Waiting for Steward Guy reflection"
     elif "MANAGER" not in submitted:
-        ai = "Waiting for manager appraisal"
+        ai = "Waiting for Chief Steward appraisal"
     elif latest and latest.state in ("QUEUED", "RUNNING", "RETRYING"):
         ai = "Running"
     elif latest and latest.state == "FAILED":
@@ -51,12 +51,12 @@ def workflow_status(review):
         marks.get(f"{role}_commitments") for role in ("employee", "manager")
     )
     requirements = [
-        ("Employee reflection", "EMPLOYEE" in submitted),
-        ("Manager appraisal", "MANAGER" in submitted),
+        ("Steward Guy reflection", "EMPLOYEE" in submitted),
+        ("Chief Steward appraisal", "MANAGER" in submitted),
         ("AI coaching", complete),
         ("Commitments confirmation", commitments),
-        ("Employee acknowledgement", review.employee_ack),
-        ("Manager acknowledgement", review.manager_ack),
+        ("Steward Guy acknowledgement", review.employee_ack),
+        ("Chief Steward acknowledgement", review.manager_ack),
         (
             "Final human assessment",
             review.hr_assessment.get("overall") and review.hr_assessment.get("rationale"),
@@ -69,7 +69,7 @@ def workflow_status(review):
         "employee_submitted": "EMPLOYEE" in submitted,
         "manager_submitted": "MANAGER" in submitted,
         "ai_coaching": ai,
-        "ai_blocked_reason": "Head of HR must validate or exclude submitted evidence first."
+        "ai_blocked_reason": "Chief Steward must validate or exclude submitted evidence first."
         if evidence_pending and not complete
         else "",
         "commitments_available": complete and {"EMPLOYEE", "MANAGER"}.issubset(submitted),

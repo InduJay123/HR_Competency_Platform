@@ -1,0 +1,103 @@
+Steward Guy sidebar and role presentation
+
+Roles: Employee / Steward -> Steward Guy. Head of HR -> Chief Steward (already
+renamed). Login keeps required explicit selection and no Automatic option.
+Platform super admin remains a separate valid entry. Internal employee, hr,
+platform, manager, EMPLOYEE, MANAGER, is_head_hr, employee_member and all existing
+routes and AI fields remain unchanged. No migrations or permission/workflow changes.
+
+Shell: role badge moved into identity area above avatar/name/job details. The badge
+uses existing primary/tint/border tokens. Name, initials/avatar, designation and
+since date remain. Team home and My team are filtered out for Chief Steward in
+all contexts, including sidebar search; /manager/dashboard and /manager/team
+routes and APIs remain. Other team links remain functional.
+
+Desktop CSS: sidebar-steward-guy is applied only to non-HR, non-Chief accounts.
+At widths above 760px: 100dvh, sticky sidebar, overflow-y:hidden, compact flex
+column spacing. Additional compact spacing at heights <=650px. Nothing disables
+body/main scrolling. Mobile drawer retains overflow-y:auto and its existing
+focus, escape and responsive behavior. Chief Steward retains its existing scroll.
+
+Tests and checks
+- Login/sidebar role-access tests updated: required selection, Steward Guy and
+  Chief Steward labels, unchanged role payloads, no auto option/dropdown, identity
+  badge, desktop-class scoping, absent Team home/My team and retained Team work.
+- Existing visible-copy assertions updated in review, growth, hierarchy and
+  consolidated-review tests; backend exposed-label assertions updated.
+- Headless Chrome with actual application styles and representative sidebar:
+  1366x768, 1280x720, 1024x600: hidden overflow, content fits, sign out within
+  viewport, main document scrolls. 390x700: mobile overflow remains auto.
+  This was a CSS layout fixture, not a live authenticated end-to-end session.
+- Frontend: 86 passed, 5 failures out of 91. New role/nav tests passed.
+  Remaining failures: evidence-editor expectation, two purpose carousel tests,
+  external logo settings expectation, shared trainer/dashboard motion preference.
+  No unrelated feature was changed to make these pass.
+- Production frontend build passed.
+- 60 backend tests passed on isolated PostgreSQL: foundation, ai,
+  accepted_coaching, pillar_cycles, reviews. No production DB changes.
+
+Remaining wording
+Role labels now use Steward Guy / Chief Steward. Internal identifiers, stored
+user content and historical snapshots can retain older words. Canonical review
+vocabulary remains Strong Steward / Developing Steward / Exceptional Steward,
+Steward pillar judgement, Steward assessment and Stewardship. The named AI
+mascot/coach remains Steward (Ask Steward, Message Steward, Steward coaching);
+that is a character name, not an employee role. No active authored Employee or
+Head of HR account-role labels remain. Historical docs/migrations/CLI metadata
+are not rewritten. No deployment, commit or push performed.
+
+Changed files (this task; previous uncommitted work preserved)
+frontend/src/app/responsive.css
+frontend\src\components\access.tsx
+frontend\src\components\account.tsx
+frontend\src\components\consolidated-review.test.tsx
+frontend\src\components\cycles.tsx
+frontend\src\components\development.tsx
+frontend\src\components\employee-detail.tsx
+frontend\src\components\growth.test.tsx
+frontend\src\components\growth.tsx
+frontend\src\components\guide.tsx
+frontend\src\components\hierarchy.test.tsx
+frontend\src\components\hierarchy.tsx
+frontend\src\components\hr-review-detail.test.tsx
+frontend\src\components\hr-review-presentation.tsx
+frontend\src\components\people.tsx
+frontend\src\components\pillar-review.test.tsx
+frontend\src\components\pillar-review.tsx
+frontend\src\components\pillar-targets.tsx
+frontend\src\components\platform.tsx
+frontend\src\components\review-coach.tsx
+frontend\src\components\review-detail.test.tsx
+frontend\src\components\review-detail.tsx
+frontend\src\components\review-form.test.tsx
+frontend\src\components\review-form.tsx
+frontend\src\components\review-list.tsx
+frontend\src\components\review-workflow.test.tsx
+frontend\src\components\review-workflow.tsx
+frontend\src\components\role-access.test.tsx
+frontend\src\components\settings.tsx
+frontend\src\components\shell.tsx
+frontend\src\components\tours.tsx
+frontend\src\components\trainer.tsx
+frontend\src\components\work.tsx
+frontend\src\lib\reviews.ts
+frontend\src\app\auth\login\page.tsx
+backend\apps\accounts\views.py
+backend\apps\ai_coach\schema.py
+backend\apps\ai_coach\services.py
+backend\apps\ai_coach\trainer.py
+backend\apps\ai_coach\trainer_documents.py
+backend\apps\ai_coach\views.py
+backend\apps\companies\access.py
+backend\apps\companies\platform.py
+backend\apps\development\views.py
+backend\apps\organisation\serializers.py
+backend\apps\organisation\services.py
+backend\apps\organisation\views.py
+backend\apps\reports\views.py
+backend\apps\reviews\services.py
+backend\apps\reviews\targets.py
+backend\apps\reviews\workflow.py
+backend\tests\test_accepted_coaching.py
+backend\tests\test_foundation.py
+backend\tests\test_reviews.py

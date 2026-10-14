@@ -96,7 +96,7 @@ class RegisterView(APIView):
                             "Unable to submit this request. Use your existing account password or recover access."
                         )
                     if user.is_superuser:
-                        raise ValidationError("Platform administrators cannot request employee membership.")
+                        raise ValidationError("Platform administrators cannot request Steward Guy membership.")
                 else:
                     user = User(
                         username=email,
@@ -168,7 +168,7 @@ class AccessRequestViewSet(viewsets.ReadOnlyModelViewSet):
         payload.is_valid(raise_exception=True)
         data = payload.validated_data
         if data["role"] == "HR" and not request.user.is_superuser and not membership(request).is_head_hr:
-            raise PermissionDenied("Only the company Head of HR can grant HR access.")
+            raise PermissionDenied("Only the company Chief Steward can grant HR access.")
         with transaction.atomic():
             obj = AccessRequest.objects.select_for_update().get(pk=obj.pk)
             if obj.status != "PENDING":

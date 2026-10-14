@@ -22,13 +22,6 @@ import { NavIcon, routeIcon } from "./nav-icon";
 
 const SessionContext = createContext<Session | null>(null);
 export const useSession = () => useContext(SessionContext)!;
-const names: Record<Context, string> = {
-  employee: "My Work",
-  manager: "My Team",
-  hr: "HR Workspace",
-  reviews: "My Reviews",
-  approvals: "My Approvals",
-};
 export function Shell({ children }: { children: ReactNode }) {
   const [data, setData] = useState<Session | null>(null),
     [profile, setProfile] = useState<Employee | null>(null),
@@ -190,6 +183,18 @@ export function Shell({ children }: { children: ReactNode }) {
     ["Growth tools", role === "manager" ? "/manager/growth" : "/employee/growth"],
     ["Review history", "/employee/review-history"],
   );
+  if (data.contexts?.includes("manager") && role !== "manager") {
+    links.push(
+      ["Team home", "/manager/dashboard"],
+      ["Team work", "/manager/tasks"],
+      ["My team", "/manager/team"],
+      ["Reviews I conduct", "/manager/reviews"],
+      ["Team development", "/manager/development"],
+    );
+  }
+  const chief = !!data.contexts?.includes("manager");
+  const stewardGuy = !chief && !data.contexts?.includes("hr");
+  const visibleLinks = chief ? links.filter(([, url]) => !["/manager/dashboard", "/manager/team"].includes(url)) : links;
   return (
     <SessionContext value={data}>
       <Tours allowed={data.contexts || []} onContextChange={change}>
@@ -199,7 +204,7 @@ export function Shell({ children }: { children: ReactNode }) {
           </a>
           <aside
             ref={drawer}
-            className={open ? "sidebar expanded" : "sidebar"}
+            className={`sidebar${open ? " expanded" : ""}${stewardGuy ? " sidebar-steward-guy" : ""}`}
             role={open ? "dialog" : undefined}
             aria-modal={open ? true : undefined}
             aria-label={open ? "Workspace navigation" : undefined}
@@ -222,21 +227,10 @@ export function Shell({ children }: { children: ReactNode }) {
             <Link href={`/${role}/dashboard`} className="brand">
               <Brand />
             </Link>
-            <label className="context-label">
-              WORKSPACE
-              <select
-                value={data.context}
-                onChange={(e) => change(e.target.value as Context)}
-              >
-                {data.contexts?.map((c) => (
-                  <option key={c} value={c}>
-                    {names[c]}
-                  </option>
-                ))}
-              </select>
-            </label>
+             <span className="identity-role">{chief ? "Chief Steward" : stewardGuy ? "Steward Guy" : "Company administrator"}</span>
+              
             <nav aria-label="Main navigation">
-              {links.map(([label, url]) => (
+              {visibleLinks.map(([label, url]) => (
                 <Link
                   key={url}
                   href={url}
@@ -276,7 +270,7 @@ export function Shell({ children }: { children: ReactNode }) {
               </Link>
             </div>
             <div className="identity">
-              <div className="identity-row">
+             <div className="identity-row">
                 {profile?.photo_url && (
                   <Image
                     className="avatar"
@@ -383,7 +377,7 @@ export function Shell({ children }: { children: ReactNode }) {
                   {search.trim() && (
                     <div className="search-results">
                       {[
-                        ...links,
+                        ...visibleLinks,
                         ["Stewardship guide", "/employee/guide"],
                         ["My account", "/employee/account"],
                         ["My actions", "/employee/notifications"],
@@ -401,7 +395,7 @@ export function Shell({ children }: { children: ReactNode }) {
                           </Link>
                         ))}
                       {![
-                        ...links,
+                        ...visibleLinks,
                         ["Stewardship guide"],
                         ["My account"],
                         ["My actions"],

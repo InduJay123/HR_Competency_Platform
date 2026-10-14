@@ -102,7 +102,7 @@ export function ReviewList({
         ) : data.count === 0 ? (
           <p className="empty">
             No reviews match this view. HR opens Mid-Year and Year-End cycles
-            for employees reporting to Head of HR.
+            for Steward Guys reporting to Chief Steward.
           </p>
         ) : (
           <>
@@ -110,7 +110,7 @@ export function ReviewList({
               <table>
                 <thead>
                   <tr>
-                    <th>Employee / responsibility</th>
+                    <th>Steward Guy / responsibility</th>
                     <th>Cycle</th>
                     <th>Due</th>
                     <th>Stage</th>

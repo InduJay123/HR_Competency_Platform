@@ -33,7 +33,7 @@ export function EmployeeDetail() {
         }),
       });
       setP(next);
-      setSuccess("Employee profile saved.");
+      setSuccess("Steward Guy profile saved.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -43,7 +43,7 @@ export function EmployeeDetail() {
   return (
     <>
       <Link href="/hr/employees">← People directory</Link>
-      <h1>Employee profile</h1>
+      <h1>Steward Guy profile</h1>
       <Feedback error={error} success={success} />
       {!p ? (
         <Loading />
@@ -67,7 +67,7 @@ export function EmployeeDetail() {
                 />
               </label>
               <label>
-                Employee joining date
+                Steward Guy joining date
                 <input
                   name="joined_on"
                   type="date"
@@ -78,7 +78,7 @@ export function EmployeeDetail() {
                 Reports to:{" "}
                 {p.is_head_hr
                   ? "No reporting manager"
-                  : `${p.manager_name} — Head of HR`}
+                  : `${p.manager_name} — Chief Steward`}
               </p>
               <label className="check-label">
                 <input
@@ -88,12 +88,12 @@ export function EmployeeDetail() {
                 />
                 Senior leadership evaluation perspective
               </label>
-              <Button disabled={busy}>Save employee details</Button>
+              <Button disabled={busy}>Save Steward Guy details</Button>
             </form>
           </Card>
           <Card title="Workspace access">
             <p>
-              Send an access link to this employee’s recorded business email.
+              Send an access link to this Steward Guy’s recorded business email.
               Email delivery requires the server email service and worker.
             </p>
             <Button

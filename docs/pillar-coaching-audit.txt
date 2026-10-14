@@ -1,0 +1,104 @@
+Pillar coaching audit and completion
+
+Already correct
+- services.pillar_reviews returns context/character/capability/continuity/contribution,
+  each with target, success_measure, expected_behaviour, employee_reflection,
+  head_of_hr_appraisal, outcome and steward_judgement. Targets come exclusively
+  from Review.pillar_context; absent historical values remain null.
+- make_input retains period, senior_leader, original submitted source content and
+  pillar_reviews. No Growth Tools source or participation stage is added.
+- OUTPUT_SCHEMA requires pillar_coaching and exactly five named pillars. Every
+  pillar requires strengths, gaps, support_options and limitations. Observations
+  require observation, source_ids, question, uncertainty; all object levels
+  reject additional properties. validate_output checks each pillar and rejects
+  empty/unknown citations, including knowledge IDs absent from review sources.
+- accepted-coaching returns the five pillar keys directly under coaching, with
+  field allowlisting, source labels and existing employee/tenant privacy.
+- tasks sends the strict schema in request.text.format and consumes the raw
+  OpenAI Responses API result. One provider call covers all five pillars.
+- Employee, accepted-coaching and HR UI already rendered separate pillar sections.
+- Existing backend fixtures/tests had already been updated in the previous task.
+
+Changes made in this turn
+backend/apps/ai_coach/schema.py: v7 prompt adds explicit neutral treatment of
+conflicting reflection/appraisal and says targets alone cannot support achievement.
+No OUTPUT_SCHEMA change; existing full five-pillar schema is retained.
+backend/tests/test_ai.py: exact run_id, input_hash, model, instructions, serialized
+input_snapshot and strict output schema assertions against the actual HTTP mock.
+frontend/src/components/hr-review-presentation.tsx: restore HR Refresh status
+using the already-wired callback. This does not run AI or add generation buttons.
+frontend/src/components/coaching-test-fixtures.ts: typed reusable five-pillar helper.
+frontend/src/components/review-detail.test.tsx: nested accepted output, five headings,
+repeated pillar sections, friendly source labels and split-node question text.
+frontend/src/components/review-workflow.test.tsx: nested output, five headings,
+exactly one employee Run AI Coaching button and none for other roles.
+frontend/src/components/hr-review-detail.test.tsx: nested output, five headings;
+replace obsolete empty-evidence wording assertion with pillar rendering assertions.
+docs/pillar-coaching-output-schema.json: exact exported JSON Schema.
+docs/pillar-coaching-audit.txt: this report.
+Existing uncommitted edits to services/views and other frontend/test files were
+preserved. They were not rewritten. n8n files were not edited.
+
+Exact request.input structure
+request.input is a JSON STRING, encoding:
+{
+  "period": {"year": <integer>, "kind": <cycle kind>, "starts_on": <ISO date>, "ends_on": <ISO date>},
+  "senior_leader": <boolean>,
+  "pillar_reviews": {
+    "context": <pillar>, "character": <pillar>, "capability": <pillar>,
+    "continuity": <pillar>, "contribution": <pillar>
+  },
+  "sources": [<source>, ...]
+}
+Each <pillar> has exactly these keys:
+{"target": <text/null>, "success_measure": <text/null>,
+ "expected_behaviour": <text/null>, "employee_reflection": <text/null>,
+ "head_of_hr_appraisal": <text/null>, "outcome": <text/null>,
+ "steward_judgement": <text/null>}
+Each source: {"id": <source ID>, "type": <source type>, "content": <original content>}.
+Types: EMPLOYEE_SUBMISSION, MANAGER_SUBMISSION, PILLAR_TARGET; existing independent
+VALIDATED_EVIDENCE may appear when submitted and validated (not Growth Tools).
+Full synthetic example: docs/pillar-ai-input-after.json.
+Wrapper: {run_id, input_hash, request: {model, store:false, instructions,
+input:<JSON string>, max_output_tokens:5000, text:{format:{type:"json_schema",
+name:"stewardship_coaching", strict:true, schema:OUTPUT_SCHEMA}}}}.
+Exact OUTPUT_SCHEMA: docs/pillar-coaching-output-schema.json.
+
+Old references
+No active output.strengths/output.gaps/output.support_options access remains in
+backend/frontend. Per-pillar strengths/gaps/support_options/limitations remain
+correct. Human appraisal fields and trainer questions are separate features.
+Backend intentionally tests rejection of the old generic shape. Historical
+stored analyses are not rewritten or fabricated into pillars. Old generic records
+are not converted into pillar guidance; existing successful runs remain reused
+under existing idempotency. If those records need regeneration or a dedicated
+legacy viewer, that needs an explicit historical-record policy.
+Historical source labels/state identifiers remain compatibility artifacts, not
+Growth Tools linkage or an active Human Conversation stage.
+Older docs and n8n fixtures may describe the old response; n8n is explicitly outside
+this task. The current exported schema above is authoritative.
+
+Validation
+manage.py check: no issues, using configured settings.
+52 backend tests passed on isolated PostgreSQL: tests.test_ai,
+tests.test_accepted_coaching, tests.test_pillar_cycles,
+tests.test_participant_workflow, tests.test_reviews.
+No Supabase failure in this run; configured remote test DB was not used.
+npm test: 76 passed, 4 failed (80 total).
+Remaining failures:
+- hr-review-detail: retains evidence validation and labels known sources without
+  showing IDs (expects Authorised excerpt editor absent from current review page).
+- purpose-journey: cycles explanatory journey / reduced-motion control (2 tests).
+- settings: saves external logo URLs (expects logo_url in current request).
+These are outside pillar coaching; no unrelated production feature changed to
+make them pass. Updated coaching-contract tests passed.
+npm run build: passed. Ruff and git diff --check passed.
+No migration needed. No provider calls, commits or deployment performed.
+
+Manual n8n handoff
+Forward Django request.input and request.text.format.schema unchanged, together
+with instructions. Preserve five pillars and all seven fields in retrieval/coaching
+context. RAG is methodology, never review evidence; keep knowledge IDs separate.
+Return raw OpenAI Responses API JSON, not unwrapped pillar_coaching JSON.
+Do not use a hardcoded old four-group output schema. Publish manually and smoke-test
+with synthetic review data. Live n8n/provider flow was not exercised here.
