@@ -111,12 +111,6 @@ class HrAssessmentSerializer(serializers.Serializer):
     human_only_reason = serializers.CharField(max_length=4000, required=False, allow_blank=True)
 
 
-class ConversationSerializer(VersionSerializer):
-    discussion = serializers.CharField(max_length=20000)
-    assessment = HrAssessmentSerializer()
-    commitments = CommitmentSerializer(many=True)
-
-
 class SaveCommitmentSerializer(VersionSerializer):
     commitment_id = serializers.UUIDField(required=False)
     commitment = CommitmentSerializer()

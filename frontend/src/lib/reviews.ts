@@ -49,9 +49,9 @@ export type Review = {
     manager_submitted: boolean;
     ai_coaching: string;
     ai_blocked_reason?: string;
-    conversation_complete: boolean;
+    commitments_available: boolean;
     commitments_complete: boolean;
-    confirmations: { round: number; [key: string]: number | { actor: string; at: string } };
+    confirmations: { round: number; employee_commitments?: { actor: string; at: string }; manager_commitments?: { actor: string; at: string } };
     missing: string[];
   };
   submission_history?: Json[];

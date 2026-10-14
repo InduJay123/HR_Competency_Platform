@@ -10,7 +10,7 @@ export function ReviewWorkflow({ review, role, hr, onSaved }: {
   const workflow = review.workflow;
   const marks = workflow?.confirmations;
   const locked = review.state === "FINALISED";
-  const editable = !!role && !locked && !!workflow?.conversation_complete && !workflow.commitments_complete && !review.employee_ack && !review.manager_ack;
+  const editable = !!role && !locked && !!workflow?.commitments_available && !workflow.commitments_complete && !review.employee_ack && !review.manager_ack;
   const empty = { owner: review.employee, action: "", due_date: "", success_measure: "", manager_support: "" };
   const [draft, setDraft] = useState(empty);
   const [editing, setEditing] = useState<string>();
@@ -34,20 +34,10 @@ export function ReviewWorkflow({ review, role, hr, onSaved }: {
   }
   return <>
     <Feedback error={error} />
-    <Card title="Human conversation">
-      <p>Employee and assigned manager each confirm their own participation.</p>
-      <dl className="record-fields">{(["employee", "manager"] as const).map(person =>
-        <div key={person}><dt>{person === "employee" ? "Employee" : "Manager"}</dt>
-          <dd><Badge>{marks?.[`${person}_participation`] ? "Participated" : "Pending"}</Badge></dd></div>)}</dl>
-      {workflow?.ai_coaching !== "Complete" && <p className="alert">Available after both submissions and AI coaching are complete.</p>}
-      {role && !locked && !marks?.[`${role}_participation`] && <Button
-        disabled={busy || workflow?.ai_coaching !== "Complete" || !workflow?.employee_submitted || !workflow.manager_submitted}
-        onClick={() => act("conversation")}>Confirm Participation</Button>}
-    </Card>
     <Card title="Commitments">
       <p>One shared action plan, agreed by the employee and assigned manager.</p>
       <Badge>{workflow?.commitments_complete ? "Complete" : "Pending"}</Badge>
-      {!workflow?.conversation_complete && <p className="alert">Editing unlocks after both people confirm conversation participation.</p>}
+      {!workflow?.commitments_available && <p className="alert">Editing unlocks after both submissions and AI coaching are complete.</p>}
       {review.commitments?.map(item => <div className="evidence-row" key={item.id}>
         <h3>{item.action}</h3><p>Owner: {(item.owner_id || item.owner) === review.employee ? review.employee_name : review.manager_name}</p>
         <p>Success measure: {item.success_measure}</p><p>Support needed: {item.manager_support}</p><p>Due {item.due_date}</p>

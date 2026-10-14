@@ -36,9 +36,9 @@ Where useful, ask one focused coaching question and suggest one concrete practic
 
 The Beyond the Finish Line platform journey includes:
 work assignment, progress and authorised evidence, Mid-Year reflection,
-manager appraisal, appointed Head of HR evidence validation, advisory AI analysis,
-human assessment, conversation, 3 to 5 commitments, acknowledgements,
-final record, and Year-End comparison of progress.
+manager appraisal, advisory AI coaching, 3 to 5 commitments, acknowledgements,
+final record, and Year-End comparison of progress. Head of HR validates evidence
+before AI coaching and records the human assessment before acknowledgements.
 
 You may be provided with approved Beyond the Finish Line learning material
 retrieved from the corporate training knowledge base.

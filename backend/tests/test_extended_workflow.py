@@ -15,7 +15,7 @@ class ExtendedWorkflowTests(TestCase):
     launch = fixture.ReviewTests.launch
     submit = fixture.ReviewTests.submit
     content = fixture.ReviewTests.content
-    conversation = fixture.ReviewTests.conversation
+    agree_commitments = fixture.ReviewTests.agree_commitments
     finish = fixture.ReviewTests.finish
 
     def setUp(self):
@@ -25,7 +25,7 @@ class ExtendedWorkflowTests(TestCase):
         r = self.launch()
         self.submit(r, "EMPLOYEE")
         self.submit(r, "MANAGER")
-        self.conversation(r)
+        self.agree_commitments(r)
         self.finish(r)
         return r
 
@@ -66,7 +66,7 @@ class ExtendedWorkflowTests(TestCase):
             end.refresh_from_db()
         self.submit(end, "MANAGER")
         self.submit(end, "EMPLOYEE")
-        self.conversation(end)
+        self.agree_commitments(end)
         self.finish(end)
         prior.refresh_from_db()
         self.assertEqual(prior.snapshot.content, baseline)

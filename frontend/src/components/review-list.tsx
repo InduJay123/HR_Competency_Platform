@@ -63,7 +63,7 @@ export function ReviewList({
         )}
       </div>
       <div className="review-banner">
-        <strong>Work → reflection → conversation → improvement</strong>
+        <strong>Reflection → appraisal → AI coaching → commitments → acknowledgement → final record</strong>
         <p>
           Two formal reviews a year. Evidence-led conversations. Human
           decisions.

@@ -300,8 +300,8 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
       <div className="review-banner">
         <strong>Evidence informs. People decide.</strong>
         <p>
-          Employee reflection → manager appraisal → evidence validation →
-          coaching → conversation → commitments → final record
+          Employee reflection → manager appraisal → AI coaching →
+          commitments → acknowledgement → final record
         </p>
       </div>
       <Feedback error={error} success={success} />
@@ -341,7 +341,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
       <ReviewWorkflow key={`${review.id}-${review.round}`} review={review} role={employee ? "employee" : manager ? "manager" : null} hr={hr} onSaved={reload} />
 
       {review.conversation?.discussion && (
-        <Card title="Shared conversation record">
+        <Card title="Historical review notes">
           <p className="long-copy">{review.conversation.discussion}</p>
           <h3>{review.hr_assessment?.overall}</h3>
           <p>{review.hr_assessment?.rationale}</p>
@@ -441,7 +441,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
               ? "Finalisation permanently seals the agreed record."
               : confirmation === "revision"
                 ? "Both participants must submit again in a new round."
-                : "Record your acknowledgement of the shared conversation."}
+                : "Record your acknowledgement of the shared review."}
           </p>
           <div className="actions">
             <Button disabled={busy} onClick={() => action(confirmation)}>

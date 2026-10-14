@@ -35,7 +35,7 @@ Company registration → Bradley approval → company workspace access. Employee
 
 Keep employment joining date separate from the automatic platform joining timestamp. Company branding includes name, tagline, logo, vision and mission. Bradley must not become a company employee merely to display platform administration controls.
 
-Preserve the review journey: work → progress/evidence → Mid-Year forms → HR source validation → optional AI advice → human conversation and commitments → acknowledgements/final record → development follow-through → Year-End review. Senior-management evaluations use the relevant senior review content; AI does not assign employment decisions.
+Preserve the review journey: work → progress/evidence → Mid-Year forms → HR source validation → AI coaching → commitments → acknowledgements/final record → development follow-through → Year-End review. Senior-management evaluations use the relevant senior review content; AI does not assign employment decisions.
 
 ## 3. Repository and services
 

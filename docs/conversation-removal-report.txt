@@ -1,0 +1,180 @@
+Human Conversation stage removal
+
+1. Root cause
+   Follow-up verification: the committed HEAD still contains the exact obsolete
+   card, progress row and locked-editing message. The removal exists as local
+   uncommitted changes. Pulling/redeploying that old commit will reproduce the
+   reported page. No local listener on ports 3000/8000 was detected. The VPS
+   running revision is unverified; commit/push and rebuild BOTH services below.
+   Two developer documents also retained obsolete instructions; now corrected.
+   Review.conversation.workflow stored employee_participation and
+   manager_participation. workflow_status required both for conversation_complete;
+   saving/confirming commitments and finalisation depended on those confirmations.
+   The UI exposed a participation card, progress row and POST conversation action.
+
+2. Implemented workflow
+   Employee reflection -> Manager appraisal -> AI coaching -> Commitments ->
+   Acknowledgement -> Final record.
+   Backend commitments_available requires both current-round submissions and a
+   succeeded current-round AI analysis. Participation is never consulted.
+   Existing evidence validation, shared-plan confirmation, human assessment,
+   acknowledgements, revision and finalisation semantics remain intact.
+   Removed participation action/service, unused prepare_conversation service and
+   review ConversationSerializer, obsolete derived state, card/buttons/API calls.
+   The removed /api/v1/reviews/{id}/conversation/ endpoint returns 404.
+
+3. Backend files changed
+   backend/apps/reviews/workflow.py
+   backend/apps/reviews/services.py
+   backend/apps/reviews/views.py
+   backend/apps/reviews/serializers.py
+   backend/apps/ai_coach/trainer.py (platform workflow guidance only)
+   backend/tests/test_reviews.py
+   backend/tests/test_participant_workflow.py
+   backend/tests/test_extended_workflow.py
+
+4. Frontend files changed
+   frontend/src/lib/reviews.ts
+   frontend/src/components/review-workflow.tsx
+   frontend/src/components/review-workflow.test.tsx
+   frontend/src/components/hr-review-presentation.tsx
+   frontend/src/components/hr-review-detail.test.tsx
+   frontend/src/components/review-detail.tsx
+   frontend/src/components/review-list.tsx
+   Documentation: docs/conversation-audit.txt, docs/review-workflow.md,
+   DEVELOPER GUIDE - LOGINS AND AI SETUP.md, and this report.
+
+5. Exact DB tables removed: none. No dedicated participation table exists.
+6. Exact DB columns removed: none. No dedicated participation column exists.
+7. Schema deliberately kept
+   reviews_review.conversation: shared JSON containing CURRENT commitment
+   confirmations/round and historical discussion/participation metadata.
+   Removing it would break commitment agreement and destroy historical records.
+   reviews_review.state, acknowledgement/assessment/finalisation fields: required
+   by remaining workflow. CONVERSATION_READY remains a read-compatible legacy
+   state value; no code produces it or requires it as a stage.
+   reviews_finalsnapshot.content/sha256, reviews_reviewevent.action/reason and
+   general audit records: immutable historical records, not participation schema.
+   AI trainer conversation/message tables and serializer: unrelated chat feature.
+   All review FKs/indexes/constraints remain necessary and unchanged.
+
+8. Migrations added: none. No model/schema change is necessary; Django confirms
+   'No changes detected'. Existing migration history remains untouched.
+
+9. Historical data handling
+   No bulk data rewrite/deletion, reopening or final snapshot rehashing.
+   Stored participation metadata survives commitment edits and revision archives,
+   but is excluded from active workflow.confirmations and all workflow gates.
+   Historical discussion is displayed as read-only 'Historical review notes'.
+   Configured database read-only audit: 3 reviews (1 FINALISED, 1 OPEN,
+   1 SUBMITTED); 1 row has each participation key and employee commitment marks;
+   0 rows have a discussion key. No dedicated participation schema was found.
+   No live mutation/migration/deployment was performed. VPS was not accessed.
+
+10. Verification
+   Final focused PostgreSQL review tests: 34 passed.
+   Final focused frontend workflow/progress tests: 11 passed.
+   Full PostgreSQL suite: 151 tests, 3 failing assertions in 2 existing trainer
+   methods; all other tests passed. Log:
+   tmp/conversation-platform-full-backend.log.
+   Existing failing backend methods:
+     tests.test_profiles_trainer.ProfileTrainerTests.test_live_adapter_sends_only_conversation_and_persists_reply
+     tests.test_trainer_documents.DocumentRequestTests.test_document_only_and_question_keep_document_out_of_storage
+   These concern trainer provider/RAG expectations and were already reproduced
+   against the unchanged baseline with the same environment (3 failures).
+   Full frontend suite: 74 tests, 68 passed / 6 failed. The same six baseline
+   failures remain: 3 hr-review-detail disclosure/provider/evidence assertions,
+   2 purpose-journey assertions and 1 settings external-logo assertion.
+   Unrelated functionality was not changed to hide those failures.
+   Frontend TypeScript check and production build: passed.
+   Django system check, migration drift check, git diff --check: passed.
+   No active code references to the removed services/endpoint/state remain;
+   negative regression assertions and preserved historical metadata are intentional.
+   Logs in tmp/conversation-{full-backend,full-frontend,final-backend,
+   final-frontend,typecheck,build}.log. Prior baseline logs in
+   tmp/baseline-backend-env-tests.log and tmp/baseline-frontend-tests.log.
+   Follow-up rerun: focused backend 34 passed; frontend 11 passed; TypeScript
+   and rebuilt production frontend passed. Full frontend: 68/74 passed, the
+   same six existing failures. Logs: tmp/conversation-platform-*.log.
+   Explicit regressions verify 404 for both employee and manager on the removed
+   endpoint, no participation event generation through finalisation, and both
+   employee and Head of HR commitment controls immediately after AI completion.
+
+   Full repository search, case-insensitive, for all requested phrases:
+   Runtime backend/apps, frontend/src excluding test files, Website/public and
+   Website/server: ZERO matches.
+   Rebuilt frontend/.next/server and frontend/.next/static: ZERO matches.
+   Whole repository (including hidden files, excluding .git, dependencies,
+   bytecode, source maps, logs and archived tmp baseline copies): only these
+   intentional matches remain:
+     docs/conversation-audit.txt and this report: removal audit/documentation;
+     review-workflow.test.tsx: negative assertion that the card is absent;
+     test_reviews.py: employee disagreement comment containing 'participated',
+       unrelated to stage confirmation.
+   Remaining conversation JSON references support shared commitment agreement
+   or immutable historical records, not an active stage. Trainer chat is separate.
+   Reproduce the runtime search (exit code 1 means no matches):
+   rg -n -i 'human conversation|conversation participation|confirm conversation|participated|employee_participated|manager_participated|human_conversation' backend/apps frontend/src Website/public Website/server -g '!*.test.*'
+   rg -l --hidden -i 'human conversation|conversation participation|confirm conversation|participated|employee_participated|manager_participated|human_conversation' frontend/.next/server frontend/.next/static -g '!*.map'
+
+11. Exact local commands (PowerShell from repository root)
+   & backend/.venv/Scripts/python.exe backend/manage.py check --settings=config.settings.test
+   & backend/.venv/Scripts/python.exe backend/manage.py makemigrations --check --dry-run --settings=config.settings.test
+   & 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D 'C:/Users/Induni/Desktop/BTFL Final/tmp/reporting-postgres' -l 'C:/Users/Induni/Desktop/BTFL Final/tmp/reporting-postgres.log' -o '-h 127.0.0.1 -p 55439' -w start
+   & backend/.venv/Scripts/python.exe backend/manage.py test tests.test_reviews tests.test_participant_workflow tests.test_extended_workflow --settings=config.settings.test_postgres --noinput
+   Push-Location backend
+   & .venv/Scripts/python.exe manage.py test tests --settings=config.settings.test_postgres --noinput
+   Pop-Location
+   & 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D 'C:/Users/Induni/Desktop/BTFL Final/tmp/reporting-postgres' -m fast -w stop
+   Push-Location frontend
+   npm.cmd test -- --run src/components/review-workflow.test.tsx
+   npm.cmd test
+   npm.cmd run typecheck
+   npm.cmd run build
+   Pop-Location
+
+   No migration is required specifically for this refactor. To inspect/apply
+   other pending project migrations, first back up the intended database and
+   inspect the plan (default settings use the configured .env database):
+   & backend/.venv/Scripts/python.exe backend/manage.py migrate --plan
+   & backend/.venv/Scripts/python.exe backend/manage.py migrate --noinput
+   Any pending two-level-reporting migrations require the separate reporting
+   preflight/remediation procedure in docs/two-level-report.txt.
+
+12. Exact Git commands (not executed; review changes before committing)
+   $btflGit = 'C:/Users/Induni/AppData/Local/GitHubDesktop/app-3.6.7/resources/app/git/cmd/git.exe'
+   & $btflGit status --short
+   & $btflGit diff --check
+   & $btflGit add -- backend/apps/reviews/workflow.py backend/apps/reviews/services.py backend/apps/reviews/views.py backend/apps/reviews/serializers.py backend/apps/ai_coach/trainer.py backend/tests/test_reviews.py backend/tests/test_participant_workflow.py backend/tests/test_extended_workflow.py frontend/src/lib/reviews.ts frontend/src/components/review-workflow.tsx frontend/src/components/review-workflow.test.tsx frontend/src/components/hr-review-presentation.tsx frontend/src/components/hr-review-detail.test.tsx frontend/src/components/review-detail.tsx frontend/src/components/review-list.tsx docs/conversation-audit.txt docs/conversation-removal-report.txt
+   & $btflGit diff --cached --stat
+   & $btflGit add -- docs/review-workflow.md 'DEVELOPER GUIDE - LOGINS AND AI SETUP.md'
+   & $btflGit diff --cached --stat
+   & $btflGit commit -m 'Remove Human Conversation stage and unlock commitments after AI coaching'
+   & $btflGit push origin main
+
+13. Exact VPS commands (Bash from existing repository checkout; not executed)
+   Frontend/backend must deploy together because the obsolete endpoint is removed.
+   Resolve the existing failing release checks before production rollout.
+   No SSH identity or checkout path is specified in the repository; retain the
+   deployment's existing connection, directory, proxy and backup procedures.
+
+   set -euo pipefail
+   git pull --ff-only origin main
+   git rev-parse HEAD
+   docker compose -f docker-compose.prodtest.yml build backend worker beat frontend
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py check
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py migrate --plan
+
+   If the plan contains pending migrations, apply the applicable migration's
+   preflight/backup procedure before continuing. This refactor adds none.
+   Once the schema is current, deploy the coordinated application update:
+
+   docker compose -f docker-compose.prodtest.yml stop frontend backend worker beat
+   docker compose -f docker-compose.prodtest.yml up -d --force-recreate backend worker beat frontend
+   docker compose -f docker-compose.prodtest.yml logs --tail=100 backend worker beat frontend
+
+   Smoke-test employee and Head of HR: both forms -> AI -> immediate commitment
+   editing -> both plan confirmations -> acknowledgements -> final record.
+   Verify the historical final record still loads and progress has six steps.
+   Confirm the VPS HEAD matches the new removal commit, then reload open browser
+   tabs so they use the new frontend. An old commit/image will retain the old UI.

@@ -1,0 +1,28 @@
+Human Conversation removal dependency audit
+
+Review.conversation (reviews_review.conversation) is shared JSON storage, not
+a dedicated participation column: it contains legacy discussion notes and
+workflow.round / employee_commitments / manager_commitments used by current
+commitment agreement. Keep this column. Historical participation keys remain
+in stored JSON but must not influence current workflow or public confirmations.
+No dedicated HumanConversation model, table, index, FK or participation column
+exists. No schema deletion or data migration is needed.
+
+Remove: reviews.services.prepare_conversation (unused), confirm_participation,
+ReviewViewSet.conversation, unused ConversationSerializer, conversation_complete
+derived state, participation card/buttons/API calls and progress row.
+Replace commitment save/confirmation gates with both submissions + succeeded
+current-round AI. Keep evidence validation, assessment, acknowledgements,
+revision archival and finalisation rules.
+
+Preserve: ReviewEvent / AuditLog immutable historical events, FinalSnapshot
+content/hash, Review final state/timestamps, historical discussion JSON and
+revision archives. CONVERSATION_READY is a legacy stored-state compatibility
+alias accepted for historical records, not a newly produced workflow stage.
+TrainerConversation / TrainerMessage are unrelated AI chat features and remain.
+No participation-specific notification, CSS, table or constraint was found.
+
+Dependency paths: workflow.py -> review serializers/status -> services gating
+and finalise; views conversation action -> confirm_participation -> JSON and
+immutable events; ReviewWorkflow -> conversation action; HrWorkflow -> derived
+status; review-detail/list -> workflow copy; tests share ReviewTests helper.

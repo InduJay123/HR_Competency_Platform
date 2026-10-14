@@ -21,7 +21,7 @@ class ParticipantWorkflowTests(TestCase):
     launch = fixture.ReviewTests.launch
     submit = fixture.ReviewTests.submit
     content = fixture.ReviewTests.content
-    conversation = fixture.ReviewTests.conversation
+    agree_commitments = fixture.ReviewTests.agree_commitments
     finish = fixture.ReviewTests.finish
 
     def setUp(self):
@@ -84,8 +84,6 @@ class ParticipantWorkflowTests(TestCase):
     def open_plan(self):
         self.ready()
         self.stored_ai()
-        for actor in (self.nimal, self.hr):
-            self.act(actor, "conversation")
 
     def test_employee_ai_requires_both_forms_and_receives_full_contents(self):
         self.act(self.nimal, "ai-coaching", expected=400)
@@ -119,29 +117,54 @@ class ParticipantWorkflowTests(TestCase):
                 self.acting(actor).get(f"/api/v1/reviews/{self.review.id}/ai-coaching/").status_code, 404
             )
         self.assertEqual(self.status()["ai_coaching"], "Complete")
-        self.assertFalse(self.status()["conversation_complete"])
+        self.assertNotIn("conversation_complete", self.status())
         self.act(self.nimal, "ai-coaching", expected=202)
         self.assertEqual(self.review.analyses.count(), 1)
         stored.refresh_from_db()
         self.assertEqual(stored.output, previous)
 
-    def test_participation_is_owned_and_requires_ai(self):
+    def test_commitments_unlock_immediately_after_ai_without_participation(self):
         self.ready()
-        self.act(self.nimal, "conversation", expected=400)
-        self.stored_ai()
-        self.act(self.sarah, "conversation", expected=404)
-        self.act(self.nimal, "conversation", expected=400, role="manager")
-        self.act(self.nimal, "conversation")
-        self.assertFalse(self.status()["conversation_complete"])
-        self.assertNotIn("manager_participation", self.status()["confirmations"])
         self.act(self.nimal, "commitments", expected=400, commitment=self.plan())
-        self.act(self.hr, "conversation")
-        self.assertTrue(self.status()["conversation_complete"])
-        marks = self.status()["confirmations"]
-        self.assertEqual(marks["employee_participation"]["actor"], str(self.nimal.id))
-        self.assertEqual(marks["manager_participation"]["actor"], str(self.hr.id))
-        self.assertTrue(marks["employee_participation"]["at"])
-        self.act(self.nimal, "conversation", expected=400)
+        self.act(self.hr, "confirm-commitments", expected=400)
+        self.stored_ai()
+        self.assertTrue(self.status()["commitments_available"])
+        for actor in (self.nimal, self.hr):
+            self.act(actor, "commitments", commitment=self.plan())
+        self.assertNotIn("conversation_complete", self.status())
+        self.assertEqual(self.status()["confirmations"], {"round": 1})
+        for actor in (self.nimal, self.hr):
+            self.assertEqual(self.acting(actor).post(
+                f"/api/v1/reviews/{self.review.id}/conversation/", {}, format="json"
+            ).status_code, 404)
+        self.assertFalse(self.review.events.filter(action__icontains="participation").exists())
+
+    def test_manager_submission_alone_cannot_run_ai(self):
+        self.submit(self.review, "MANAGER")
+        self.act(self.nimal, "ai-coaching", expected=400)
+        self.assertFalse(self.status()["commitments_available"])
+
+    def test_legacy_participation_is_preserved_but_never_unlocks_commitments(self):
+        self.ready()
+        legacy = {"round": 1, "employee_participation": {"actor": str(self.nimal.id)},
+                  "manager_participation": {"actor": str(self.hr.id)}}
+        self.review.conversation = {"discussion": "Historical notes", "workflow": legacy}
+        self.review.save()
+        self.assertFalse(self.status()["commitments_available"])
+        self.assertEqual(self.status()["confirmations"], {"round": 1})
+        self.act(self.nimal, "commitments", expected=400, commitment=self.plan())
+        self.stored_ai()
+        self.act(self.nimal, "commitments", commitment=self.plan())
+        self.assertEqual(self.review.conversation["workflow"], legacy)
+        self.assertEqual(self.review.conversation["discussion"], "Historical notes")
+
+    def test_legacy_ready_state_can_continue_directly_to_commitments(self):
+        self.ready()
+        self.stored_ai()
+        self.review.state = "CONVERSATION_READY"
+        self.review.save()
+        self.act(self.nimal, "commitments", commitment=self.plan())
+        self.assertEqual(self.status()["confirmations"], {"round": 1})
 
     def test_plan_is_shared_edits_clear_agreement_and_both_confirmations_lock_it(self):
         self.open_plan()
@@ -173,7 +196,7 @@ class ParticipantWorkflowTests(TestCase):
 
     def test_acknowledgement_cannot_impersonate_and_hr_must_wait(self):
         self.ready()
-        self.conversation(self.review)
+        self.agree_commitments(self.review)
         for actor, payload in ((self.nimal, {"manager_ack": True}), (self.hr, {"employee_ack": True})):
             self.act(actor, "acknowledge", expected=400, **payload)
         self.act(self.sarah, "acknowledge", expected=404)
@@ -185,12 +208,12 @@ class ParticipantWorkflowTests(TestCase):
         self.act(self.nimal, "complete", expected=403)
         self.act(self.hr, "complete")
         self.assertEqual(self.review.state, "FINALISED")
+        self.assertFalse(self.review.events.filter(action__icontains="participation").exists())
         self.assertEqual(
             self.review.snapshot.content["employee_comments"], "Reviewed; I disagree with one statement."
         )
         before = deepcopy(self.review.snapshot.content)
         for actor, action, values in (
-            (self.nimal, "conversation", {}),
             (self.hr, "confirm-commitments", {}),
             (self.nimal, "commitments", {"commitment": self.plan()}),
             (self.nimal, "acknowledge", {}),
@@ -213,8 +236,6 @@ class ParticipantWorkflowTests(TestCase):
         response = self.act(self.hr, "complete", expected=400)
         for label in (
             "AI coaching",
-            "Employee conversation participation",
-            "Manager conversation participation",
             "Commitments confirmation",
         ):
             self.assertIn(label, str(response.data))
@@ -235,13 +256,13 @@ class ParticipantWorkflowTests(TestCase):
             self.assertEqual(response.data["conversation"]["discussion"], "Historical discussion")
             self.assertTrue(response.data["employee_ack"])
             self.assertEqual(response.data["workflow"]["ai_coaching"], "Complete")
-            self.assertFalse(response.data["workflow"]["conversation_complete"])
+            self.assertNotIn("conversation_complete", response.data["workflow"])
             self.assertFalse(response.data["workflow"]["commitments_complete"])
         self.assertEqual(list(self.review.submissions.values("id", "content", "submitted_at")), before)
 
     def test_revision_archives_all_prior_stage_data_and_keeps_commitment_ids(self):
         self.ready()
-        self.conversation(self.review)
+        self.agree_commitments(self.review)
         self.act(self.nimal, "acknowledge", comments="Original perspective")
         old_marks = deepcopy(self.review.conversation)
         old_ids = list(self.review.commitments.values_list("id", flat=True))
@@ -253,7 +274,8 @@ class ParticipantWorkflowTests(TestCase):
         self.assertEqual(list(self.review.commitments.values_list("id", flat=True)), old_ids)
         self.assertEqual(self.review.submissions.filter(round=1).count(), 2)
         self.assertEqual(self.review.analyses.count(), 1)
-        self.assertFalse(self.status()["conversation_complete"])
+        self.assertNotIn("conversation_complete", self.status())
+        self.assertFalse(self.status()["commitments_available"])
         history = self.acting(self.hr).get(f"/api/v1/reviews/{self.review.id}/").data
         self.assertEqual(len(history["submission_history"]), 2)
         self.assertTrue(all(event["actor_id"] for event in history["history"]))
@@ -286,6 +308,5 @@ class ParticipantWorkflowTests(TestCase):
         self.assertEqual(response.data["state"], "FINALISED")
         self.assertEqual(response.data["snapshot"]["content"], old_snapshot)
         self.assertEqual(response.data["workflow"]["ai_coaching"], "Complete")
-        self.assertFalse(response.data["workflow"]["conversation_complete"])
-        self.act(self.nimal, "conversation", expected=400)
+        self.assertNotIn("conversation_complete", response.data["workflow"])
         self.assertEqual(FinalSnapshot.objects.get(review=self.review).content, old_snapshot)

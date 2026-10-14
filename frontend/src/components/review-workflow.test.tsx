@@ -5,6 +5,7 @@ import { api, post } from "@/lib/api";
 import type { Review } from "@/lib/reviews";
 import { ReviewWorkflow } from "./review-workflow";
 import { Coach } from "./review-coach";
+import { HrWorkflow } from "./hr-review-presentation";
 
 const session = vi.hoisted(() => ({ member: "employee-member" }));
 vi.mock("@/lib/api", () => ({ api: vi.fn(), post: vi.fn() }));
@@ -14,7 +15,7 @@ const base = {
   manager_member: "manager-member", reviewer: "head-hr", employee_name: "Alex", manager_name: "Morgan",
   round: 1, version: 5, state: "SUBMITTED", employee_ack: null, manager_ack: null,
   workflow: { employee_submitted: true, manager_submitted: true, ai_coaching: "Complete",
-    conversation_complete: true, commitments_complete: false, confirmations: { round: 1 }, missing: [] },
+    commitments_available: true, commitments_complete: false, confirmations: { round: 1 }, missing: [] },
   commitments: [{ id: "commitment", action: "Existing action", owner_id: "employee", due_date: "2026-12-01", manager_support: "Time", success_measure: "Outcome" }],
 } as unknown as Review;
 let review: Review;
@@ -26,6 +27,16 @@ beforeEach(() => {
   vi.mocked(api).mockResolvedValue({ configured: true, analyses: [] });
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
+
+it("shows exactly the six review stages for HR oversight", () => {
+  const { container } = render(<HrWorkflow review={review} />);
+  expect(Array.from(container.querySelectorAll("dt"), item => item.textContent)).toEqual([
+    "Employee reflection", "Manager appraisal", "AI coaching", "Commitments", "Acknowledgement", "Final record",
+  ]);
+  expect(Array.from(container.querySelectorAll("dd"), item => item.textContent).slice(0, 4)).toEqual([
+    "Complete", "Complete", "Complete", "Pending",
+  ]);
+});
 
 it("blocks employee coaching until manager submission, then uses the existing endpoint", async () => {
   review.workflow!.manager_submitted = false;
@@ -53,14 +64,15 @@ it.each(["employee-member", "manager-member", "head-hr"])("renders saved coachin
   if (member !== "head-hr") expect(screen.queryByRole("button", { name: "Accept as coaching input" })).toBeNull();
 });
 
-it.each(["employee", "manager"] as const)("confirms only the authenticated %s participation without a target identity", async role => {
-  render(<ReviewWorkflow review={review} role={role} hr={false} onSaved={saved} />);
-  fireEvent.click(screen.getByRole("button", { name: "Confirm Participation" }));
-  await waitFor(() => expect(post).toHaveBeenCalledWith("reviews/review/conversation/", { version: 5 }));
+it.each(["employee", "manager"] as const)("unlocks commitments immediately after AI for %s", role => {
+  render(<ReviewWorkflow review={review} role={role} hr={role === "manager"} onSaved={saved} />);
+  expect(screen.getByRole("button", { name: "Save commitment" })).toBeTruthy();
+  expect(screen.queryByText("Human conversation")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Confirm Participation" })).toBeNull();
 });
 
-it("keeps commitments visible but unavailable before both participation confirmations", () => {
-  review.workflow!.conversation_complete = false;
+it("keeps commitments visible but unavailable before AI is complete", () => {
+  review.workflow!.commitments_available = false;
   render(<ReviewWorkflow review={review} role="employee" hr={false} onSaved={saved} />);
   expect(screen.getByText("Existing action")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Save commitment" })).toBeNull();

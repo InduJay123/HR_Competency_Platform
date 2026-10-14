@@ -23,7 +23,7 @@ const baseReview = {
     { kind: "MANAGER", submitted_at: "2026-07-02", content: { overall: "Developing Steward", ecp: "Growers", summary: "Original manager appraisal" } },
   ],
   workflow: { employee_submitted: true, manager_submitted: true, ai_coaching: "Complete",
-    conversation_complete: false, commitments_complete: false, confirmations: { round: 1 },
+    commitments_available: false, commitments_complete: false, confirmations: { round: 1 },
     missing: ["Commitments confirmation", "Manager acknowledgement"] },
   evidence: [], history: [
     { action: "employee.saved", version: 1, created_at: "2026-07-01", reason: "Saved reflection" },

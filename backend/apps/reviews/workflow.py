@@ -8,7 +8,7 @@ def require_participant(member, review):
         return "employee"
     if member.id == review.responsible_manager.membership_id:
         return "manager"
-    raise PermissionDenied("Only the employee or assigned manager can confirm their own participation.")
+    raise PermissionDenied("Only the employee or assigned manager can update this review.")
 
 
 def require_content_access(member, review):
@@ -47,7 +47,6 @@ def workflow_status(review):
     else:
         ai = "Ready"
     marks = confirmations(review)
-    conversation = all(marks.get(f"{role}_participation") for role in ("employee", "manager"))
     commitments = review.commitments.exists() and all(
         marks.get(f"{role}_commitments") for role in ("employee", "manager")
     )
@@ -55,8 +54,6 @@ def workflow_status(review):
         ("Employee reflection", "EMPLOYEE" in submitted),
         ("Manager appraisal", "MANAGER" in submitted),
         ("AI coaching", complete),
-        ("Employee conversation participation", marks.get("employee_participation")),
-        ("Manager conversation participation", marks.get("manager_participation")),
         ("Commitments confirmation", commitments),
         ("Employee acknowledgement", review.employee_ack),
         ("Manager acknowledgement", review.manager_ack),
@@ -75,8 +72,10 @@ def workflow_status(review):
         "ai_blocked_reason": "Head of HR must validate or exclude submitted evidence first."
         if evidence_pending and not complete
         else "",
-        "conversation_complete": bool(conversation),
+        "commitments_available": complete and {"EMPLOYEE", "MANAGER"}.issubset(submitted),
         "commitments_complete": bool(commitments),
-        "confirmations": marks,
+        # Legacy participation metadata is preserved in storage, never active state.
+        "confirmations": {key: value for key, value in marks.items()
+                          if key in ("round", "employee_commitments", "manager_commitments")},
         "missing": [label for label, satisfied in requirements if not satisfied],
     }

@@ -92,7 +92,7 @@ class ReviewTests(TestCase):
         self.assertEqual(result.status_code, 200, result.data)
         review.refresh_from_db()
 
-    def conversation(self, review):
+    def agree_commitments(self, review):
         from uuid import uuid4
 
         from apps.ai_coach.models import Analysis
@@ -110,8 +110,6 @@ class ReviewTests(TestCase):
                 {"version": review.version, **values}, format="json")
             self.assertEqual(response.status_code, 200, response.data)
 
-        for actor in (self.nimal, self.hr):
-            act(actor, "conversation")
         for i in range(3):
             act(self.nimal, "commitments", commitment={
                 "owner": str(self.nimal.profile.id), "action": f"Action {i}",
@@ -172,12 +170,11 @@ class ReviewTests(TestCase):
                     object_id=str(review.id), action=f"review.{kind.lower()}.submitted"
                 ).count(), 1)
         self.assertEqual(review.state, "SUBMITTED")
-        self.conversation(review)
+        self.agree_commitments(review)
         self.finish(review)
         actions = list(review.events.values_list("action", flat=True))
         for action in (
-            "employee.saved", "manager.saved", "employee.participation_confirmed",
-            "manager.participation_confirmed", "commitment.saved",
+            "employee.saved", "manager.saved", "commitment.saved",
             "employee.commitments_confirmed", "manager.commitments_confirmed",
             "assessment.saved", "finalised",
         ):
@@ -189,7 +186,7 @@ class ReviewTests(TestCase):
         self.submit(review, "MANAGER")
         self.submit(review, "EMPLOYEE")
         self.assertEqual(review.state, "SUBMITTED")
-        self.conversation(review)
+        self.agree_commitments(review)
         self.finish(review)
         before = FinalSnapshot.objects.get(review=review).content
         c = Commitment.objects.filter(review=review).first()
@@ -236,7 +233,7 @@ class ReviewTests(TestCase):
         result = self.acting(self.nimal).get(f"/api/v1/reviews/{r.id}/")
         self.assertEqual(result.data["forms"], [])
 
-    def test_manager_submission_shared_after_both_submit_before_conversation(self):
+    def test_manager_submission_shared_after_both_submit_before_commitments(self):
         r = self.launch()
         self.submit(r, "MANAGER")
         self.assertEqual(self.acting(self.nimal).get(f"/api/v1/reviews/{r.id}/").data["forms"], [])
@@ -248,7 +245,7 @@ class ReviewTests(TestCase):
         r = self.launch()
         self.submit(r, "EMPLOYEE")
         self.submit(r, "MANAGER")
-        self.conversation(r)
+        self.agree_commitments(r)
         url = f"/api/v1/reviews/{r.id}/acknowledge/"
         denied = self.acting(self.hr).post(
             url, {"version": r.version, "comments": "Forged employee perspective"}, format="json"
@@ -292,7 +289,7 @@ class ReviewTests(TestCase):
         r = self.launch()
         self.submit(r, "EMPLOYEE")
         self.submit(r, "MANAGER")
-        self.conversation(r)
+        self.agree_commitments(r)
         result = self.acting(self.hr).post(
             f"/api/v1/reviews/{r.id}/complete/", {"version": r.version}, format="json"
         )
@@ -302,7 +299,7 @@ class ReviewTests(TestCase):
         r = self.launch()
         self.submit(r, "EMPLOYEE")
         self.submit(r, "MANAGER")
-        self.conversation(r)
+        self.agree_commitments(r)
         result = self.acting(self.hr).post(
             f"/api/v1/reviews/{r.id}/revision/",
             {"version": r.version, "reason": "Add missing context"},
@@ -342,7 +339,7 @@ class ReviewTests(TestCase):
         r = self.launch()
         self.submit(r, "EMPLOYEE")
         self.submit(r, "MANAGER")
-        self.conversation(r)
+        self.agree_commitments(r)
         self.finish(r)
         with self.assertRaises(DatabaseError), transaction.atomic():
             FinalSnapshot.objects.filter(review=r).update(content={"tampered": True})

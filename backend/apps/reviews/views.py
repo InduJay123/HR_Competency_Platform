@@ -179,13 +179,6 @@ class ReviewViewSet(CoachingActions, ComparisonActions, viewsets.ReadOnlyModelVi
         )
         return Response(ReviewSerializer(obj).data)
 
-    @action(detail=True, methods=["post"])
-    def conversation(self, request, pk=None):
-        obj = services.confirm_participation(
-            membership(request), self.get_object(), **validated(VersionSerializer, request)
-        )
-        return Response(ReviewSerializer(obj).data)
-
     @action(detail=True, methods=["post"], url_path="commitments")
     def save_commitment(self, request, pk=None):
         obj = services.save_commitment(membership(request), self.get_object(),

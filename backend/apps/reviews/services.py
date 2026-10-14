@@ -205,36 +205,12 @@ def evidence_ready(review):
 
 
 @transaction.atomic
-def prepare_conversation(member, review, version, discussion, assessment, commitments):
-    # Retain the old service name for callers, but never allow the former HR
-    # action to replace participant commitments or impersonate participation.
-    raise ValidationError("Use participant conversation confirmation and the shared commitment actions.")
-
-
-@transaction.atomic
-def confirm_participation(member, review, version):
-    review = lock(member, review, version)
-    role = require_participant(member, review)
-    status = workflow_status(review)
-    if not status["employee_submitted"] or not status["manager_submitted"] or status["ai_coaching"] != "Complete":
-        raise ValidationError("Both submissions and completed AI coaching are required before participation confirmation.")
-    marks = confirmations(review).copy()
-    key = f"{role}_participation"
-    if marks.get(key):
-        raise ValidationError("Your participation is already confirmed.")
-    marks[key] = {"actor": str(member.id), "at": timezone.now().isoformat()}
-    review.conversation = {**review.conversation, "workflow": marks}
-    touch(member, review, f"{role}.participation_confirmed")
-    return review
-
-
-@transaction.atomic
 def save_commitment(member, review, version, commitment, commitment_id=None):
     review = lock(member, review, version)
     require_participant(member, review)
     status = workflow_status(review)
-    if not status["conversation_complete"]:
-        raise ValidationError("Both participants must confirm the human conversation first.")
+    if not status["commitments_available"]:
+        raise ValidationError("Both submissions and completed AI coaching are required before commitments.")
     if status["commitments_complete"] or review.employee_ack or review.manager_ack:
         raise ValidationError("The agreed plan is locked. Request a formal revision.")
     owner = commitment.pop("owner")
@@ -270,8 +246,8 @@ def save_commitment(member, review, version, commitment, commitment_id=None):
 def confirm_commitments(member, review, version):
     review = lock(member, review, version)
     role = require_participant(member, review)
-    if not workflow_status(review)["conversation_complete"] or not review.commitments.exists():
-        raise ValidationError("Confirm the conversation and record a shared action plan first.")
+    if not workflow_status(review)["commitments_available"] or not review.commitments.exists():
+        raise ValidationError("Complete both submissions and AI coaching, then record a shared action plan first.")
     marks = confirmations(review).copy()
     key = f"{role}_commitments"
     if marks.get(key):
