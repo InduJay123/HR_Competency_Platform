@@ -1,0 +1,85 @@
+Year-End appraisal unblock report
+
+Root cause
+backend/apps/reviews/services.py:save_form unconditionally required a comparison
+entry for every prior_midyear.snapshot.content.commitments ID for MANAGER submissions.
+It applied to workflow_version=2 as well as legacy forms, although pillar validation
+was already satisfied. Removed that six-line submission gate for both versions.
+Reflection-first, five-pillar validation, human assessment, AI permissions,
+commitment confirmations, acknowledgements and finalisation remain unchanged.
+The existing launch-time requirement for a finalised Mid-Year baseline is unchanged;
+this fix addresses appraisal submission, not cycle launch policy.
+
+Dependency/schema audit
+Review.prior_midyear -> protected historical Review -> immutable FinalSnapshot.
+Review.comparison JSON -> comparison GET privacy rules -> final snapshot
+midyear_comparison. These fields preserve historical records, not just a gate.
+No gate-only table, field, index or constraint exists. No DB fields/tables removed;
+no migrations added. General commitments, development progress, snapshots and
+historical comparison.saved audit events are untouched. No production data rewrite.
+No production database was accessed or migrated.
+
+API/UI
+GET reviews/<id>/comparison/ retained for read-only historical reference.
+POST removed (405); ComparisonSerializer and mutation/event-generation code removed.
+Comparison page no longer has outcome selectors, rationale editor or save actions.
+Review detail identifies the baseline as historical and explicitly says outcomes
+are not required for appraisal submission. Existing privacy rules remain in force.
+
+Files changed for this fix
+backend/apps/reviews/services.py
+backend/apps/reviews/comparison.py
+backend/tests/test_extended_workflow.py
+backend/tests/test_pillar_cycles.py (also contains earlier AI work)
+frontend/src/components/comparison.tsx
+frontend/src/components/comparison.test.tsx (new)
+frontend/src/components/review-detail.tsx
+frontend/src/components/review-detail.test.tsx
+  Also corrected an existing asynchronous assertion to wait for its request.
+docs/yearend-appraisal-fix.txt
+
+Tests
+52 backend tests passed: extended_workflow, pillar_cycles, reviews, ai,
+participant_workflow. Includes Year-End five-pillar success with zero comparisons,
+missing reflection/pillar/overall rejection, employee AI endpoint 202, commitments,
+acknowledgements/finalisation, unchanged prior final snapshot, historical comparison
+read access/privacy and rejected POST. PostgreSQL test database was isolated.
+26 frontend tests passed across comparison, review-detail, pillar-review,
+review-form and review-workflow. Production Next.js build passed.
+Ruff passed; makemigrations --check --dry-run: no changes.
+Focused suites run, not entire repository suite. No external AI call/live deploy.
+
+Local commands (PowerShell, repository root)
+# No migration needed for this fix. Check schema:
+& backend/.venv/Scripts/python.exe backend/manage.py makemigrations --check --dry-run --settings=config.settings.test
+# Existing isolated test cluster only (not production):
+& 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D tmp/reporting-postgres -l tmp/reporting-postgres.log -o '-p 55439 -h 127.0.0.1' start
+& backend/.venv/Scripts/python.exe backend/manage.py test tests.test_extended_workflow tests.test_pillar_cycles tests.test_reviews tests.test_ai tests.test_participant_workflow --settings=config.settings.test_postgres --noinput
+& 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D tmp/reporting-postgres stop
+Push-Location frontend
+npm.cmd test -- --run src/components/comparison.test.tsx src/components/review-detail.test.tsx src/components/pillar-review.test.tsx src/components/review-form.test.tsx src/components/review-workflow.test.tsx
+npm.cmd run build
+Pop-Location
+
+Git commands (PowerShell, repository root)
+# Earlier AI changes remain uncommitted. Stage this fix only; select the Year-End
+# test hunk in test_pillar_cycles.py, leaving earlier AI hunks unstaged.
+$btflGit = 'C:/Users/Induni/AppData/Local/GitHubDesktop/app-3.6.7/resources/app/git/cmd/git.exe'
+& $btflGit add backend/apps/reviews/services.py backend/apps/reviews/comparison.py backend/tests/test_extended_workflow.py frontend/src/components/comparison.tsx frontend/src/components/comparison.test.tsx frontend/src/components/review-detail.tsx frontend/src/components/review-detail.test.tsx docs/yearend-appraisal-fix.txt
+& $btflGit add -p backend/tests/test_pillar_cycles.py
+& $btflGit diff --cached --check
+& $btflGit diff --cached
+& $btflGit commit -m "Remove Mid-Year commitment gate from Year-End appraisal"
+& $btflGit push
+
+VPS commands (run inside existing BTFL checkout on its deployment branch;
+assumes the supplied docker-compose.prodtest.yml is the deployed stack)
+git pull --ff-only
+docker compose -f docker-compose.prodtest.yml build backend frontend
+docker compose -f docker-compose.prodtest.yml up -d --no-deps backend worker beat frontend
+docker compose -f docker-compose.prodtest.yml exec backend python manage.py check
+docker compose -f docker-compose.prodtest.yml ps
+docker compose -f docker-compose.prodtest.yml logs --tail=80 backend frontend
+No migrate command required for this patch. Deploy frontend/backend together because
+comparison POST is removed. Verify the affected Year-End appraisal submits and the
+employee can request coaching. No Git commit/push or VPS deployment was performed.

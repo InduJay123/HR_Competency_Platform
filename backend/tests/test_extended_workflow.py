@@ -42,54 +42,39 @@ class ExtendedWorkflowTests(TestCase):
         launch_cycle(self.hr, cycle, [self.nimal.profile.id], self.hr.id)
         return Review.objects.get(cycle=cycle)
 
-    def test_yearend_requires_all_commitment_outcomes_and_preserves_baseline(self):
+    def test_yearend_submits_without_outcomes_and_preserves_baseline(self):
         prior = self.final_midyear()
         baseline = prior.snapshot.content
         end = self.year_end(prior)
-        blocked = self.acting(self.hr).post(
-            f"/api/v1/reviews/{end.id}/manager-assessment/",
-            {"version": end.version, "content": self.content("MANAGER"), "submit": True},
-            format="json",
-        )
-        self.assertEqual(blocked.status_code, 400)
-        for c in baseline["commitments"]:
-            result = self.acting(self.hr).post(
-                f"/api/v1/reviews/{end.id}/comparison/",
-                {
-                    "version": end.version,
-                    "commitment_id": c["id"],
-                    "outcome": "PARTIALLY_MET",
-                    "rationale": "Progress and remaining support documented.",
-                },
-                format="json",
-            )
-            self.assertEqual(result.status_code, 200, result.data)
-            end.refresh_from_db()
-        self.submit(end, "MANAGER")
+        self.assertTrue(baseline["commitments"])
+        self.assertEqual(end.comparison, {})
         self.submit(end, "EMPLOYEE")
+        self.submit(end, "MANAGER")
         self.agree_commitments(end)
         self.finish(end)
         prior.refresh_from_db()
+        self.assertEqual(prior.state, "FINALISED")
         self.assertEqual(prior.snapshot.content, baseline)
-        self.assertEqual(len(end.snapshot.content["midyear_comparison"]), 3)
+        self.assertEqual(end.snapshot.content["midyear_comparison"], {})
 
-    def test_comparison_draft_is_private_to_manager(self):
+    def test_historical_comparison_is_read_only_and_preserves_privacy(self):
         prior = self.final_midyear()
         end = self.year_end(prior)
-        c = prior.snapshot.content["commitments"][0]
-        self.acting(self.hr).post(
-            f"/api/v1/reviews/{end.id}/comparison/",
-            {
-                "version": end.version,
-                "commitment_id": c["id"],
-                "outcome": "MISSED",
-                "rationale": "Private draft",
-            },
-            format="json",
-        )
-        self.assertEqual(
-            self.acting(self.nimal).get(f"/api/v1/reviews/{end.id}/comparison/").data["outcomes"], {}
-        )
+        key = str(prior.snapshot.content["commitments"][0]["id"])
+        end.comparison = {key: {"outcome": "MISSED", "rationale": "Historical draft"}}
+        end.save(update_fields=["comparison"])
+        url = f"/api/v1/reviews/{end.id}/comparison/"
+        self.assertEqual(self.acting(self.nimal).get(url).data["outcomes"], {})
+        result = self.acting(self.hr).get(url)
+        self.assertEqual(result.data["outcomes"], end.comparison)
+        self.assertEqual(result.data["baseline"], prior.snapshot.content["commitments"])
+        self.assertEqual(self.acting(self.hr).post(url, {}, format="json").status_code, 405)
+        self.submit(end, "EMPLOYEE")
+        self.submit(end, "MANAGER")
+        self.agree_commitments(end)
+        self.finish(end)
+        self.assertEqual(end.snapshot.content["midyear_comparison"], end.comparison)
+        self.assertEqual(self.acting(self.nimal).get(url).data["outcomes"], end.comparison)
 
     def test_development_work_link_is_idempotent(self):
         r = self.final_midyear()

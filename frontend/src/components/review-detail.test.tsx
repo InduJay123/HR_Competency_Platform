@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { api } from "@/lib/api";
 import { ReviewDetail } from "./review-detail";
 
@@ -47,7 +47,7 @@ it("does not render a panel when coaching is unavailable", async () => {
   } : review);
   render(<ReviewDetail showAcceptedCoaching />);
   await screen.findByText("Workflow history");
-  expect(api).toHaveBeenCalledWith("reviews/review-1/accepted-coaching/");
+  await waitFor(() => expect(api).toHaveBeenCalledWith("reviews/review-1/accepted-coaching/"));
   expect(screen.queryByText("Steward coaching")).toBeNull();
 });
 
@@ -57,4 +57,13 @@ it("leaves other review page callers unchanged", async () => {
   await screen.findByText("Workflow history");
   expect(api).toHaveBeenCalledTimes(1);
   expect(api).toHaveBeenCalledWith("reviews/review-1/");
+});
+
+it("shows Mid-Year data as historical reference without a required comparison action", async () => {
+  vi.mocked(api).mockResolvedValue({ ...review, midyear_baseline: { commitments: [{ action: "Historical action" }] } });
+  render(<ReviewDetail />);
+  expect(await screen.findByText("Mid-Year historical reference")).toBeTruthy();
+  expect(screen.getByText(/outcomes are not required to submit/)).toBeTruthy();
+  expect(screen.queryByText(/Open commitment comparison/)).toBeNull();
+  expect(screen.getByText("View the final Mid-Year record")).toBeTruthy();
 });

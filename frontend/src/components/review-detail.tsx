@@ -456,12 +456,13 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
         </Card>
       )}
       {review.midyear_baseline && (
-        <Card title="Preserved Mid-Year baseline">
+        <Card title="Mid-Year historical reference">
+          <p>Read-only reference. Mid-Year commitment outcomes are not required to submit this appraisal.</p>
           <Link href={`/employee/reviews/${id}/comparison`}>
-            Open commitment comparison →
+            View historical commitments →
           </Link>
           <details>
-            <summary>Compare with the final Mid-Year record</summary>
+            <summary>View the final Mid-Year record</summary>
             <RecordContent value={review.midyear_baseline} />
           </details>
         </Card>

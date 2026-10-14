@@ -9,6 +9,7 @@ from django.utils import timezone
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from apps.audit.services import record
+from apps.reviews.schemas import PILLARS
 from apps.reviews.services import current_forms, evidence_ready, lock, require_reviewer
 
 from .models import Analysis
@@ -17,6 +18,29 @@ from .schema import OUTPUT_SCHEMA, PROMPT_VERSION
 
 def configured():
     return bool(settings.N8N_WEBHOOK_URL and settings.N8N_WEBHOOK_TOKEN and settings.OPENAI_MODEL)
+
+
+def pillar_reviews(review, forms):
+    """Compare locked expectations with submitted accounts, never live target rows."""
+    snapshots = {p["pillar"].lower(): p for p in review.pillar_context}
+    contents = {form.kind: form.content.get("pillars", {}) for form in forms}
+    result = {}
+    for pillar in PILLARS:
+        target = snapshots.get(pillar, {})
+        reflection = contents.get("EMPLOYEE", {}).get(pillar)
+        appraisal = contents.get("MANAGER", {}).get(pillar, {})
+        if not isinstance(appraisal, dict):
+            appraisal = {}
+        result[pillar] = {
+            "target": target.get("target"),
+            "success_measure": target.get("success_measure"),
+            "expected_behaviour": target.get("expected_behaviour", target.get("notes")),
+            "employee_reflection": reflection,
+            "head_of_hr_appraisal": appraisal.get("narrative"),
+            "outcome": appraisal.get("outcome"),
+            "steward_judgement": appraisal.get("descriptor"),
+        }
+    return result
 
 
 def make_input(review):
@@ -40,6 +64,7 @@ def make_input(review):
         "period": {"year": review.cycle.year, "kind": review.cycle.kind,
             "starts_on": review.cycle.starts_on.isoformat(), "ends_on": review.cycle.ends_on.isoformat()},
         "senior_leader": review.employee.senior_leader,
+        "pillar_reviews": pillar_reviews(review, forms),
         "sources": sources,
     }
 

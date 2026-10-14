@@ -115,6 +115,57 @@ class PillarCycleTests(TestCase):
         self.assertEqual(appraisal["pillars"]["context"]["descriptor"], "Strong")
         self.assertEqual(len([s for s in sources if s["type"] == "PILLAR_TARGET"]), 5)
 
+    def test_yearend_pillar_appraisal_ignores_historical_commitment_outcomes(self):
+        from apps.reviews.models import ReviewCycle
+
+        self.setup_targets()
+        self.start()
+        prior = self.launch()
+        self.submit(prior, "EMPLOYEE")
+        self.submit(prior, "MANAGER")
+        self.agree_commitments(prior)
+        self.finish(prior)
+        baseline = deepcopy(prior.snapshot.content)
+        self.assertTrue(baseline["commitments"])
+        self.cycle = ReviewCycle.objects.create(
+            company=self.company, workflow_version=2, kind="YEAR_END", year=2026,
+            starts_on=date(2026, 7, 1), ends_on=date(2026, 12, 31), due_on=date(2027, 1, 15),
+        )
+        self.setup_targets()
+        self.start()
+        review = self.launch()
+        self.assertEqual(review.prior_midyear_id, prior.id)
+        self.assertEqual(review.comparison, {})
+        url = f"/api/v1/reviews/{review.id}/manager-assessment/"
+        client = self.acting(self.hr)
+        def submit(content):
+            return client.post(url, {"version": review.version, "content": content, "submit": True}, format="json")
+        self.assertEqual(submit(self.content("MANAGER")).status_code, 400)
+        self.submit(review, "EMPLOYEE")
+        incomplete = self.content("MANAGER")
+        del incomplete["pillars"]["context"]
+        self.assertEqual(submit(incomplete).status_code, 400)
+        incomplete = self.content("MANAGER")
+        incomplete["overall"] = ""
+        self.assertEqual(submit(incomplete).status_code, 400)
+        self.submit(review, "MANAGER")
+        self.assertEqual(workflow_status(review)["ai_coaching"], "Ready")
+        with patch("apps.ai_coach.tasks.enqueue"), self.captureOnCommitCallbacks(execute=True):
+            response = self.acting(self.nimal).post(
+                f"/api/v1/reviews/{review.id}/ai-coaching/", {"version": review.version}, format="json")
+        self.assertEqual(response.status_code, 202, response.data)
+        self.agree_commitments(review)
+        self.finish(review)
+        self.assertEqual(review.state, "FINALISED")
+        self.assertEqual(review.comparison, {})
+        self.assertEqual(len(review.pillar_context), 5)
+        prior.refresh_from_db()
+        self.assertEqual(prior.state, "FINALISED")
+        self.assertEqual(prior.snapshot.content, baseline)
+        detail = self.acting(self.hr).get(f"/api/v1/reviews/{review.id}/")
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(detail.data["midyear_baseline"], baseline)
+
     def test_new_api_cycles_default_to_pillars_and_head_only(self):
         payload = {
             "year": 2027,
@@ -129,6 +180,57 @@ class PillarCycleTests(TestCase):
         self.assertEqual(
             self.acting(self.nimal).post("/api/v1/review-cycles/", payload, format="json").status_code, 403
         )
+
+    def test_ai_pillar_context_uses_locked_targets_and_all_submitted_accounts(self):
+        self.setup_targets()
+        self.start()
+        review = self.launch()
+        self.submit(review, "EMPLOYEE")
+        self.submit(review, "MANAGER")
+        # Simulate changed live rows: the formal-review snapshot remains authoritative.
+        self.cycle.targets.update(target="Later target", success_measure="Later measure", notes="Later notes")
+        payload = make_input(review)
+        self.assertEqual(list(payload["pillar_reviews"]), PILLARS)
+        for pillar, row in payload["pillar_reviews"].items():
+            self.assertEqual(row, {
+                "target": f"Target {pillar.upper()}", "success_measure": "Observable success",
+                "expected_behaviour": "Expected behaviour", "employee_reflection": f"Reflection on {pillar}",
+                "head_of_hr_appraisal": f"Assessment of {pillar}", "outcome": "Achieved", "steward_judgement": "Strong",
+            })
+        self.assertEqual([s["content"] for s in payload["sources"] if s["type"] == "EMPLOYEE_SUBMISSION"], [self.content("EMPLOYEE")])
+        self.assertEqual([s["content"] for s in payload["sources"] if s["type"] == "MANAGER_SUBMISSION"], [self.content("MANAGER")])
+        self.assertNotIn("conversation", str(payload).lower())
+        self.assertNotIn("growth", str(payload).lower())
+
+    def test_structured_coaching_cannot_write_human_pillar_or_overall_assessments(self):
+        import json
+        from unittest.mock import Mock
+
+        from apps.ai_coach.services import request_analysis
+        from apps.ai_coach.tasks import run_analysis
+
+        self.setup_targets()
+        self.start()
+        review = self.launch()
+        self.submit(review, "EMPLOYEE")
+        self.submit(review, "MANAGER")
+        before = deepcopy(review.hr_assessment)
+        forms_before = list(review.submissions.values("id", "content"))
+        analysis = request_analysis(self.nimal, review, review.version)
+        source = analysis.input_snapshot["sources"][0]["id"]
+        output = {"strengths": [{"observation": "The reviewer reports achievement", "question": "What supported this?",
+                  "source_ids": [source], "uncertainty": "Reported account"}], "gaps": [], "support_options": [], "limitations": []}
+        with patch("apps.ai_coach.tasks.requests.post") as http:
+            http.return_value = Mock(content=b"{}", json=lambda: {"status": "completed", "output": [
+                {"type": "message", "content": [{"type": "output_text", "text": json.dumps(output)}]}]})
+            run_analysis.run(str(analysis.id))
+            sent = json.loads(http.call_args.kwargs["json"]["request"]["input"])
+            self.assertEqual(sent["pillar_reviews"], analysis.input_snapshot["pillar_reviews"])
+        analysis.refresh_from_db()
+        review.refresh_from_db()
+        self.assertEqual(analysis.state, "SUCCEEDED")
+        self.assertEqual(review.hr_assessment, before)
+        self.assertEqual(list(review.submissions.values("id", "content")), forms_before)
 
     def test_individual_drafts_completion_audit_and_permissions(self):
         self.setup_targets(complete=False)

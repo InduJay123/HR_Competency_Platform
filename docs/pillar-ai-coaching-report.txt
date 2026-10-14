@@ -1,0 +1,104 @@
+Pillar-target-aware AI coaching
+
+Payload before
+  request.input was a JSON-encoded object with period, senior_leader and sources.
+  Sources already included complete EMPLOYEE_SUBMISSION, MANAGER_SUBMISSION,
+  optional validated task evidence and locked PILLAR_TARGET records. Targets
+  were separate from the matching submitted pillar accounts.
+  Exact complete synthetic example: docs/pillar-ai-input-before.json.
+
+Payload after
+  All existing fields and source contents remain unchanged. Added pillar_reviews
+  with context, character, capability, continuity and contribution, each containing:
+    target
+    success_measure
+    expected_behaviour (locked notes, or locked expected_behaviour if present)
+    employee_reflection
+    head_of_hr_appraisal
+    outcome
+    steward_judgement
+  Exact complete synthetic example: docs/pillar-ai-input-after.json.
+  Examples illustrate the exact request.input structure, not production records.
+  The webhook envelope is unchanged:
+    {run_id, input_hash, request: {model, store:false, instructions,
+      input:JSON.stringify(the above object), max_output_tokens:5000,
+      text:{format:{type:"json_schema",name:"stewardship_coaching",strict:true,schema:OUTPUT_SCHEMA}}}}
+  No mutable PillarTarget row is read. Locked Review.pillar_context is authoritative.
+  Legacy reviews without recorded targets still include five entries with null
+  expectation fields; missing targets are not fabricated from current values.
+  Both original submitted forms remain full sources. No Growth Tools or removed
+  participation stage data is added. Existing task evidence rules remain unchanged.
+
+Backend files changed
+  backend/apps/ai_coach/services.py -- grouped locked pillar context in make_input.
+  backend/apps/ai_coach/schema.py -- prompt v5 and explicit source/assessment roles.
+  No database model/migration, frontend, response parser or review mutation change.
+
+Tests changed/added
+  backend/tests/test_pillar_cycles.py -- locked vs mutable targets, all five fields,
+    unchanged submission sources, webhook payload and unchanged human assessments.
+  backend/tests/test_ai.py -- missing historical targets, knowledge-ID rejection,
+    rating-field rejection under the existing response schema.
+  n8n/tests/formal-ai-coaching-rag.test.cjs -- runs embedded code with mocked RAG:
+    short-field retrieval, all-pillar query budget, legacy source compatibility,
+    unchanged request/schema, separate knowledge IDs, empty retrieval and wiring.
+  Results: 37 relevant backend tests PASS; 6 Node tests PASS; Django system and
+    migration-drift checks PASS; changed Python lint PASS.
+  Tests use an isolated local PostgreSQL cluster and mocked provider/retrieval.
+  No live n8n, OpenAI or Supabase request was made. Full unrelated suites were
+  not rerun for this scoped payload/prompt change.
+
+n8n changes implemented
+  Active Downloads file updated:
+    C:/Users/Induni/Downloads/BTFL - Formal AI Coaching with RAG.json
+  Original backup:
+    C:/Users/Induni/Downloads/BTFL - Formal AI Coaching with RAG.before-pillar-targets.json
+  Only Build RAG query and Add book context to request jsCode changed; verified
+  the remainder of the downloaded workflow matches its backup exactly.
+  Backend payload remains compatible with the existing webhook/HTTP nodes.
+
+  Build RAG query explicitly includes all seven fields for all five pillars,
+  including short values, plus documented gaps/support/development context.
+  Query-only per-field limits prevent one long response hiding later pillars.
+  Full review input remains unchanged for final coaching. Existing embedding
+  model, approved-book RPC filter, retrieval count/threshold and HTTP wiring stay.
+
+  Add book context keeps knowledge separate from review sources and gives it
+  non-colliding knowledge: IDs. It preserves the full pillar input and structured
+  response specification. Instructions distinguish expectations from achievement,
+  human accounts/assessments from methodology, and prohibit knowledge IDs in
+  response source_ids. Existing Django source validation rejects unknown IDs.
+  The response cannot write human assessments; rating additions fail schema
+  validation. Natural-language coaching remains advisory and human judgement
+  authoritative; targets or book guidance alone cannot establish achievement.
+
+  Repository template (credentials removed, inactive):
+    n8n/workflows/formal-ai-coaching-rag.json
+  Maintained node source:
+    n8n/code/build-rag-query.js
+    n8n/code/add-book-context.js
+  Tests assert source files match embedded workflow code.
+
+Deployment required
+  Reimport the UPDATED Downloads JSON into the existing n8n workflow and publish/
+  activate it. Its existing credentials and HTTP settings are preserved. Deploy
+  updated Django web/worker code. No database migration is required.
+  If importing the repository template instead, configure webhook Header Auth
+  to match Django's X-BFL-Token and supply OPENAI_API_KEY, BFL_RAG_SUPABASE_KEY,
+  BFL_RAG_SUPABASE_URL in n8n (or equivalent n8n credentials per installation).
+  The template uses env expressions; the updated Downloads file retains its
+  existing deployment configuration and requires no credential changes.
+  Existing successful analyses remain immutable/reused according to current
+  idempotency rules; this does not silently regenerate paid coaching calls.
+
+Response schema changed? NO.
+  strengths, gaps, support_options, limitations remain exactly the same.
+  Observations still have observation, source_ids, question and uncertainty.
+  No rating/outcome mutation field was added. Knowledge IDs are never added to
+  the backend allowed review-source set.
+
+Verification commands (repository root; isolated PostgreSQL running on 55439)
+  & backend/.venv/Scripts/python.exe backend/manage.py test tests.test_ai tests.test_pillar_cycles tests.test_accepted_coaching tests.test_participant_workflow --settings=config.settings.test_postgres --noinput
+  node --test n8n/tests/formal-ai-coaching-rag.test.cjs
+  & backend/.venv/Scripts/python.exe backend/manage.py check --settings=config.settings.test
+  & backend/.venv/Scripts/python.exe backend/manage.py makemigrations --check --dry-run --settings=config.settings.test

@@ -1,0 +1,114 @@
+{
+  "period": {
+    "year": 2027,
+    "kind": "MID_YEAR",
+    "starts_on": "2027-01-01",
+    "ends_on": "2027-06-30"
+  },
+  "senior_leader": false,
+  "sources": [
+    {
+      "id": "employee-submission-id",
+      "type": "EMPLOYEE_SUBMISSION",
+      "content": {
+        "pillars": {
+          "context": "Reflection on context",
+          "character": "Reflection on character",
+          "capability": "Reflection on capability",
+          "continuity": "Reflection on continuity",
+          "contribution": "Reflection on contribution"
+        }
+      }
+    },
+    {
+      "id": "manager-submission-id",
+      "type": "MANAGER_SUBMISSION",
+      "content": {
+        "pillars": {
+          "context": {
+            "narrative": "Assessment of context",
+            "descriptor": "Strong",
+            "outcome": "Achieved",
+            "evidence_ids": []
+          },
+          "character": {
+            "narrative": "Assessment of character",
+            "descriptor": "Strong",
+            "outcome": "Achieved",
+            "evidence_ids": []
+          },
+          "capability": {
+            "narrative": "Assessment of capability",
+            "descriptor": "Strong",
+            "outcome": "Achieved",
+            "evidence_ids": []
+          },
+          "continuity": {
+            "narrative": "Assessment of continuity",
+            "descriptor": "Strong",
+            "outcome": "Achieved",
+            "evidence_ids": []
+          },
+          "contribution": {
+            "narrative": "Assessment of contribution",
+            "descriptor": "Strong",
+            "outcome": "Achieved",
+            "evidence_ids": []
+          }
+        },
+        "overall": "Strong Steward",
+        "summary": "Human judgement across all five pillars"
+      }
+    },
+    {
+      "id": "context-target-id",
+      "type": "PILLAR_TARGET",
+      "content": {
+        "pillar": "CONTEXT",
+        "target": "Target CONTEXT",
+        "success_measure": "Observable success",
+        "notes": "Expected behaviour"
+      }
+    },
+    {
+      "id": "character-target-id",
+      "type": "PILLAR_TARGET",
+      "content": {
+        "pillar": "CHARACTER",
+        "target": "Target CHARACTER",
+        "success_measure": "Observable success",
+        "notes": "Expected behaviour"
+      }
+    },
+    {
+      "id": "capability-target-id",
+      "type": "PILLAR_TARGET",
+      "content": {
+        "pillar": "CAPABILITY",
+        "target": "Target CAPABILITY",
+        "success_measure": "Observable success",
+        "notes": "Expected behaviour"
+      }
+    },
+    {
+      "id": "continuity-target-id",
+      "type": "PILLAR_TARGET",
+      "content": {
+        "pillar": "CONTINUITY",
+        "target": "Target CONTINUITY",
+        "success_measure": "Observable success",
+        "notes": "Expected behaviour"
+      }
+    },
+    {
+      "id": "contribution-target-id",
+      "type": "PILLAR_TARGET",
+      "content": {
+        "pillar": "CONTRIBUTION",
+        "target": "Target CONTRIBUTION",
+        "success_measure": "Observable success",
+        "notes": "Expected behaviour"
+      }
+    }
+  ]
+}

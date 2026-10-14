@@ -179,12 +179,6 @@ def save_form(member, review, kind, content, evidence_ids, submit, version):
                 not set(row.get("evidence_ids", [])).issubset(refs) for row in content["pillars"].values()
             ):
                 raise ValidationError("Pillar evidence must also be selected in this submission.")
-        if kind == "MANAGER" and review.prior_midyear_id:
-            baseline = review.prior_midyear.snapshot.content.get("commitments", [])
-            if any(str(c["id"]) not in review.comparison for c in baseline):
-                raise ValidationError(
-                    "Record the outcome of every preserved Mid-Year commitment before submitting the Year-End appraisal."
-                )
     form.content = content
     form.save()
     form.evidence.set(evidence)

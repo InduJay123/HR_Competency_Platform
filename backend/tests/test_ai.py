@@ -82,12 +82,20 @@ class CoachingTests(TestCase):
         payload = make_input(self.review)
         self.assertEqual(len(payload["sources"]), 2)
         self.assertNotIn("email", json.dumps(payload))
+        self.assertEqual(len(payload["pillar_reviews"]), 5)
+        self.assertTrue(all(row["target"] is None for row in payload["pillar_reviews"].values()))
 
     def test_unknown_citation_and_extra_rating_are_rejected(self):
         with self.assertRaises(ValueError):
             validate_output(self.output("outside-tenant"), {"allowed"})
+        with self.assertRaises(ValueError):
+            validate_output(self.output("knowledge:0:book"), {"allowed"})
         invalid = self.output("allowed")
         invalid["rating"] = "Strong"
+        with self.assertRaises(Exception):
+            validate_output(invalid, {"allowed"})
+        invalid = self.output("allowed")
+        invalid["strengths"][0]["steward_judgement"] = "Exceptional"
         with self.assertRaises(Exception):
             validate_output(invalid, {"allowed"})
 
