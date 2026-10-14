@@ -298,13 +298,12 @@ export function Account() {
                 <dt>Department</dt>
                 <dd>{profile.department_name || "Not assigned"}</dd>
                 <dt>Reporting manager</dt>
-                <dd>{profile.manager_name || "Not assigned"}</dd>
+                <dd>{profile.is_head_hr ? "No reporting manager" : `${profile.manager_name} — Head of HR`}</dd>
                 <dt>Joining date</dt>
                 <dd>{profile.joined_on || "Not recorded"}</dd>
               </dl>
               <small>
-                HR manages your reporting line, joining date and access
-                responsibilities.
+                All employees report directly to Head of HR. HR manages joining dates and access.
               </small>
             </Card>
             <Card title="Security and notifications">

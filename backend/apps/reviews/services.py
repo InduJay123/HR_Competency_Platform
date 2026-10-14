@@ -11,7 +11,8 @@ from apps.companies.models import Company, Membership
 from apps.development.models import Commitment
 from apps.evidence.models import EvidenceItem
 from apps.notifications.services import notify
-from apps.organisation.models import EmployeeProfile, ReportingRelationship
+from apps.organisation.models import EmployeeProfile
+from apps.organisation.services import effective_manager
 from common.exceptions import Conflict
 from common.permissions import require_hr
 
@@ -53,8 +54,8 @@ def lock(member, review, version):
 
 
 def require_reviewer(member, review):
-    if not member.is_head_hr or review.reviewer_id != member.id or review.employee.membership_id == member.id:
-        raise PermissionDenied("Only the independent appointed Head of HR can perform this action.")
+    if not member.is_head_hr or review.responsible_reviewer.id != member.id or review.employee.membership_id == member.id:
+        raise PermissionDenied("Only the company Head of HR can perform this action.")
 
 
 def current_forms(review):
@@ -79,21 +80,12 @@ def launch_cycle(member, cycle, employee_ids, reviewer_id):
         employee = EmployeeProfile.objects.filter(
             id=employee_id, company=member.company, membership__active=True
         ).first()
-        reporting = (
-            ReportingRelationship.objects.select_related("manager__membership")
-            .filter(employee=employee, company=member.company)
-            .first()
-        )
-        if (
-            not employee
-            or not reporting
-            or not reporting.manager.membership.active
-            or not reporting.manager.membership.is_manager
-        ):
-            raise ValidationError("Each participant needs an active reporting manager before launch.")
+        if not employee:
+            raise ValidationError("Choose an active employee in this company.")
+        manager = effective_manager(employee)
         if employee.membership_id == reviewer.id:
             raise ValidationError(
-                "Head of HR cannot review themselves. Appoint an independent eligible reviewer."
+                "Head of HR cannot be a participant in their own review cycle."
             )
         prior = None
         if cycle.kind == "YEAR_END":
@@ -112,7 +104,7 @@ def launch_cycle(member, cycle, employee_ids, reviewer_id):
             company=member.company,
             cycle=cycle,
             employee=employee,
-            manager=reporting.manager,
+            manager=manager,
             reviewer=reviewer,
             prior_midyear=prior,
         )
@@ -132,7 +124,7 @@ def launch_cycle(member, cycle, employee_ids, reviewer_id):
 @transaction.atomic
 def save_form(member, review, kind, content, evidence_ids, submit, version):
     review = lock(member, review, version)
-    expected = review.employee.membership_id if kind == "EMPLOYEE" else review.manager.membership_id
+    expected = review.employee.membership_id if kind == "EMPLOYEE" else review.responsible_manager.membership_id
     if member.id != expected:
         raise PermissionDenied("You cannot edit this person’s submission.")
     if review.state not in ["OPEN", "REVISION_REQUESTED", "PREPARING"]:
@@ -142,6 +134,12 @@ def save_form(member, review, kind, content, evidence_ids, submit, version):
     )
     if form.submitted_at:
         raise ValidationError("Submitted forms are read-only. Request a formal revision.")
+    if form.author_id != member.id:
+        touch(member, review, "manager.draft_transferred", json.dumps({
+            "previous_author": str(form.author_id), "content": form.content,
+            "evidence_ids": [str(pk) for pk in form.evidence.values_list("id", flat=True)],
+        }, default=str))
+        form.author = member
     if not isinstance(content, dict) or len(json.dumps(content)) > 120000:
         raise ValidationError("Invalid form content or size.")
     evidence = EvidenceItem.objects.filter(
@@ -190,7 +188,7 @@ def save_form(member, review, kind, content, evidence_ids, submit, version):
     if submit:
         notify(
             member.company,
-            review.reviewer.user,
+            review.responsible_reviewer.user,
             f"review:{review.id}:{review.round}:{kind}:submitted",
             "A review submission is ready",
             f"/hr/reviews/{review.id}",
@@ -240,7 +238,7 @@ def save_commitment(member, review, version, commitment, commitment_id=None):
     if status["commitments_complete"] or review.employee_ack or review.manager_ack:
         raise ValidationError("The agreed plan is locked. Request a formal revision.")
     owner = commitment.pop("owner")
-    if owner not in (review.employee_id, review.manager_id):
+    if owner not in (review.employee_id, review.responsible_manager.id):
         raise ValidationError("Commitment owner must be the employee or assigned manager.")
     previous = None
     if commitment_id:
@@ -318,7 +316,7 @@ def acknowledge(member, review, version, comments=""):
             )
         review.employee_ack = timezone.now()
         review.employee_comments = comments
-    elif member.id == review.manager.membership_id:
+    elif member.id == review.responsible_manager.membership_id:
         if comments:
             raise PermissionDenied("Only the employee can record employee comments.")
         if review.manager_ack:
@@ -330,7 +328,7 @@ def acknowledge(member, review, version, comments=""):
     if review.employee_ack and review.manager_ack:
         notify(
             member.company,
-            review.reviewer.user,
+            review.responsible_reviewer.user,
             f"review:{review.id}:ready:{review.round}",
             "Review ready for finalisation",
             f"/hr/reviews/{review.id}",
@@ -358,7 +356,7 @@ def request_revision(member, review, version, reason):
     review.hr_assessment = {}
     review.conversation = {}
     touch(member, review, "revision.requested", reason)
-    for participant in [review.employee, review.manager]:
+    for participant in [review.employee, review.responsible_manager]:
         notify(
             member.company,
             participant.membership.user,
@@ -393,7 +391,14 @@ def finalise(member, review, version):
             "id", "action", "owner_id", "manager_support", "success_measure", "due_date"
         )
     )
+    original_manager = review.manager_id
+    original_reviewer = review.reviewer_id
+    # Seal the final responsible participants; previous appointments remain in
+    # the snapshot and existing submissions/events retain their original authors.
+    review.manager = review.responsible_manager
+    review.reviewer = review.responsible_reviewer
     content = {
+        "original_appointments": {"manager": str(original_manager), "reviewer": str(original_reviewer)},
         "company": {"id": str(review.company_id), "name": review.company.name},
         "employee": {
             "id": str(review.employee_id),
@@ -462,7 +467,7 @@ def finalise(member, review, version):
     review.state = "FINALISED"
     review.finalised_at = timezone.now()
     touch(member, review, "finalised")
-    for participant in [review.employee, review.manager]:
+    for participant in [review.employee, review.responsible_manager]:
         notify(
             member.company,
             participant.membership.user,

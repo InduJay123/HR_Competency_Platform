@@ -100,7 +100,7 @@ export function ReviewList({
         ) : data.count === 0 ? (
           <p className="empty">
             No reviews match this view. HR opens Mid-Year and Year-End cycles
-            after confirming reporting relationships.
+            for employees reporting to Head of HR.
           </p>
         ) : (
           <>

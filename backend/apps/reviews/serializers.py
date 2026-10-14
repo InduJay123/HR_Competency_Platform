@@ -37,11 +37,13 @@ class ReviewSerializer(serializers.ModelSerializer):
         return workflow_status(obj)
 
     employee_name = serializers.CharField(source="employee.membership.user.get_full_name", read_only=True)
-    manager_name = serializers.CharField(source="manager.membership.user.get_full_name", read_only=True)
+    manager_name = serializers.CharField(source="responsible_manager.membership.user.get_full_name", read_only=True)
     cycle_detail = CycleSerializer(source="cycle", read_only=True)
     senior_leader = serializers.BooleanField(source="employee.senior_leader", read_only=True)
     employee_member = serializers.UUIDField(source="employee.membership_id", read_only=True)
-    manager_member = serializers.UUIDField(source="manager.membership_id", read_only=True)
+    manager = serializers.UUIDField(source="responsible_manager.id", read_only=True)
+    reviewer = serializers.UUIDField(source="responsible_reviewer.id", read_only=True)
+    manager_member = serializers.UUIDField(source="responsible_manager.membership_id", read_only=True)
 
     class Meta:
         model = Review

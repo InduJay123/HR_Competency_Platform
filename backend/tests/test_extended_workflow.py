@@ -45,14 +45,14 @@ class ExtendedWorkflowTests(TestCase):
         prior = self.final_midyear()
         baseline = prior.snapshot.content
         end = self.year_end(prior)
-        blocked = self.acting(self.sarah).post(
+        blocked = self.acting(self.hr).post(
             f"/api/v1/reviews/{end.id}/manager-assessment/",
             {"version": end.version, "content": self.content("MANAGER"), "submit": True},
             format="json",
         )
         self.assertEqual(blocked.status_code, 400)
         for c in baseline["commitments"]:
-            result = self.acting(self.sarah).post(
+            result = self.acting(self.hr).post(
                 f"/api/v1/reviews/{end.id}/comparison/",
                 {
                     "version": end.version,
@@ -76,7 +76,7 @@ class ExtendedWorkflowTests(TestCase):
         prior = self.final_midyear()
         end = self.year_end(prior)
         c = prior.snapshot.content["commitments"][0]
-        self.acting(self.sarah).post(
+        self.acting(self.hr).post(
             f"/api/v1/reviews/{end.id}/comparison/",
             {
                 "version": end.version,
@@ -93,7 +93,7 @@ class ExtendedWorkflowTests(TestCase):
     def test_development_work_link_is_idempotent(self):
         r = self.final_midyear()
         c = r.commitments.first()
-        client = self.acting(self.sarah)
+        client = self.acting(self.hr)
         one = client.post(f"/api/v1/development/{c.id}/create-work/", {}, format="json")
         two = client.post(f"/api/v1/development/{c.id}/create-work/", {}, format="json")
         self.assertEqual(one.status_code, 201, one.data)
@@ -127,8 +127,8 @@ class ExtendedWorkflowTests(TestCase):
             self.acting(self.hr).get("/api/v1/reports/overview/?scope=hr").data["reviews"]["total"], 1
         )
         self.assertEqual(
-            self.acting(self.foreign).get("/api/v1/reports/overview/?scope=manager").data["reviews"]["total"],
-            0,
+            self.acting(self.foreign).get("/api/v1/reports/overview/?scope=manager").status_code,
+            403,
         )
         self.assertEqual(safe_cell("=CMD()"), "'=CMD()")
         self.assertEqual(self.acting(self.hr).get("/api/v1/reports/reviews.csv/").status_code, 200)
@@ -153,21 +153,21 @@ class ExtendedWorkflowTests(TestCase):
         self.assertEqual(response.status_code, 200, response.data)
         self.assertEqual(len(employee.get(url + "history/").data), 1)
         self.assertEqual(
-            self.acting(self.hr)
+            self.acting(self.sarah)
             .post(
                 url + "progress/",
                 {"version": response.data["version"], "status": "COMPLETE", "notes": "No permission"},
                 format="json",
             )
             .status_code,
-            403,
+            404,
         )
 
     def test_senior_appraisal_requires_strategic_context(self):
         self.nimal.profile.senior_leader = True
         self.nimal.profile.save()
         r = self.launch()
-        result = self.acting(self.sarah).post(
+        result = self.acting(self.hr).post(
             f"/api/v1/reviews/{r.id}/manager-assessment/",
             {"version": 1, "content": self.content("MANAGER"), "submit": True},
             format="json",

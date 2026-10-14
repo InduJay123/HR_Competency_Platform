@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -53,7 +54,9 @@ class CycleViewSet(viewsets.ReadOnlyModelViewSet):
         cycle = self.get_object()
         people = EmployeeProfile.objects.filter(
             company=cycle.company, membership__active=True
-        ).select_related("membership__user", "reporting")
+        ).select_related("membership__user")
+        from apps.organisation.services import head_of_hr
+        head = head_of_hr(cycle.company_id)
         reviewers = Membership.objects.filter(
             company=cycle.company, is_head_hr=True, active=True
         ).select_related("user")
@@ -63,7 +66,7 @@ class CycleViewSet(viewsets.ReadOnlyModelViewSet):
                     {
                         "id": p.id,
                         "name": p.membership.user.get_full_name(),
-                        "has_manager": hasattr(p, "reporting"),
+                        "has_manager": p.membership_id != head.membership_id,
                     }
                     for p in people
                 ],
@@ -83,10 +86,15 @@ class ReviewViewSet(CoachingActions, ComparisonActions, viewsets.ReadOnlyModelVi
     serializer_class = ReviewSerializer
 
     def get_queryset(self):
-        qs = services.visible_reviews(membership(self.request))
+        member = membership(self.request)
+        qs = services.visible_reviews(member)
         if self.request.query_params.get("appointed") == "true":
-            qs = qs.filter(reviewer=membership(self.request))
-        for field in ["state", "employee", "manager", "cycle"]:
+            qs = qs.filter(Q(reviewer=member) | (~Q(state="FINALISED") if member.is_head_hr else Q(pk__in=[])))
+        if self.request.query_params.get("manager"):
+            manager_id = self.request.query_params["manager"]
+            live = ~Q(state="FINALISED") if member.is_head_hr and manager_id == str(member.profile.id) else Q(pk__in=[])
+            qs = qs.filter(Q(state="FINALISED", manager_id=manager_id) | live)
+        for field in ["state", "employee", "cycle"]:
             if self.request.query_params.get(field):
                 qs = qs.filter(**{field: self.request.query_params[field]})
         if self.request.query_params.get("department"):
@@ -100,14 +108,14 @@ class ReviewViewSet(CoachingActions, ComparisonActions, viewsets.ReadOnlyModelVi
         member = membership(request)
         data = ReviewSerializer(obj).data
         # General HR can monitor status; narrative requires a participant or explicit appointment.
-        participant = member.is_head_hr or member.id in [obj.employee.membership_id, obj.manager.membership_id, obj.reviewer_id]
+        participant = member.is_head_hr or member.id in [obj.employee.membership_id, obj.responsible_manager.membership_id, obj.reviewer_id]
         if not participant:
             return Response(data)
         data["can_view_coaching"] = True
         forms = services.current_forms(obj)
         visible = []
         for form in forms:
-            own = form.author_id == member.id
+            own = form.author_id == member.id or (form.kind == "MANAGER" and member.id == obj.responsible_manager.membership_id)
             shared = bool(form.submitted_at) and (
                 form.kind == "EMPLOYEE"
                 or member.id != obj.employee.membership_id

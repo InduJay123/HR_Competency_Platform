@@ -37,7 +37,6 @@ class Credentials(serializers.Serializer):
         choices=[
             "auto",
             "employee",
-            "manager",
             "hr",
             "platform",
         ],
@@ -72,6 +71,10 @@ class SessionView(APIView):
         current = memberships.filter(
             company_id=request.session.get("company_id")
         ).first()
+        context = request.session.get("context", "employee")
+        if not current or context not in current.contexts:
+            context = "employee"
+            request.session["context"] = context
 
         return Response(
             {
@@ -103,10 +106,7 @@ class SessionView(APIView):
                     if current
                     else None
                 ),
-                "context": request.session.get(
-                    "context",
-                    "employee",
-                ),
+                "context": context,
                 "contexts": (
                     current.contexts
                     if current
@@ -167,11 +167,6 @@ class LoginView(APIView):
                 is_hr=True
             )
 
-        elif role == "manager":
-            eligible = eligible.filter(
-                is_manager=True
-            )
-
         slug = data.validated_data.get(
             "company_slug"
         )
@@ -230,16 +225,12 @@ class LoginView(APIView):
 
             if role in [
                 "hr",
-                "manager",
                 "employee",
             ]:
                 selected = role
 
             elif member.is_hr:
                 selected = "hr"
-
-            elif member.is_manager:
-                selected = "manager"
 
             else:
                 selected = "employee"

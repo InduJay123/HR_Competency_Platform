@@ -1,0 +1,255 @@
+BTFL two-level reporting refactor — 2026-10-14
+
+Status: implemented and tested locally. Configured live database was inspected
+read-only; these migrations have NOT been applied to it. No commit, push or VPS
+deployment was performed. Full suites still have verified pre-existing failures.
+
+1. Discovered model
+   Arbitrary organisation.ReportingRelationship(employee, manager, company),
+   recursive cycle checking, independent Membership.is_manager, manager login
+   role, recursive frontend tree and editable reporting dropdowns.
+   Full dependency map: docs/two-level-audit.txt.
+
+2. Implemented model
+   Active company Head of HR is resolved centrally by company; Head has no
+   effective manager and all other employees resolve to that Head. My Team is
+   all other active company employees. Ordinary employees have no team/manager
+   capability. Arbitrary reporting fields return 400; old /reporting/ endpoint
+   is removed (404). Manager login/approval role and assignment controls removed.
+   Existing manager workspace URLs remain as Head of HR capabilities.
+   Missing/multiple Heads fail closed. Company approval/bootstrap creates its
+   Head transactionally; employee creation requires a valid Head. Last-Head
+   deactivation/demotion is blocked in ordinary writes and promotion commands.
+   DB enforces at most one active Head with a partial unique constraint;
+   at-least-one is enforced through supported creation/transfer/business paths
+   and migration preflight (not a cross-table CHECK on arbitrary direct SQL).
+
+3. Exact models changed
+   companies.Membership: remove is_manager; add one_active_head_hr constraint;
+   protect Head demotion/deactivation; derive manager context from active Head.
+   organisation.ReportingRelationship: removed.
+   reviews.Review: add effective responsibility properties, no schema removal.
+   EmployeeProfile schema and all other business models are unchanged.
+
+4. Exact table removed by migration (not yet removed from live database)
+   organisation_reportingrelationship
+   Its no_self_manager constraint, employee unique index, primary key and
+   company/employee/manager FKs and indexes are removed with DeleteModel.
+
+5. Exact columns removed by migration
+   companies_membership.is_manager
+   All columns of organisation_reportingrelationship: id, created_at,
+   updated_at, company_id, employee_id, manager_id.
+   No reports_to column existed.
+
+6. Deliberately retained
+   companies_membership.is_hr: separate administrative permission.
+   companies_membership.is_head_hr/active/company_id: canonical responsibility.
+   reviews_review.manager_id/reviewer_id: original/final historical participants.
+   reviews_submission.author_id/kind and evidence links: historical authorship.
+   reviews_finalsnapshot, reviews_reviewevent, audit_auditlog: immutable history.
+   tasks_workitem.parent_task_id/assigned_by_id/assigned_to_id/accountable_owner_id:
+   historical work provenance, not employee reporting hierarchy.
+   development_commitment.owner_id/manager_support: agreed development plans.
+   organisation_growthentry.owner_id/subject_id/shared: authorship and sharing.
+   Departments, job roles, senior_leader, all employee/company/auth/invitation/
+   access-request/evidence/growth/review rows and audit metadata remain.
+
+7. Migrations added
+   organisation.0005_two_level_reporting
+   companies.0007_two_level_membership
+   Old migrations stay intact for fresh installs and historical model states.
+
+8. Data migration behavior
+   Lock company rows; validate ALL companies before writes. Fail with IDs for
+   missing/duplicate Heads, missing/invalid Head profiles, tenant mismatches or
+   unfinished Head self-reviews. Never infer assignments from title or old flag.
+   PostgreSQL unexpected incoming FKs/dependent views (including flag views)
+   block cleanup rather than being silently removed by CASCADE.
+   Remove Head's old reporting link; normalize active employees to Head; then
+   drop the redundant table atomically. Flush deferred PostgreSQL FK checks
+   before the DROP. Add partial unique constraint and remove manager flag.
+   No existing review, submission, snapshot or audit is rewritten by migrations.
+   Unfinished review responsibility derives from current Head. Sealed forms
+   remain sealed; takeover of an old draft archives previous content/authorship
+   in a new ReviewEvent. New finalization records final responsible participants
+   and retains original appointments in its snapshot. Already completed records
+   stay byte-for-byte unchanged. Growth shared records follow current Head.
+   Controlled repair: set_head_hr requires explicit company/membership/active
+   platform-admin IDs and a reason, validates tenant/profile, records an event,
+   and refuses a candidate with an unfinished self-review. Raw parameterized
+   SQL is limited to this command's old/new-schema-compatible role update and
+   schema preflight; migrations use Django operations for schema removal.
+
+9. Frontend files changed
+   frontend/src/app/auth/login/page.tsx
+   frontend/src/components/access.tsx
+   frontend/src/components/account.tsx
+   frontend/src/components/cycles.tsx
+   frontend/src/components/employee-detail.tsx
+   frontend/src/components/growth.tsx
+   frontend/src/components/hierarchy.test.tsx
+   frontend/src/components/hierarchy.tsx
+   frontend/src/components/people.test.tsx
+   frontend/src/components/people.tsx
+   frontend/src/components/review-list.tsx
+   frontend/src/components/shell.tsx
+   frontend/src/components/tours.tsx
+   frontend/src/components/work.tsx
+   frontend/src/lib/types.ts
+
+10. Backend files changed
+   backend/apps/accounts/views.py
+   backend/apps/companies/access.py
+   backend/apps/companies/management/commands/audit_reporting.py
+   backend/apps/companies/management/commands/create_preview_admin.py
+   backend/apps/companies/management/commands/promote_platform_admin.py
+   backend/apps/companies/management/commands/seed_demo.py
+   backend/apps/companies/management/commands/set_head_hr.py
+   backend/apps/companies/migrations/0007_two_level_membership.py
+   backend/apps/companies/models.py
+   backend/apps/companies/platform.py
+   backend/apps/development/views.py
+   backend/apps/notifications/tasks.py
+   backend/apps/organisation/growth.py
+   backend/apps/organisation/migrations/0005_two_level_reporting.py
+   backend/apps/organisation/models.py
+   backend/apps/organisation/serializers.py
+   backend/apps/organisation/services.py
+   backend/apps/organisation/views.py
+   backend/apps/reports/views.py
+   backend/apps/reviews/comparison.py
+   backend/apps/reviews/models.py
+   backend/apps/reviews/serializers.py
+   backend/apps/reviews/services.py
+   backend/apps/reviews/views.py
+   backend/apps/reviews/workflow.py
+   backend/apps/tasks/services.py
+   backend/apps/tasks/views.py
+   backend/common/permissions.py
+   backend/config/settings/test_postgres.py
+   backend/tests/test_accepted_coaching.py
+   backend/tests/test_ai.py
+   backend/tests/test_evidence.py
+   backend/tests/test_extended_workflow.py
+   backend/tests/test_foundation.py
+   backend/tests/test_growth_invitation.py
+   backend/tests/test_head_hr_transfer.py
+   backend/tests/test_participant_workflow.py
+   backend/tests/test_platform_access.py
+   backend/tests/test_preview_admin.py
+   backend/tests/test_profiles_trainer.py
+   backend/tests/test_reporting_display.py
+   backend/tests/test_reporting_migrations.py
+   backend/tests/test_review_reporting.py
+   backend/tests/test_reviews.py
+
+11. Verification
+   Frontend production build: PASS (39 static pages plus dynamic routes).
+   TypeScript: PASS. Changed Python files Ruff: PASS. Migration consistency:
+   PASS (no model changes missing migrations). git diff --check: PASS.
+   Targeted frontend: 26/26 PASS across people, hierarchy, growth and review UI.
+   PostgreSQL reporting regression run: 97/97 PASS before the final extra guards
+   and transfer tests; the final full run also covers those additions.
+   Final focused PostgreSQL run (including historical follow-up and transfer):
+   57/57 PASS; see tmp/reporting-last-check.log.
+   Full backend PostgreSQL run: 148 tests, 3 failure reports in 2 unrelated
+   pre-existing methods (live trainer adapter; document RAG test, two subcases).
+   The same 3 reports reproduce on HEAD in a separate baseline checkout with
+   the same environment. No reporting regression failed in the final run.
+   Full frontend: 73 tests, 67 PASS, 6 pre-existing failures: three HR review
+   presentation tests, two purpose-journey tests, one settings/logo test. All
+   six reproduce on HEAD (baseline: 72 tests, 66 pass, 6 fail).
+   Upgrade tests run on disposable SQLite and PostgreSQL 18 databases: legacy
+   chains, empty database, missing/duplicate Heads, external view dependencies,
+   and preservation of review/submission/snapshot/profile/growth/access/audit
+   rows. PostgreSQL immutable-history triggers were exercised by the suite.
+   Head of HR can also edit legacy work assignments and assign development work
+   from completed reviews whose historical manager is another employee; stored
+   assignment provenance and final review identities are preserved.
+   Full-suite green acceptance is therefore still blocked by baseline failures;
+   unrelated product behavior was not changed to conceal them.
+   Local logs: tmp/backend-final-suite.log, tmp/reporting-final-tests.log,
+   tmp/postgres-migrations.log, tmp/frontend-tests.log, tmp/frontend-final-build.log,
+   tmp/baseline-backend-env-tests.log, tmp/baseline-frontend-tests.log.
+
+12. Configured database findings
+   One company; exactly one active Head of HR; five legacy reporting links.
+   Final read-only audit_reporting preflight passed. No missing/duplicate Head,
+   invalid Head profile, profile tenant mismatch or unfinished Head self-review
+   was reported. VPS data was not separately accessed; rerun preflight there.
+   No live table/column was dropped and no live business record was changed.
+
+13. Exact local commands (PowerShell, repository root)
+   Python here requires execution access to the existing venv's base interpreter.
+   Tests below use isolated databases; migrate without --settings uses .env and
+   MUST be run only against the intended backed-up deployment database.
+
+   & backend/.venv/Scripts/python.exe backend/manage.py audit_reporting
+   & backend/.venv/Scripts/python.exe backend/manage.py check --settings=config.settings.test
+   & backend/.venv/Scripts/python.exe backend/manage.py makemigrations --check --dry-run --settings=config.settings.test
+   & backend/.venv/Scripts/python.exe backend/manage.py test --settings=config.settings.test --noinput
+   & backend/.venv/Scripts/python.exe backend/manage.py test --settings=config.settings.test_postgres --noinput
+   & backend/.venv/Scripts/python.exe backend/manage.py test tests.test_reporting_migrations --settings=config.settings.test_postgres --noinput
+   Push-Location frontend
+   npm.cmd run typecheck
+   npm.cmd test
+   npm.cmd run build
+   Pop-Location
+
+   The PostgreSQL test settings connect ONLY to loopback:55439 and create/drop
+   test_bfl_reporting plus randomly named test_reporting_migration_* databases.
+   Use a dedicated test server, with CREATEDB rights; never production credentials.
+   To restart the isolated cluster created for this verification:
+   & 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D 'C:/Users/Induni/Desktop/BTFL Final/tmp/reporting-postgres' -l 'C:/Users/Induni/Desktop/BTFL Final/tmp/reporting-postgres.log' -o '-h 127.0.0.1 -p 55439' -w start
+   To stop it:
+   & 'C:/Program Files/PostgreSQL/18/bin/pg_ctl.exe' -D 'C:/Users/Induni/Desktop/BTFL Final/tmp/reporting-postgres' -m fast -w stop
+
+   After backup, conflict resolution and stopping the old application:
+   & backend/.venv/Scripts/python.exe backend/manage.py migrate --plan
+   & backend/.venv/Scripts/python.exe backend/manage.py migrate --noinput
+   & backend/.venv/Scripts/python.exe backend/manage.py audit_reporting
+
+   Explicit remediation, only with client-selected IDs (replace placeholders):
+   & backend/.venv/Scripts/python.exe backend/manage.py set_head_hr --company COMPANY_UUID --membership MEMBERSHIP_UUID --actor PLATFORM_ADMIN_USER_UUID --reason 'Client-approved Head of HR assignment'
+
+14. Exact Git commands (not executed; current branch main, remote origin)
+   $btflGit = 'C:/Users/Induni/AppData/Local/GitHubDesktop/app-3.6.7/resources/app/git/cmd/git.exe'
+   & $btflGit status --short
+   & $btflGit diff --check
+   & $btflGit diff --stat
+   & $btflGit add -- backend/apps backend/common/permissions.py backend/config/settings/test_postgres.py backend/tests frontend/src docs/deployment.md docs/two-level-audit.txt docs/two-level-report.txt
+   & $btflGit diff --cached --stat
+   & $btflGit commit -m 'Enforce two-level Head of HR reporting with guarded schema cleanup'
+   & $btflGit push origin main
+   Existing generated next-env changes are outside the staged paths.
+
+15. Exact VPS deployment commands (Bash, from the existing repository checkout)
+   VPS directory/reverse proxy/SSH identity are not in this repository; do not
+   invent or replace them. Resolve existing failing release checks before rollout.
+   Preserve a verified full backup; migration reversal cannot recover old maps.
+   Do not run old web/worker images against the cleaned schema.
+
+   set -euo pipefail
+   git pull --ff-only origin main
+   docker compose -f docker-compose.prodtest.yml build backend worker beat frontend
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py audit_reporting
+   docker compose -f docker-compose.prodtest.yml stop frontend backend worker beat
+   mkdir -p backups
+   backup="backups/before-two-level-$(date -u +%Y%m%dT%H%M%SZ).dump"
+   docker run --rm --env-file .env postgres:18 sh -c 'exec pg_dump --dbname="$DATABASE_URL" --format=custom' > "$backup"
+   test -s "$backup"
+   docker run --rm -i postgres:18 pg_restore --list < "$backup" > "$backup.contents.txt"
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py audit_reporting
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py migrate --plan
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py migrate --noinput
+   docker compose -f docker-compose.prodtest.yml run --rm --no-deps backend python manage.py audit_reporting
+   docker compose -f docker-compose.prodtest.yml up -d backend worker beat frontend
+   docker compose -f docker-compose.prodtest.yml logs --tail=100 backend worker beat frontend
+
+   pg_restore --list validates the archive structure, not a full restore drill;
+   keep the deployment's existing tested backup/restore process and storage backup.
+   If preflight/migration fails, keep services stopped, inspect reported IDs or
+   dependencies and use explicit remediation. Do not --fake these migrations.
+   Smoke-test Head/employee sign-in, directory, My Team, review launch/manager
+   appraisal, historical review loading and shared Growth Tools after deployment.

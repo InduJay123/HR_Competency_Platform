@@ -52,7 +52,6 @@ class Membership(TenantEntity):
     active = models.BooleanField(default=True)
     is_hr = models.BooleanField(default=False)
     is_head_hr = models.BooleanField(default=False)
-    is_manager = models.BooleanField(default=False)
     stewardship_code = models.CharField(max_length=40, unique=True, null=True, editable=False)
     approved_at = models.DateTimeField(null=True)
 
@@ -60,8 +59,12 @@ class Membership(TenantEntity):
         from django.db import transaction
 
         with transaction.atomic():
+            company = Company.objects.select_for_update().get(pk=self.company_id)
+            previous = type(self).objects.filter(pk=self.pk, active=True, is_head_hr=True).first()
+            if previous and (not self.active or not self.is_head_hr or self.company_id != previous.company_id):
+                from django.core.exceptions import ValidationError
+                raise ValidationError("Use the controlled Head of HR transfer command.")
             if not self.stewardship_code:
-                company = Company.objects.select_for_update().get(pk=self.company_id)
                 company.employee_sequence += 1
                 company.save(update_fields=["employee_sequence"])
                 self.stewardship_code = f"{company.stewardship_code}-{company.employee_sequence}"
@@ -70,6 +73,7 @@ class Membership(TenantEntity):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["company", "user"], name="membership_unique"),
+            models.UniqueConstraint(fields=["company"], condition=models.Q(active=True, is_head_hr=True), name="one_active_head_hr"),
             models.CheckConstraint(
                 condition=models.Q(is_head_hr=False) | models.Q(is_hr=True), name="head_hr_is_hr"
             ),
@@ -78,7 +82,7 @@ class Membership(TenantEntity):
     @property
     def contexts(self):
         result = ["employee", "reviews"]
-        if self.is_manager:
+        if self.is_head_hr and self.active:
             result.append("manager")
         if self.is_hr:
             result.append("hr")

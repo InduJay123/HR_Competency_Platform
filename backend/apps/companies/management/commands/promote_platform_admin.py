@@ -18,14 +18,11 @@ class Command(BaseCommand):
             raise CommandError("No account found.")
         from django.db.models import Q
 
-        from apps.organisation.models import ReportingRelationship
         from apps.reviews.models import Review
 
         members = Membership.objects.filter(user=user)
-        if ReportingRelationship.objects.filter(
-            Q(employee__membership__in=members) | Q(manager__membership__in=members)
-        ).exists():
-            raise CommandError("Reassign reporting relationships before promotion.")
+        if members.filter(active=True, is_head_hr=True).exists():
+            raise CommandError("Transfer Head of HR responsibility before promotion.")
         if (
             Review.objects.exclude(state="FINALISED")
             .filter(
@@ -39,6 +36,6 @@ class Command(BaseCommand):
         user.is_superuser = True
         user.is_staff = True
         user.save(update_fields=["is_superuser", "is_staff"])
-        members.update(active=False, is_hr=False, is_head_hr=False, is_manager=False)
+        members.update(active=False, is_hr=False, is_head_hr=False)
         PlatformEvent.objects.create(actor=user, action="platform.administrator_promoted")
         self.stdout.write("Platform administrator enabled; company memberships retired.")

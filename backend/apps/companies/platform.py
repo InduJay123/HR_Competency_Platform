@@ -137,8 +137,6 @@ class PlatformCompanyViewSet(viewsets.ViewSet):
                     if p.membership.is_head_hr
                     else "HR"
                     if p.membership.is_hr
-                    else "Manager"
-                    if p.membership.is_manager
                     else "Employee",
                 }
                 for p in page

@@ -38,7 +38,7 @@ export type Employee = {
   department: string | null;
   job_role: string | null;
   photo_url: string;
-  is_manager: boolean;
+  is_head_hr: boolean;
   senior_leader: boolean;
   manager_id: string | null;
   manager_name?: string;

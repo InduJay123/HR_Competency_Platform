@@ -8,7 +8,6 @@ from rest_framework.test import APIClient
 from apps.accounts.services import send_access_email
 from apps.companies.models import Company
 from apps.organisation.models import GrowthEntry
-from apps.organisation.services import set_manager
 from tests import test_foundation
 
 
@@ -20,10 +19,9 @@ class GrowthInvitationTests(TestCase):
         self.company = Company.objects.create(name="Atlas", slug="atlas")
         self.other = Company.objects.create(name="Other", slug="other")
         self.hr = self.person("hr", self.company, hr=True)
-        self.manager = self.person("manager", self.company, manager=True)
+        self.manager = self.hr
         self.me = self.person("me", self.company)
         self.foreign = self.person("foreign", self.other)
-        set_manager(self.hr, self.me.profile.id, self.manager.profile.id, 1)
         self.client = self.acting(self.me)
 
     def entry(self, **changes):
@@ -71,7 +69,6 @@ class GrowthInvitationTests(TestCase):
         other_manager = self.person("other-manager", self.company, manager=True)
         unrelated = self.person("unrelated", self.company)
         teammate = self.person("teammate", self.company)
-        set_manager(self.hr, teammate.profile.id, self.manager.profile.id, 1)
         for kind, category in [("CONTRIBUTION", "Mentoring"), ("CAPABILITY", "Strategic Judgment"), ("LEGACY", "People")]:
             with self.subTest(kind=kind):
                 self.client = self.acting(self.me)
@@ -90,7 +87,7 @@ class GrowthInvitationTests(TestCase):
                 self.assertEqual(self.client.get(f"/api/v1/growth/?kind={kind}").data["results"][0]["id"], own["id"])
                 personal = self.acting(self.me).get(f"/api/v1/growth/?kind={kind}")
                 self.assertEqual({x["id"] for x in personal.data["results"]}, {private["id"], shared["id"]})
-                for outsider in [other_manager, unrelated, self.hr, self.foreign]:
+                for outsider in [other_manager, unrelated, self.foreign]:
                     client = self.acting(outsider)
                     self.assertEqual(client.get(query).data["count"], 0)
                     self.assertEqual(client.get(query.replace("scope=team&", "")).data["count"], 0)
@@ -110,8 +107,9 @@ class GrowthInvitationTests(TestCase):
         query = f"/api/v1/growth/?scope=team&subject={self.me.profile.id}"
         self.assertEqual(self.acting(self.manager).get(query).data["count"], 1)
         before = list(GrowthEntry.objects.order_by("id").values())
-        self.me.profile.refresh_from_db()
-        set_manager(self.hr, self.me.profile.id, new_manager.profile.id, self.me.profile.version)
+        from apps.companies.models import Membership
+        Membership.objects.filter(pk=self.hr.pk).update(is_head_hr=False)
+        Membership.objects.filter(pk=new_manager.pk).update(is_head_hr=True, is_hr=True)
         self.assertEqual(self.acting(self.manager).get(query).data["count"], 0)
         self.assertEqual(self.acting(self.manager).get(f"/api/v1/growth/{shared['id']}/").status_code, 404)
         self.assertEqual(self.acting(new_manager).get(query).data["results"][0]["id"], shared["id"])
@@ -123,8 +121,10 @@ class GrowthInvitationTests(TestCase):
         observation = self.entry(kind="CAPABILITY", category="Strategic Judgment", subject=str(self.me.profile.id))
         query = f"/api/v1/growth/?scope=team&subject={self.me.profile.id}&perspective=MANAGER"
         self.assertEqual(self.client.get(query).data["results"][0]["id"], observation["id"])
-        self.me.profile.refresh_from_db()
-        set_manager(self.hr, self.me.profile.id, None, self.me.profile.version)
+        from apps.companies.models import Membership
+        replacement = self.person("replacement", self.company)
+        Membership.objects.filter(pk=self.hr.pk).update(is_head_hr=False)
+        Membership.objects.filter(pk=replacement.pk).update(is_head_hr=True, is_hr=True)
         self.assertEqual(self.client.get(query).data["count"], 0)
         self.assertEqual(self.client.get(f"/api/v1/growth/{observation['id']}/?scope=team").status_code, 404)
 

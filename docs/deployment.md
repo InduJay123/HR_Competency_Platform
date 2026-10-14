@@ -99,8 +99,17 @@ For a local rehearsal, use the provided `scripts/backup-local.ps1` and `scripts/
 
 Rollback the application image only if it remains compatible with applied migrations. Do not reverse immutable-record migrations or discard review rows to make an old build run. Prefer forward fixes; rehearse any migration rollback with restored data first.
 
+## Two-level reporting release
+
+See `two-level-audit.txt` for the dependency audit and `two-level-report.txt` for
+the exact migration, test, Git and VPS commands. Stop web and worker processes
+before applying organisation `0005` and companies `0007`: old application code
+requires the removed reporting table and manager flag. Run `audit_reporting`
+first and preserve a verified backup. These hierarchy migrations are deliberately
+not reversible; use forward fixes or restore the complete pre-release backup.
+
 ## Acceptance gates
-- All automated backend/frontend checks pass; browser journey verified for Employee, Manager and Head of HR.
+- All automated backend/frontend checks pass; browser journey verified for Employee and Head of HR, including the Head of HR's My Team workspace.
 - PostgreSQL immutability and tenant access tests pass.
 - Provider integration, source citation, prompt-injection, refusal, retry and human-only review tests pass.
 - Accessibility: keyboard, focus, error association, reduced motion, responsive overflow and screen-reader labels.

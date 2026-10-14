@@ -1,0 +1,44 @@
+Pre-change dependency audit (2026-10-14)
+
+Canonical hierarchy candidates:
+organisation.ReportingRelationship: employee OneToOne -> EmployeeProfile;
+manager FK -> EmployeeProfile; company FK; no_self_manager check; implicit FK
+indexes and unique employee index. No other model points to this table.
+Consumers: organisation services, serializers, views, growth visibility;
+review launch; task visibility/team scope; reports; demo seed; promotion guard;
+foundation, growth and reporting-display tests. Frontend: people dropdown,
+recursive hierarchy, work/growth team filters, employee detail.
+Decision: remove after validation/normalization. Manager identity remains a
+derived read-only API value; no mapping table needed for two levels.
+
+companies.Membership.is_manager: contexts, login filter, platform role display,
+employee create/update, task/report permission checks, access approvals, preview
+and demo commands, tests. No independent business capability remains: all such
+responsibilities move to active Head of HR. Remove column and assignment role.
+Keep manager workspace context as a capability of Head of HR, not a role flag.
+
+Keep Membership.is_hr: separate HR administration permission, not a reporting
+relationship. Keep is_head_hr/active/company_id and unique company/user.
+Keep Review.manager_id and reviewer_id: historical appointed participants;
+Submission.author_id/kind, FinalSnapshot, ReviewEvent and AuditLog immutable
+records must survive. Pending responsibilities resolve dynamically to current
+Head of HR; completed records retain original manager identity.
+Keep WorkItem parent_task_id/assigned_by_id/accountable_owner_id/assigned_to_id:
+historical work provenance/delegation, not employee reporting relationships.
+Keep Commitment.owner_id and manager_support: historical agreed plans.
+Keep GrowthEntry.owner_id/subject_id/shared: authorship, subject and consent.
+Keep job roles, senior_leader and departments: evaluation/organisation metadata,
+not hierarchy levels. Keep invitation/access-request details and event JSON.
+
+No reports_to field, parent_manager field, hierarchy depth column, membership
+manager join table or separate tree metadata was found. Old initial migrations
+must retain historical schema definitions; new migrations perform the cleanup.
+Celery review reminders use stored review participants and must use effective
+manager for unfinished reviews. No hierarchy table references in audit FKs.
+
+Safety boundary: validate every existing company has exactly one active Head
+of HR with a same-company profile before any destructive operation. Missing or
+duplicate heads fail with company IDs; never infer from designation/is_manager.
+Normalize links before drop. Preserve all employee/review/evidence/growth/audit/
+company/invitation/access-request rows. Production application is a separate
+deployment step; do not apply destructive migrations during local development.

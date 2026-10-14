@@ -29,10 +29,10 @@ class OverviewView(APIView):
         if scope == "hr":
             require_hr(member)
         elif scope == "manager":
-            if not member.is_manager:
+            if not member.is_head_hr:
                 raise PermissionDenied("Manager responsibility required.")
-            tasks = tasks.filter(assigned_to__reporting__manager__membership=member)
-            reviews = reviews.filter(manager__membership=member)
+            tasks = tasks.filter(assigned_to__membership__active=True).exclude(assigned_to__membership=member)
+            reviews = reviews.exclude(employee__membership=member)
         elif scope == "employee":
             tasks = tasks.filter(assigned_to__membership=member)
             reviews = reviews.filter(employee__membership=member)
@@ -127,7 +127,7 @@ class ReviewExportView(APIView):
                     safe_cell(x)
                     for x in [
                         r.employee.membership.user.get_full_name(),
-                        r.manager.membership.user.get_full_name(),
+                        r.responsible_manager.membership.user.get_full_name(),
                         r.cycle.year,
                         r.cycle.kind,
                         r.state,

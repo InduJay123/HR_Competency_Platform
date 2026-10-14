@@ -18,6 +18,7 @@ class ProfileTrainerTests(TestCase):
     def setUp(self):
         self.company = Company.objects.create(name="Atlas", slug="atlas")
         self.other = Company.objects.create(name="Other", slug="other")
+        self.hr = self.person("head", self.company, hr=True)
         self.me = self.person("me", self.company)
         self.peer = self.person("peer", self.company)
         self.foreign = self.person("foreign", self.other)

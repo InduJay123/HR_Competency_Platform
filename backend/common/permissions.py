@@ -23,5 +23,5 @@ def require_hr(member):
 
 
 def require_manager(member):
-    if not member.is_manager:
-        raise PermissionDenied("Manager access is required.")
+    if not member.active or not member.is_head_hr:
+        raise PermissionDenied("Active Head of HR access is required.")

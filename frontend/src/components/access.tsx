@@ -508,7 +508,6 @@ export function RequestQueue({
                   Approved responsibility
                   <select name="role">
                     <option value="EMPLOYEE">Employee</option>
-                    <option value="MANAGER">Manager + employee</option>
                     <option value="HR">
                       HR administrator (Head of HR approval required)
                     </option>

@@ -39,16 +39,6 @@ class EmployeeProfile(TenantEntity):
     onboarding_completed_at = models.DateTimeField(null=True)
 
 
-class ReportingRelationship(TenantEntity):
-    employee = models.OneToOneField(EmployeeProfile, on_delete=models.PROTECT, related_name="reporting")
-    manager = models.ForeignKey(EmployeeProfile, on_delete=models.PROTECT, related_name="direct_reports")
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(condition=~models.Q(employee=models.F("manager")), name="no_self_manager")
-        ]
-
-
 class GrowthEntry(TenantEntity):
     owner = models.ForeignKey("companies.Membership", on_delete=models.PROTECT)
     subject = models.ForeignKey(EmployeeProfile, on_delete=models.PROTECT, related_name="growth_entries")

@@ -8,7 +8,6 @@ export function People({ manage = false }: { manage?: boolean }) {
   const [data, setData] = useState<Page<Employee> | null>(null),
     [departments, setDepartments] = useState<Named[]>([]),
     [roles, setRoles] = useState<Named[]>([]),
-    [managers, setManagers] = useState<Employee[]>([]),
     [error, setError] = useState(""),
     [success, setSuccess] = useState(""),
     [creating, setCreating] = useState(false),
@@ -16,19 +15,19 @@ export function People({ manage = false }: { manage?: boolean }) {
     [page, setPage] = useState(1);
   const load = useCallback(() => {
     Promise.all([
-      api<Page<Employee>>(`employees/?page=${page}`),
+      api<Page<Employee>>(
+        `employees/?page=${page}${manage ? "" : "&scope=team"}`,
+      ),
       allPages<Named>("organisation/departments/"),
       allPages<Named>("organisation/roles/"),
-      allPages<Employee>("employees/?managers=true"),
     ])
-      .then(([p, d, r, m]) => {
+      .then(([p, d, r]) => {
         setData(p);
         setDepartments(d);
         setRoles(r);
-        setManagers(m);
       })
       .catch((e) => setError(e.message));
-  }, [page]);
+  }, [page, manage]);
   useEffect(load, [load]);
   async function create(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,7 +37,6 @@ export function People({ manage = false }: { manage?: boolean }) {
     try {
       await post("employees/", {
         ...data,
-        is_manager: data.is_manager === "on",
         senior_leader: data.senior_leader === "on",
         joined_on: data.joined_on || null,
         department: data.department || null,
@@ -48,23 +46,6 @@ export function People({ manage = false }: { manage?: boolean }) {
         "Employee created with login disabled until account activation.",
       );
       setCreating(false);
-      load();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function reporting(e: FormEvent<HTMLFormElement>, p: Employee) {
-    e.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      await post(`employees/${p.id}/reporting/`, {
-        manager_id: new FormData(e.currentTarget).get("manager") || null,
-        version: p.version,
-      });
-      setSuccess("Reporting relationship saved.");
       load();
     } catch (e) {
       setError((e as Error).message);
@@ -135,10 +116,6 @@ export function People({ manage = false }: { manage?: boolean }) {
               </label>
             </div>
             <label>
-              <input className="check" type="checkbox" name="is_manager" />{" "}
-              Assigns and manages work
-            </label>
-            <label>
               <input className="check" type="checkbox" name="senior_leader" />{" "}
               Senior leadership evaluation view
             </label>
@@ -193,33 +170,9 @@ export function People({ manage = false }: { manage?: boolean }) {
                           </td>
                         )}
                         <td>
-                          {manage ? (
-                            <form
-                              className="inline-form"
-                              onSubmit={(e) => reporting(e, p)}
-                            >
-                              <select
-                                key={p.version}
-                                name="manager"
-                                aria-label={`Reporting manager for ${p.first_name}`}
-                                defaultValue={p.manager_id || ""}
-                              >
-                                <option value="">No reporting manager</option>
-                                {managers
-                                  .filter((m) => m.is_manager && m.id !== p.id)
-                                  .map((m) => (
-                                    <option key={m.id} value={m.id}>
-                                      {m.first_name} {m.last_name}
-                                    </option>
-                                  ))}
-                              </select>
-                              <Button variant="neutral" disabled={busy}>
-                                Save
-                              </Button>
-                            </form>
-                          ) : (
-                            p.manager_name || "Outside this view"
-                          )}
+                          {p.is_head_hr
+                            ? "No reporting manager"
+                            : `${p.manager_name} — Head of HR`}
                         </td>
                       </tr>
                     ))}

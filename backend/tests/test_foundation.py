@@ -6,8 +6,7 @@ from rest_framework.test import APIClient
 
 from apps.audit.models import AuditLog
 from apps.companies.models import Company, Membership
-from apps.organisation.models import Department, EmployeeProfile, ReportingRelationship
-from apps.organisation.services import set_manager
+from apps.organisation.models import Department, EmployeeProfile
 from apps.tasks.models import WorkItem
 from apps.tasks.services import assign_work
 
@@ -21,11 +20,10 @@ class FoundationTests(TestCase):
         self.nimal = self.person("nimal", self.company, manager=True)
         self.kamal = self.person("kamal", self.company)
         self.foreign = self.person("foreign", self.other, manager=True)
-        set_manager(self.hr, self.nimal.profile.id, self.sarah.profile.id, 1)
-        set_manager(self.hr, self.kamal.profile.id, self.nimal.profile.id, 1)
         self.client = APIClient()
 
     def person(self, name, company, manager=False, hr=False):
+        # A managerial job title no longer grants any reporting responsibility.
         u = get_user_model().objects.create_user(
             username=f"{name}@example.test",
             email=f"{name}@example.test",
@@ -33,7 +31,7 @@ class FoundationTests(TestCase):
             first_name=name.title(),
             last_name="Test",
         )
-        m = Membership.objects.create(company=company, user=u, is_manager=manager, is_hr=hr, is_head_hr=hr)
+        m = Membership.objects.create(company=company, user=u, is_hr=hr, is_head_hr=hr)
         EmployeeProfile.objects.create(
             company=company, membership=m, designation="Manager" if manager else "Employee"
         )
@@ -58,7 +56,7 @@ class FoundationTests(TestCase):
     def task(self):
         data = self.task_data()
         data["due_date"] = date(2026, 12, 20)
-        return assign_work(self.sarah, data)
+        return assign_work(self.hr, data)
 
     def test_anonymous_cannot_read(self):
         self.assertEqual(self.client.get("/api/v1/employees/").status_code, 403)
@@ -112,44 +110,21 @@ class FoundationTests(TestCase):
             self.acting(self.kamal).get(f"/api/v1/employees/{self.sarah.profile.id}/").status_code, 404
         )
 
-    def test_manager_gets_direct_reports_not_grandchildren(self):
-        data = self.acting(self.sarah).get("/api/v1/employees/").data["results"]
-        self.assertEqual({x["email"] for x in data}, {self.sarah.user.email, self.nimal.user.email})
+    def test_head_hr_team_is_all_other_employees(self):
+        data = self.acting(self.hr).get("/api/v1/employees/?scope=team").data["results"]
+        self.assertEqual({x["email"] for x in data}, {self.sarah.user.email, self.nimal.user.email, self.kamal.user.email})
 
-    def test_hierarchy_self_rejected(self):
-        r = self.acting(self.hr).post(
-            f"/api/v1/employees/{self.sarah.profile.id}/reporting/",
-            {"manager_id": str(self.sarah.profile.id), "version": 1},
-            format="json",
-        )
-        self.assertEqual(r.status_code, 400)
+    def test_normal_employee_has_no_team(self):
+        self.assertEqual(self.acting(self.sarah).get("/api/v1/employees/?scope=team").data["count"], 0)
 
-    def test_hierarchy_cycle_rejected(self):
-        self.kamal.is_manager = True
-        self.kamal.save()
-        r = self.acting(self.hr).post(
-            f"/api/v1/employees/{self.sarah.profile.id}/reporting/",
-            {"manager_id": str(self.kamal.profile.id), "version": 1},
-            format="json",
-        )
-        self.assertEqual(r.status_code, 400)
-        self.assertFalse(ReportingRelationship.objects.filter(employee=self.sarah.profile).exists())
-
-    def test_cross_tenant_manager_rejected(self):
-        r = self.acting(self.hr).post(
-            f"/api/v1/employees/{self.sarah.profile.id}/reporting/",
-            {"manager_id": str(self.foreign.profile.id), "version": 1},
-            format="json",
-        )
-        self.assertEqual(r.status_code, 400)
-
-    def test_stale_hierarchy_update_conflicts(self):
-        r = self.acting(self.hr).post(
-            f"/api/v1/employees/{self.nimal.profile.id}/reporting/",
-            {"manager_id": None, "version": 1},
-            format="json",
-        )
-        self.assertEqual(r.status_code, 409)
+    def test_arbitrary_reporting_assignment_rejected(self):
+        for key in ("manager_id", "reports_to", "reporting_manager", "is_manager"):
+            response = self.acting(self.hr).patch(f"/api/v1/employees/{self.nimal.profile.id}/",
+                {"version": 1, key: str(self.sarah.profile.id)}, format="json")
+            self.assertEqual(response.status_code, 400)
+        response = self.acting(self.hr).post(f"/api/v1/employees/{self.nimal.profile.id}/reporting/",
+            {"version": 1, "manager_id": str(self.sarah.profile.id)}, format="json")
+        self.assertEqual(response.status_code, 404)
 
     def test_non_hr_cannot_create_people(self):
         r = self.acting(self.sarah).post(
@@ -183,30 +158,27 @@ class FoundationTests(TestCase):
         )
 
     def test_assignment_to_direct_report(self):
-        r = self.acting(self.sarah).post("/api/v1/tasks/", self.task_data(), format="json")
+        r = self.acting(self.hr).post("/api/v1/tasks/", self.task_data(), format="json")
         self.assertEqual(r.status_code, 201)
         self.assertEqual(r.data["accountable_owner"], self.nimal.profile.id)
 
-    def test_assignment_to_grandchild_denied(self):
+    def test_normal_employee_cannot_assign_work_to_peer(self):
         r = self.acting(self.sarah).post("/api/v1/tasks/", self.task_data(self.kamal), format="json")
         self.assertEqual(r.status_code, 403)
 
     def test_assignment_foreign_denied(self):
-        r = self.acting(self.sarah).post("/api/v1/tasks/", self.task_data(self.foreign), format="json")
+        r = self.acting(self.hr).post("/api/v1/tasks/", self.task_data(self.foreign), format="json")
         self.assertEqual(r.status_code, 400)
 
-    def test_delegation_preserves_parent(self):
+    def test_normal_employee_cannot_delegate_and_parent_is_preserved(self):
         parent = self.task()
         r = self.acting(self.nimal).post(
             f"/api/v1/tasks/{parent.id}/delegate/", self.task_data(self.kamal), format="json"
         )
-        self.assertEqual(r.status_code, 201)
+        self.assertEqual(r.status_code, 403)
         parent.refresh_from_db()
-        child = WorkItem.objects.get(id=r.data["id"])
         self.assertEqual(parent.accountable_owner, self.nimal.profile)
-        self.assertEqual(parent.assigned_to, self.nimal.profile)
-        self.assertEqual(child.accountable_owner, self.kamal.profile)
-        self.assertEqual(child.parent_task, parent)
+        self.assertFalse(WorkItem.objects.filter(parent_task=parent).exists())
 
     def test_assignee_updates_blocker_and_result(self):
         t = self.task()
@@ -232,7 +204,7 @@ class FoundationTests(TestCase):
 
     def test_manager_cannot_impersonate_employee_progress(self):
         t = self.task()
-        r = self.acting(self.sarah).post(
+        r = self.acting(self.hr).post(
             f"/api/v1/tasks/{t.id}/updates/", {"version": 1, "status": "IN_PROGRESS"}, format="json"
         )
         self.assertEqual(r.status_code, 403)

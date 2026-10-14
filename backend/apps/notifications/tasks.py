@@ -17,7 +17,7 @@ def send_due_reminders():
             "company", "employee__membership__user", "manager__membership__user", "reviewer__user"
         )
     ):
-        for person in [r.employee.membership, r.manager.membership, r.reviewer]:
+        for person in [r.employee.membership, r.responsible_manager.membership, r.responsible_reviewer]:
             if person.active and person.profile.notification_digest:
                 notify(
                     r.company,

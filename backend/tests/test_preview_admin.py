@@ -33,7 +33,7 @@ class PreviewAdminTests(TestCase):
     def test_preview_has_tenant_admin_roles_without_global_superuser(self):
         self.create()
         member = Membership.objects.get()
-        self.assertTrue(member.is_hr and member.is_head_hr and member.is_manager)
+        self.assertTrue(member.is_hr and member.is_head_hr and "manager" in member.contexts)
         self.assertEqual(member.user.get_full_name(), "Bradly Emerson")
         self.assertFalse(member.user.is_superuser)
         self.assertIsNone(member.profile.joined_on)

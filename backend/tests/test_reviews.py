@@ -82,7 +82,7 @@ class ReviewTests(TestCase):
 
     def submit(self, review, kind):
         review.refresh_from_db()
-        actor = self.nimal if kind == "EMPLOYEE" else self.sarah
+        actor = self.nimal if kind == "EMPLOYEE" else self.hr
         action = "employee-reflection" if kind == "EMPLOYEE" else "manager-assessment"
         result = self.acting(actor).post(
             f"/api/v1/reviews/{review.id}/{action}/",
@@ -110,7 +110,7 @@ class ReviewTests(TestCase):
                 {"version": review.version, **values}, format="json")
             self.assertEqual(response.status_code, 200, response.data)
 
-        for actor in (self.nimal, self.sarah):
+        for actor in (self.nimal, self.hr):
             act(actor, "conversation")
         for i in range(3):
             act(self.nimal, "commitments", commitment={
@@ -118,12 +118,12 @@ class ReviewTests(TestCase):
                 "manager_support": "Protected time", "success_measure": "Agreed outcome",
                 "due_date": "2026-12-01"})
         act(self.hr, "human-assessment", assessment={"overall": "Strong Steward", "rationale": "Human-led assessment."})
-        for actor in (self.nimal, self.sarah):
+        for actor in (self.nimal, self.hr):
             act(actor, "confirm-commitments")
         review.refresh_from_db()
 
     def finish(self, review):
-        for actor in [self.nimal, self.sarah]:
+        for actor in [self.nimal, self.hr]:
             r = self.acting(actor).post(
                 f"/api/v1/reviews/{review.id}/acknowledge/", {"version": review.version}, format="json"
             )
@@ -139,7 +139,7 @@ class ReviewTests(TestCase):
         review = self.launch()
         for kind, actor, endpoint in [
             ("EMPLOYEE", self.nimal, "employee-reflection"),
-            ("MANAGER", self.sarah, "manager-assessment"),
+            ("MANAGER", self.hr, "manager-assessment"),
         ]:
             with self.subTest(kind=kind):
                 # Represent historical rows created before draft events were removed.
@@ -228,7 +228,7 @@ class ReviewTests(TestCase):
 
     def test_private_manager_draft_not_disclosed(self):
         r = self.launch()
-        self.acting(self.sarah).post(
+        self.acting(self.hr).post(
             f"/api/v1/reviews/{r.id}/manager-assessment/",
             {"version": r.version, "content": {"summary": "Private draft"}},
             format="json",
@@ -250,7 +250,7 @@ class ReviewTests(TestCase):
         self.submit(r, "MANAGER")
         self.conversation(r)
         url = f"/api/v1/reviews/{r.id}/acknowledge/"
-        denied = self.acting(self.sarah).post(
+        denied = self.acting(self.hr).post(
             url, {"version": r.version, "comments": "Forged employee perspective"}, format="json"
         )
         self.assertEqual(denied.status_code, 403)
@@ -266,7 +266,7 @@ class ReviewTests(TestCase):
         )
         self.assertEqual(second.status_code, 400)
         self.assertEqual(
-            self.acting(self.sarah).post(url, {"version": r.version}, format="json").status_code, 200
+            self.acting(self.hr).post(url, {"version": r.version}, format="json").status_code, 200
         )
         r.refresh_from_db()
         result = self.acting(self.hr).post(
@@ -281,9 +281,9 @@ class ReviewTests(TestCase):
         r = self.launch()
         self.assertEqual(self.acting(self.foreign).get(f"/api/v1/reviews/{r.id}/").status_code, 404)
 
-    def test_manager_cannot_finalise(self):
+    def test_employee_cannot_finalise(self):
         r = self.launch()
-        result = self.acting(self.sarah).post(
+        result = self.acting(self.nimal).post(
             f"/api/v1/reviews/{r.id}/complete/", {"version": r.version}, format="json"
         )
         self.assertEqual(result.status_code, 403)
@@ -330,7 +330,7 @@ class ReviewTests(TestCase):
         r = self.launch()
         body = {"version": r.version, "content": {"ecp": "Stars", "pillars": []}, "submit": True}
         self.assertEqual(
-            self.acting(self.sarah)
+            self.acting(self.hr)
             .post(f"/api/v1/reviews/{r.id}/manager-assessment/", body, format="json")
             .status_code,
             400,

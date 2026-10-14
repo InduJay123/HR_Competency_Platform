@@ -84,7 +84,6 @@ export default function Login() {
               <option value="auto">Automatic · my assigned access</option>
               <option value="platform">Platform super admin</option>
               <option value="hr">Company HR administrator</option>
-              <option value="manager">Manager</option>
               <option value="employee">Employee</option>
             </select>
           </label>

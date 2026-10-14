@@ -348,7 +348,7 @@ export function GrowthPage({
             {x.shared
               ? x.perspective === "MANAGER"
                 ? "Shared with the employee"
-                : "Shared with your reporting manager"
+                : "Shared with Head of HR"
               : "Personal record"}{" "}
             ·{" "}
             {x.perspective === "MANAGER"
@@ -642,7 +642,7 @@ export function GrowthPage({
                 name="shared"
                 defaultChecked={editing?.shared}
               />
-              Share with my reporting manager
+              Share with Head of HR
             </label>
             <small>Manager observations are visible to the employee.</small>
             <div className="actions">

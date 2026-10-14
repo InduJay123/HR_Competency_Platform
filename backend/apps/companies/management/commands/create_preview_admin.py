@@ -28,6 +28,8 @@ class Command(BaseCommand):
         if len(password) < 8:
             raise CommandError("Set BFL_PREVIEW_PASSWORD with at least eight characters.")
         company = Company.objects.get(slug=options["company"], active=True)
+        if Membership.objects.filter(company=company, active=True, is_head_hr=True).exists():
+            raise CommandError("This company already has a Head of HR. Use an existing identity or an explicit transfer.")
         email = options["email"].strip().lower()
         if get_user_model().objects.filter(email__iexact=email).exists():
             raise CommandError("This identity already exists; no credentials or roles were changed.")
@@ -43,7 +45,6 @@ class Command(BaseCommand):
             user=user,
             is_hr=True,
             is_head_hr=True,
-            is_manager=True,
         )
         EmployeeProfile.objects.create(
             company=company,

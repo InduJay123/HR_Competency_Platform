@@ -41,6 +41,11 @@ export function Shell({ children }: { children: ReactNode }) {
     menuButton = useRef<HTMLButtonElement>(null),
     restoreMenuFocus = useRef(false);
   useEffect(() => {
+    if (data && path.startsWith("/manager") && !data.contexts?.includes("manager")) {
+      router.replace("/employee/dashboard");
+    }
+  }, [data, path, router]);
+  useEffect(() => {
     if (!open) {
       if (restoreMenuFocus.current) {
         menuButton.current?.focus();
@@ -145,6 +150,7 @@ export function Shell({ children }: { children: ReactNode }) {
     }
   }
   if (!data) return error ? <Feedback error={error} /> : <Loading />;
+  if (path.startsWith("/manager") && !data.contexts?.includes("manager")) return <Loading />;
   const company = data.memberships?.find(
       (m) => m.company_id === data.company_id,
     ),

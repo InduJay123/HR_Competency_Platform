@@ -84,7 +84,7 @@ class ParticipantWorkflowTests(TestCase):
     def open_plan(self):
         self.ready()
         self.stored_ai()
-        for actor in (self.nimal, self.sarah):
+        for actor in (self.nimal, self.hr):
             self.act(actor, "conversation")
 
     def test_employee_ai_requires_both_forms_and_receives_full_contents(self):
@@ -103,15 +103,14 @@ class ParticipantWorkflowTests(TestCase):
         self.assertEqual(analysis.requested_by, self.nimal)
         self.assertEqual(self.status()["ai_coaching"], "Running")
         self.assertEqual(self.review.hr_assessment, {})
-        for actor in (self.sarah, self.hr):
-            self.act(actor, "ai-coaching", expected=403)
+        for actor in (self.hr, self.sarah):
+            self.act(actor, "ai-coaching", expected=403 if actor == self.hr else 404)
 
     def test_existing_ai_visible_to_participants_and_head_hr_not_unrelated_people(self):
         self.ready()
         stored = self.stored_ai()
         previous = deepcopy(stored.output)
-        extra_head = self.person("independent-head", self.company, hr=True)
-        for actor in (self.nimal, self.sarah, self.hr, extra_head):
+        for actor in (self.nimal, self.hr):
             response = self.acting(actor).get(f"/api/v1/reviews/{self.review.id}/ai-coaching/")
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data["analyses"][0]["output"], previous)
@@ -130,40 +129,40 @@ class ParticipantWorkflowTests(TestCase):
         self.ready()
         self.act(self.nimal, "conversation", expected=400)
         self.stored_ai()
-        self.act(self.hr, "conversation", expected=403)
+        self.act(self.sarah, "conversation", expected=404)
         self.act(self.nimal, "conversation", expected=400, role="manager")
         self.act(self.nimal, "conversation")
         self.assertFalse(self.status()["conversation_complete"])
         self.assertNotIn("manager_participation", self.status()["confirmations"])
         self.act(self.nimal, "commitments", expected=400, commitment=self.plan())
-        self.act(self.sarah, "conversation")
+        self.act(self.hr, "conversation")
         self.assertTrue(self.status()["conversation_complete"])
         marks = self.status()["confirmations"]
         self.assertEqual(marks["employee_participation"]["actor"], str(self.nimal.id))
-        self.assertEqual(marks["manager_participation"]["actor"], str(self.sarah.id))
+        self.assertEqual(marks["manager_participation"]["actor"], str(self.hr.id))
         self.assertTrue(marks["employee_participation"]["at"])
         self.act(self.nimal, "conversation", expected=400)
 
     def test_plan_is_shared_edits_clear_agreement_and_both_confirmations_lock_it(self):
         self.open_plan()
         self.act(self.nimal, "confirm-commitments", expected=400)
-        self.act(self.hr, "commitments", expected=403, commitment=self.plan())
+        self.act(self.sarah, "commitments", expected=404, commitment=self.plan())
         self.act(self.nimal, "commitments", commitment=self.plan())
         item = self.review.commitments.get()
         self.act(self.nimal, "confirm-commitments")
         self.assertFalse(self.status()["commitments_complete"])
         self.act(
-            self.sarah, "commitments", commitment_id=str(item.id), commitment=self.plan(action="Shared edit")
+            self.hr, "commitments", commitment_id=str(item.id), commitment=self.plan(action="Shared edit")
         )
         self.assertNotIn("employee_commitments", self.status()["confirmations"])
         self.assertEqual(self.review.commitments.get().id, item.id)
         self.assertEqual(self.review.commitments.get().action, "Shared edit")
         self.act(self.nimal, "acknowledge", expected=400)
-        for actor in (self.nimal, self.sarah):
+        for actor in (self.nimal, self.hr):
             self.act(actor, "confirm-commitments")
         self.assertTrue(self.status()["commitments_complete"])
-        self.act(self.sarah, "commitments", expected=400, commitment=self.plan())
-        self.act(self.hr, "confirm-commitments", expected=403)
+        self.act(self.hr, "commitments", expected=400, commitment=self.plan())
+        self.act(self.sarah, "confirm-commitments", expected=404)
         self.act(
             self.nimal,
             "commitments",
@@ -175,15 +174,15 @@ class ParticipantWorkflowTests(TestCase):
     def test_acknowledgement_cannot_impersonate_and_hr_must_wait(self):
         self.ready()
         self.conversation(self.review)
-        for actor, payload in ((self.nimal, {"manager_ack": True}), (self.sarah, {"employee_ack": True})):
+        for actor, payload in ((self.nimal, {"manager_ack": True}), (self.hr, {"employee_ack": True})):
             self.act(actor, "acknowledge", expected=400, **payload)
-        self.act(self.hr, "acknowledge", expected=403)
+        self.act(self.sarah, "acknowledge", expected=404)
         self.act(self.nimal, "acknowledge", comments="Reviewed; I disagree with one statement.")
         self.assertIsNone(self.review.manager_ack)
         response = self.act(self.hr, "complete", expected=400)
         self.assertIn("Manager acknowledgement", str(response.data))
-        self.act(self.sarah, "acknowledge")
-        self.act(self.sarah, "complete", expected=403)
+        self.act(self.hr, "acknowledge")
+        self.act(self.nimal, "complete", expected=403)
         self.act(self.hr, "complete")
         self.assertEqual(self.review.state, "FINALISED")
         self.assertEqual(
@@ -192,7 +191,7 @@ class ParticipantWorkflowTests(TestCase):
         before = deepcopy(self.review.snapshot.content)
         for actor, action, values in (
             (self.nimal, "conversation", {}),
-            (self.sarah, "confirm-commitments", {}),
+            (self.hr, "confirm-commitments", {}),
             (self.nimal, "commitments", {"commitment": self.plan()}),
             (self.nimal, "acknowledge", {}),
             (self.nimal, "ai-coaching", {}),
@@ -229,7 +228,7 @@ class ParticipantWorkflowTests(TestCase):
         self.review.state = "ACKNOWLEDGEMENT_PENDING"
         self.review.save()
         before = list(self.review.submissions.values("id", "content", "submitted_at"))
-        for actor in (self.nimal, self.sarah, self.hr):
+        for actor in (self.nimal, self.hr):
             response = self.acting(actor).get(f"/api/v1/reviews/{self.review.id}/")
             self.assertEqual(response.status_code, 200)
             self.assertEqual(len(response.data["forms"]), 2)
@@ -263,7 +262,7 @@ class ParticipantWorkflowTests(TestCase):
         self.open_plan()
         old_version = self.review.version
         self.act(self.nimal, "commitments", commitment=self.plan())
-        response = self.acting(self.sarah).post(
+        response = self.acting(self.hr).post(
             f"/api/v1/reviews/{self.review.id}/confirm-commitments/", {"version": old_version}, format="json"
         )
         self.assertEqual(response.status_code, 409)

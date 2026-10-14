@@ -29,7 +29,6 @@ export function EmployeeDetail() {
           version: p.version,
           designation: f.get("designation"),
           joined_on: f.get("joined_on") || null,
-          is_manager: f.get("is_manager") === "on",
           senior_leader: f.get("senior_leader") === "on",
         }),
       });
@@ -75,14 +74,12 @@ export function EmployeeDetail() {
                   defaultValue={p.joined_on || ""}
                 />
               </label>
-              <label className="check-label">
-                <input
-                  type="checkbox"
-                  name="is_manager"
-                  defaultChecked={p.is_manager}
-                />
-                Manager responsibility
-              </label>
+              <p>
+                Reports to:{" "}
+                {p.is_head_hr
+                  ? "No reporting manager"
+                  : `${p.manager_name} — Head of HR`}
+              </p>
               <label className="check-label">
                 <input
                   type="checkbox"

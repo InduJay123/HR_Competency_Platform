@@ -25,7 +25,7 @@ class WorkViewSet(viewsets.ReadOnlyModelViewSet):
             qs = qs.filter(assigned_to__membership=member)
         elif self.action == "team":
             require_manager(member)
-            qs = qs.filter(assigned_to__reporting__manager__membership=member)
+            qs = qs.filter(assigned_to__membership__active=True).exclude(assigned_to__membership=member)
         if self.request.query_params.get("status"):
             qs = qs.filter(status=self.request.query_params["status"])
         if self.request.query_params.get("overdue") == "true":

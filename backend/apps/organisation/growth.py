@@ -91,16 +91,17 @@ class GrowthViewSet(viewsets.ModelViewSet):
         qs = qs.filter(
             Q(subject__membership=member)
             | Q(owner=member)
-            | Q(shared=True, subject__reporting__manager__membership=member)
+            | (Q(shared=True, subject__membership__active=True) & ~Q(subject__membership=member) if member.is_head_hr else Q(pk__in=[]))
         )
         team = self.request.query_params.get("scope") == "team"
         if team:
             # Team reads must never fall back to personal records or author access.
             qs = qs.filter(
                 shared=True,
-                subject__reporting__company=member.company,
-                subject__reporting__manager__membership=member,
+                subject__company=member.company,
+                subject__membership__active=True,
             )
+            qs = qs.exclude(subject__membership=member) if member.is_head_hr else qs.none()
         if self.action == "list":
             subject = self.request.query_params.get("subject", "" if team else str(member.profile.id))
             try:

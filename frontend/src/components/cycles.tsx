@@ -45,10 +45,11 @@ export function Cycles() {
   async function inspect(c: Cycle) {
     setError("");
     try {
-      setPreview(await api<Preview>(`review-cycles/${c.id}/preview/`));
+      const result = await api<Preview>(`review-cycles/${c.id}/preview/`);
+      setPreview(result);
       setSelected(c);
       setIds([]);
-      setReviewer("");
+      setReviewer(result.reviewers.length === 1 ? result.reviewers[0].id : "");
     } catch (e) {
       setError((e as Error).message);
     }
@@ -120,24 +121,10 @@ export function Cycles() {
       {preview && selected && (
         <Card title={`Launch ${human(selected.kind)} ${selected.year}`}>
           <p>
-            Each participant needs a reporting manager. Year-End also requires
-            their final Mid-Year record. The appointed Head of HR must be
-            independent of the employee.
+            Head of HR appraises every participant. Year-End also requires
+            their final Mid-Year record. Head of HR cannot appraise themselves.
           </p>
-          <label>
-            Appointed Head of HR
-            <select
-              value={reviewer}
-              onChange={(e) => setReviewer(e.target.value)}
-            >
-              <option value="">Choose reviewer</option>
-              {preview.reviewers.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <p>Appointed Head of HR: {preview.reviewers.find((r) => r.id === reviewer)?.name || "Unavailable"}</p>
           <fieldset>
             <legend>Choose participants</legend>
             {preview.people.map((p) => (

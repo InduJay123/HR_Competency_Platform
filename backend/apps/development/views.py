@@ -6,6 +6,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 
 from apps.audit.services import record
+from apps.organisation.services import is_direct_report
 from common.exceptions import Conflict
 from common.permissions import membership
 
@@ -18,14 +19,13 @@ class CommitmentSerializer(serializers.ModelSerializer):
 
     def get_can_update(self, obj):
         actor = membership(self.context["request"])
-        return actor.id in [
+        return is_direct_report(actor, obj.employee) or actor.id in [
             obj.employee.membership_id,
             obj.owner.membership_id,
-            obj.review.manager.membership_id,
         ]
 
     def get_can_create_work(self, obj):
-        return membership(self.context["request"]).id == obj.review.manager.membership_id
+        return is_direct_report(membership(self.context["request"]), obj.employee)
 
     class Meta:
         model = Commitment
@@ -90,8 +90,8 @@ class CommitmentViewSet(viewsets.ReadOnlyModelViewSet):
 
         obj = self.get_object()
         member = membership(request)
-        if member.id != obj.review.manager.membership_id:
-            raise PermissionDenied("Only the reviewing manager can assign development work.")
+        if not is_direct_report(member, obj.employee):
+            raise PermissionDenied("Only Head of HR can assign development work.")
         obj = Commitment.objects.select_for_update().get(id=obj.id)
         if obj.work_item_id:
             return Response({"work_item": obj.work_item_id})
@@ -116,10 +116,9 @@ class CommitmentViewSet(viewsets.ReadOnlyModelViewSet):
     def progress(self, request, pk=None):
         obj = self.get_object()
         member = membership(request)
-        if member.id not in [
+        if not is_direct_report(member, obj.employee) and member.id not in [
             obj.employee.membership_id,
             obj.owner.membership_id,
-            obj.review.manager.membership_id,
         ]:
             raise PermissionDenied("Only the employee, owner or assigned manager can record follow-up.")
         data = ProgressSerializer(data=request.data)

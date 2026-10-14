@@ -12,9 +12,9 @@ from .serializers import (
     EmployeeCreateSerializer,
     EmployeeSerializer,
     JobRoleSerializer,
-    ReportingSerializer,
+    reject_reporting_fields,
 )
-from .services import create_employee, set_manager
+from .services import create_employee
 
 
 class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
@@ -22,9 +22,7 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         member = membership(self.request)
-        qs = EmployeeProfile.objects.select_related(
-            "membership__user", "reporting__manager__membership__user"
-        ).filter(
+        qs = EmployeeProfile.objects.select_related("membership__user").filter(
             company=member.company, membership__user__is_superuser=False
         )
         if not member.is_hr or (
@@ -32,7 +30,7 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
         ):
             qs = qs.filter(membership__active=True)
         if not member.is_hr:
-            qs = qs.filter(Q(membership=member) | Q(reporting__manager__membership=member))
+            qs = qs.filter(membership=member)
         if self.request.query_params.get("search"):
             term = self.request.query_params["search"][:150]
             qs = qs.filter(
@@ -40,8 +38,8 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
                 | Q(membership__user__last_name__icontains=term)
                 | Q(membership__user__email__icontains=term)
             )
-        if self.request.query_params.get("managers") == "true":
-            qs = qs.filter(membership__is_manager=True)
+        if self.request.query_params.get("scope") == "team":
+            qs = qs.exclude(membership=member) if member.is_head_hr else qs.none()
         if self.action != "photo":
             qs = qs.defer("avatar_data").annotate(
                 has_avatar=Case(
@@ -105,9 +103,9 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
             department = serializers.UUIDField(required=False, allow_null=True)
             job_role = serializers.UUIDField(required=False, allow_null=True)
             senior_leader = serializers.BooleanField(required=False)
-            is_manager = serializers.BooleanField(required=False)
             active = serializers.BooleanField(required=False)
 
+        reject_reporting_fields(request.data)
         data = Changes(data=request.data)
         data.is_valid(raise_exception=True)
         with transaction.atomic():
@@ -118,11 +116,8 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
             values = data.validated_data
             if values["version"] != obj.version:
                 raise Conflict()
-            disabling = values.get("active") is False or values.get("is_manager") is False
-            if disabling and obj.direct_reports.exists():
-                raise ValidationError(
-                    "Reassign direct reports before removing manager responsibility or access."
-                )
+            if values.get("active") is False and obj.membership.is_head_hr:
+                raise ValidationError("Transfer Head of HR responsibility before deactivation.")
             if values.get("active") is False:
                 from apps.reviews.models import Review
 
@@ -142,7 +137,7 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
             for k, model in [("department", Department), ("job_role", JobRole)]:
                 if k in values:
                     setattr(obj, k, related(model, member.company_id, values[k]))
-            for k in ["is_manager", "active"]:
+            for k in ["active"]:
                 if k in values:
                     setattr(obj.membership, k, values[k])
             obj.membership.save()
@@ -151,13 +146,6 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
             record(member, "employee.updated", obj)
         return Response(EmployeeSerializer(obj).data)
 
-    @action(detail=True, methods=["post"])
-    def reporting(self, request, pk=None):
-        obj = self.get_object()
-        data = ReportingSerializer(data=request.data)
-        data.is_valid(raise_exception=True)
-        set_manager(membership(request), obj.id, **data.validated_data)
-        return Response(EmployeeSerializer(self.get_object()).data)
 
 
 class OrganisationViewSet(viewsets.ModelViewSet):

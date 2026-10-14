@@ -26,25 +26,25 @@ class EmployeeSerializer(serializers.ModelSerializer):
     first_name = serializers.CharField(source="membership.user.first_name", read_only=True)
     last_name = serializers.CharField(source="membership.user.last_name", read_only=True)
     email = serializers.EmailField(source="membership.user.email", read_only=True)
-    is_manager = serializers.BooleanField(source="membership.is_manager", read_only=True)
+    is_head_hr = serializers.BooleanField(source="membership.is_head_hr", read_only=True)
     manager_id = serializers.SerializerMethodField()
     manager_name = serializers.SerializerMethodField()
 
+    def _manager(self, obj):
+        from .services import head_of_hr
+        cache = self.context.setdefault("company_heads", {})
+        if obj.company_id not in cache:
+            cache[obj.company_id] = head_of_hr(obj.company_id)
+        head = cache[obj.company_id]
+        return None if head.membership_id == obj.membership_id else head
+
     def get_manager_id(self, obj):
-        return str(obj.reporting.manager_id) if hasattr(obj, "reporting") else None
+        manager = self._manager(obj)
+        return str(manager.id) if manager else None
 
     def get_manager_name(self, obj):
-        if not hasattr(obj, "reporting"):
-            return ""
-        relationship = obj.reporting
-        manager = relationship.manager
-        if (
-            relationship.company_id != obj.company_id
-            or manager.company_id != obj.company_id
-            or manager.membership.company_id != obj.company_id
-        ):
-            return ""
-        return manager.membership.user.get_full_name()
+        manager = self._manager(obj)
+        return manager.membership.user.get_full_name() if manager else ""
 
     def get_photo_url(self, obj):
         has_avatar = obj.has_avatar if hasattr(obj, "has_avatar") else bool(obj.avatar_data)
@@ -67,7 +67,7 @@ class EmployeeSerializer(serializers.ModelSerializer):
             "joined_on",
             "photo_url",
             "senior_leader",
-            "is_manager",
+            "is_head_hr",
             "manager_id",
             "manager_name",
             "version",
@@ -75,7 +75,17 @@ class EmployeeSerializer(serializers.ModelSerializer):
         ]
 
 
+def reject_reporting_fields(data):
+    forbidden = set(data) & {"manager", "manager_id", "reports_to", "reporting_manager", "is_manager"}
+    if forbidden:
+        raise serializers.ValidationError("Reporting is automatic: all employees report to Head of HR.")
+
+
 class EmployeeCreateSerializer(serializers.Serializer):
+    def to_internal_value(self, data):
+        reject_reporting_fields(data)
+        return super().to_internal_value(data)
+
     email = serializers.EmailField()
     first_name = serializers.CharField(max_length=150)
     last_name = serializers.CharField(max_length=150)
@@ -83,13 +93,7 @@ class EmployeeCreateSerializer(serializers.Serializer):
     joined_on = serializers.DateField(required=False, allow_null=True)
     department = serializers.UUIDField(required=False, allow_null=True)
     job_role = serializers.UUIDField(required=False, allow_null=True)
-    is_manager = serializers.BooleanField(default=False)
     senior_leader = serializers.BooleanField(default=False)
-
-
-class ReportingSerializer(serializers.Serializer):
-    manager_id = serializers.UUIDField(allow_null=True)
-    version = serializers.IntegerField(min_value=1)
 
 
 class SelfProfileSerializer(EmployeeSerializer):

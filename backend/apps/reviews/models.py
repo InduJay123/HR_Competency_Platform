@@ -46,6 +46,23 @@ class Review(TenantEntity):
     manager_ack = models.DateTimeField(null=True)
     finalised_at = models.DateTimeField(null=True)
 
+    @property
+    def responsible_reviewer(self):
+        return self.reviewer if self.state == "FINALISED" else self.responsible_manager.membership
+
+    @property
+    def responsible_manager(self):
+        if self.state == "FINALISED":
+            return self.manager
+        from rest_framework.exceptions import ValidationError
+
+        from apps.organisation.services import effective_manager
+
+        manager = effective_manager(self.employee)
+        if manager is None:
+            raise ValidationError("Head of HR cannot appraise themselves.")
+        return manager
+
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["cycle", "employee"], name="one_review_per_employee_cycle"),

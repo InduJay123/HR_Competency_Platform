@@ -111,14 +111,14 @@ class PlatformAccessTests(TestCase):
         self.assertEqual(r.status_code, 201)
         req = AccessRequest.objects.get(pk=r.data["id"])
         endpoint = f"/api/v1/access-requests/{req.id}/decide/"
-        data = {"decision": "APPROVED", "note": "Employment verified", "role": "MANAGER"}
+        data = {"decision": "APPROVED", "note": "Employment verified", "role": "EMPLOYEE"}
         self.assertEqual(self.acting(self.other_hr).post(endpoint, data, format="json").status_code, 404)
         self.assertEqual(self.acting(self.employee).post(endpoint, data, format="json").status_code, 403)
         self.assertEqual(self.platform.post(endpoint, data, format="json").status_code, 404)
         r = self.acting(self.hr).post(endpoint, data, format="json")
         self.assertEqual(r.status_code, 200, r.data)
         m = Membership.objects.get(user=req.user)
-        self.assertTrue(m.is_manager)
+        self.assertNotIn("manager", m.contexts)
         self.assertFalse(m.is_hr)
         self.assertEqual(str(m.profile.joined_on), "2020-02-01")
         self.assertEqual(m.stewardship_code, f"{self.company.stewardship_code}-3")
@@ -165,12 +165,12 @@ class PlatformAccessTests(TestCase):
         self.assertEqual(client.get("/api/v1/employees/").status_code, 403)
 
     def test_stable_unique_codes_and_superadmin_excluded_from_company_directory(self):
-        original = self.hr.stewardship_code
-        self.hr.active = False
-        self.hr.save()
-        self.hr.active = True
-        self.hr.save()
-        self.assertEqual(self.hr.stewardship_code, original)
+        original = self.employee.stewardship_code
+        self.employee.active = False
+        self.employee.save()
+        self.employee.active = True
+        self.employee.save()
+        self.assertEqual(self.employee.stewardship_code, original)
         self.assertNotEqual(self.company.stewardship_code, self.other.stewardship_code)
         membership = Membership.objects.create(user=self.admin, company=self.company)
         from apps.organisation.models import EmployeeProfile

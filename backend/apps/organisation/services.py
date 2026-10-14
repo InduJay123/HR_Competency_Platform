@@ -3,11 +3,10 @@ from django.db import transaction
 from rest_framework.exceptions import ValidationError
 
 from apps.audit.services import record
-from apps.companies.models import Company, Membership
-from common.exceptions import Conflict
+from apps.companies.models import Membership
 from common.permissions import require_hr
 
-from .models import Department, EmployeeProfile, JobRole, ReportingRelationship
+from .models import Department, EmployeeProfile, JobRole
 
 
 def related(model, company_id, pk):
@@ -22,6 +21,7 @@ def related(model, company_id, pk):
 @transaction.atomic
 def create_employee(member, data):
     require_hr(member)
+    head_of_hr(member.company_id)
     department = related(Department, member.company_id, data.get("department"))
     role = related(JobRole, member.company_id, data.get("job_role"))
     User = get_user_model()
@@ -35,7 +35,7 @@ def create_employee(member, data):
     user.set_unusable_password()
     user.save()
     membership = Membership.objects.create(
-        company=member.company, user=user, is_manager=data.get("is_manager", False)
+        company=member.company, user=user
     )
     profile = EmployeeProfile.objects.create(
         company=member.company,
@@ -50,38 +50,26 @@ def create_employee(member, data):
     return profile
 
 
-@transaction.atomic
-def set_manager(member, employee_id, manager_id, version):
-    require_hr(member)
-    # A tenant-wide row lock serialises competing hierarchy changes on PostgreSQL.
-    Company.objects.select_for_update().get(pk=member.company_id)
-    employee = related(EmployeeProfile, member.company_id, employee_id)
-    if employee.version != version:
-        raise Conflict()
-    manager = related(EmployeeProfile, member.company_id, manager_id)
-    if manager:
-        if not manager.membership.is_manager or not manager.membership.active:
-            raise ValidationError("The reporting manager must be an active manager.")
-        cursor = manager
-        seen = {employee.id}
-        while cursor:
-            if cursor.id in seen:
-                raise ValidationError("Circular reporting and self-management are prohibited.")
-            seen.add(cursor.id)
-            link = ReportingRelationship.objects.select_related("manager").filter(employee=cursor).first()
-            cursor = link.manager if link else None
-        ReportingRelationship.objects.update_or_create(
-            employee=employee, defaults={"company": member.company, "manager": manager}
-        )
-    else:
-        ReportingRelationship.objects.filter(employee=employee).delete()
-    employee.version += 1
-    employee.save(update_fields=["version", "updated_at"])
-    record(member, "hierarchy.changed", employee, manager_id=str(manager.id) if manager else None)
-    return employee
+def head_of_hr(company_id):
+    heads = list(EmployeeProfile.objects.select_related("membership__user").filter(
+        company_id=company_id, membership__company_id=company_id,
+        membership__active=True, membership__is_head_hr=True,
+        membership__user__is_superuser=False,
+    )[:2])
+    if len(heads) != 1:
+        raise ValidationError("Company must have exactly one active Head of HR with an employee profile. Contact your administrator.")
+    return heads[0]
+
+
+def effective_manager(employee):
+    head = head_of_hr(employee.company_id)
+    return None if employee.membership_id == head.membership_id else head
 
 
 def is_direct_report(member, employee):
-    return ReportingRelationship.objects.filter(
-        company_id=member.company_id, employee=employee, manager__membership=member
-    ).exists()
+    return bool(
+        member.active and member.is_head_hr
+        and employee.company_id == member.company_id
+        and employee.membership.company_id == member.company_id
+        and employee.membership.active and employee.membership_id != member.id
+    )

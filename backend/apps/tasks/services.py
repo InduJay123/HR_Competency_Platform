@@ -6,7 +6,7 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from apps.audit.services import record
 from apps.notifications.services import notify
 from apps.organisation.models import EmployeeProfile
-from apps.organisation.services import is_direct_report, related
+from apps.organisation.services import effective_manager, is_direct_report, related
 from common.exceptions import Conflict
 from common.permissions import require_manager
 
@@ -24,7 +24,6 @@ def visible_work(member):
     return qs.filter(
         Q(assigned_to__membership=member)
         | Q(assigned_by__membership=member)
-        | Q(assigned_to__reporting__manager__membership=member)
     )
 
 
@@ -99,10 +98,11 @@ def progress_work(member, task, data):
         task.completed_at = timezone.now()
     task.save(update_fields=["status", "version", "completed_at", "updated_at"])
     record(member, "work.progress", task, status=task.status, version=task.version)
-    if task.status in ["BLOCKED", "DONE"]:
+    manager = effective_manager(task.assigned_to)
+    if task.status in ["BLOCKED", "DONE"] and manager:
         notify(
             member.company,
-            task.assigned_by.membership.user,
+            manager.membership.user,
             f"work:{task.id}:progress:{task.version}",
             "Work needs support" if task.status == "BLOCKED" else "Work outcome recorded",
             f"/manager/tasks/{task.id}",
@@ -113,8 +113,8 @@ def progress_work(member, task, data):
 @transaction.atomic
 def edit_work(member, task, data):
     task = WorkItem.objects.select_for_update().get(pk=task.pk, company_id=member.company_id)
-    if task.assigned_by.membership_id != member.id or not member.is_manager:
-        raise PermissionDenied("Only the assigning manager can change this assignment.")
+    if not is_direct_report(member, task.assigned_to):
+        raise PermissionDenied("Only the company Head of HR can change this assignment.")
     if task.version != data.pop("version"):
         raise Conflict()
     if task.status in ["DONE", "CANCELLED"]:

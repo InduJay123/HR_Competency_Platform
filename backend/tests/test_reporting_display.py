@@ -1,12 +1,13 @@
 from unittest.mock import patch
 
+from django.db import IntegrityError, transaction
 from django.test import TestCase
+from rest_framework.exceptions import ValidationError
 from rest_framework.pagination import PageNumberPagination
 
-from apps.companies.models import Company
-from apps.organisation.models import ReportingRelationship
-from apps.organisation.serializers import EmployeeSerializer, SelfProfileSerializer
-from apps.organisation.services import set_manager
+from apps.companies.models import Company, Membership
+from apps.organisation.serializers import EmployeeSerializer
+from apps.organisation.services import effective_manager
 from tests.test_foundation import FoundationTests
 
 
@@ -15,58 +16,59 @@ class ReportingDisplayTests(TestCase):
     acting = FoundationTests.acting
 
     def setUp(self):
-        self.company = Company.objects.create(name="Reporting", slug="reporting")
-        self.hr = self.person("hr", self.company, hr=True)
-        self.abc = self.person("abc", self.company, manager=True)
-        self.dinaya = self.person("dinaya", self.company, manager=True)
-        self.xyz = self.person("xyz", self.company)
-        for member, first, last in [(self.abc, "abc", "abc"), (self.dinaya, "Dinaya", "Nuu"), (self.xyz, "xyz", "xyz")]:
-            member.user.first_name = first
-            member.user.last_name = last
-            member.user.save(update_fields=["first_name", "last_name"])
-        set_manager(self.hr, self.dinaya.profile.id, self.abc.profile.id, 1)
-        set_manager(self.hr, self.xyz.profile.id, self.dinaya.profile.id, 1)
+        self.company = Company.objects.create(name='Reporting', slug='reporting')
+        self.hr = self.person('head', self.company, hr=True)
+        self.employee = self.person('employee', self.company)
+        self.peer = self.person('peer', self.company)
 
-    def test_manager_identity_resolves_without_exposing_manager_profile_or_changing_hierarchy(self):
-        before = list(ReportingRelationship.objects.order_by("id").values())
-        client = self.acting(self.dinaya)
-        response = client.get("/api/v1/employees/")
-        self.assertEqual(response.status_code, 200)
-        rows = {row["id"]: row for row in response.data["results"]}
-        self.assertEqual(set(rows), {str(self.dinaya.profile.id), str(self.xyz.profile.id)})
-        dinaya = rows[str(self.dinaya.profile.id)]
-        self.assertEqual(dinaya["manager_id"], str(self.abc.profile.id))
-        self.assertEqual(dinaya["manager_name"], "abc abc")
-        self.assertEqual(rows[str(self.xyz.profile.id)]["manager_name"], "Dinaya Nuu")
-        self.assertNotIn("manager_email", dinaya)
-        self.assertNotIn("manager", dinaya)
-        self.assertEqual(client.get(f"/api/v1/employees/{self.abc.profile.id}/").status_code, 404)
-        self.assertEqual(list(ReportingRelationship.objects.order_by("id").values()), before)
-        self.assertEqual(SelfProfileSerializer(self.dinaya.profile).data["manager_name"], "abc abc")
+    def test_effective_manager_and_read_only_identity(self):
+        self.assertIsNone(effective_manager(self.hr.profile))
+        self.assertEqual(effective_manager(self.employee.profile), self.hr.profile)
+        data = EmployeeSerializer(self.employee.profile).data
+        self.assertEqual(data['manager_id'], str(self.hr.profile.id))
+        self.assertEqual(data['manager_name'], 'Head Test')
+        self.assertNotIn('is_manager', data)
+        self.assertIsNone(EmployeeSerializer(self.hr.profile).data['manager_id'])
+        client = self.acting(self.employee)
+        self.assertEqual(client.get(f'/api/v1/employees/{self.hr.profile.id}/').status_code, 404)
+        self.assertEqual(client.get('/api/v1/employees/').data['count'], 1)
 
-    def test_pagination_and_search_do_not_control_name_resolution(self):
-        client = self.acting(self.dinaya)
-        with patch.object(PageNumberPagination, "page_size", 1):
-            page = client.get("/api/v1/employees/?page=2")
-        self.assertEqual(len(page.data["results"]), 1)
-        self.assertEqual(page.data["results"][0]["manager_name"], "Dinaya Nuu")
-        result = client.get("/api/v1/employees/?search=xyz")
-        self.assertEqual(result.data["count"], 1)
-        self.assertEqual(result.data["results"][0]["manager_name"], "Dinaya Nuu")
+    def test_pagination_and_search_do_not_control_head_resolution(self):
+        with patch.object(PageNumberPagination, 'page_size', 1):
+            page = self.acting(self.hr).get('/api/v1/employees/?scope=team&page=2')
+        self.assertEqual(page.data['results'][0]['manager_name'], 'Head Test')
+        result = self.acting(self.employee).get('/api/v1/employees/?search=employee')
+        self.assertEqual(result.data['results'][0]['manager_name'], 'Head Test')
 
-    def test_no_manager_and_inactive_assigned_manager(self):
-        self.assertEqual(EmployeeSerializer(self.abc.profile).data["manager_name"], "")
-        self.assertIsNone(EmployeeSerializer(self.abc.profile).data["manager_id"])
-        self.abc.active = False
-        self.abc.save(update_fields=["active"])
-        response = self.acting(self.dinaya).get("/api/v1/employees/?search=Dinaya")
-        self.assertEqual(response.data["results"][0]["manager_name"], "abc abc")
+    def test_duplicate_head_rejected_by_database(self):
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            Membership.objects.filter(pk=self.peer.id).update(is_head_hr=True, is_hr=True)
 
-    def test_invalid_cross_company_relationship_does_not_expose_name(self):
-        other = Company.objects.create(name="Other", slug="other")
-        foreign = self.person("foreign", other, manager=True)
-        # Defensive coverage for inconsistent data; assignments normally reject this.
-        ReportingRelationship.objects.filter(employee=self.dinaya.profile).update(manager=foreign.profile)
-        result = self.acting(self.dinaya).get("/api/v1/employees/?search=Dinaya")
-        self.assertEqual(result.data["results"][0]["manager_name"], "")
-        self.assertEqual(self.acting(self.dinaya).get(f"/api/v1/employees/{foreign.profile.id}/").status_code, 404)
+    def test_missing_head_fails_closed(self):
+        Membership.objects.filter(pk=self.hr.id).update(is_head_hr=False)
+        with self.assertRaises(ValidationError):
+            effective_manager(self.employee.profile)
+
+    def test_head_cannot_be_deactivated(self):
+        response = self.acting(self.hr).patch(f'/api/v1/employees/{self.hr.profile.id}/',
+            {'version': 1, 'active': False}, format='json')
+        self.assertEqual(response.status_code, 400)
+
+    def test_normal_employee_cannot_select_manager_workspace_or_login_role(self):
+        client = self.acting(self.employee)
+        response = client.post('/api/v1/auth/context/',
+            {'company_id': str(self.company.id), 'context': 'manager'}, format='json')
+        self.assertEqual(response.status_code, 403)
+        session = client.session
+        session['context'] = 'manager'
+        session.save()
+        self.assertEqual(client.get('/api/v1/auth/session/').data['context'], 'employee')
+        self.assertNotIn('manager', self.employee.contexts)
+        self.assertIn('manager', self.hr.contexts)
+
+    def test_tenant_isolation(self):
+        other = Company.objects.create(name='Other', slug='other')
+        other_head = self.person('other-head', other, hr=True)
+        foreign = self.person('foreign', other)
+        self.assertEqual(effective_manager(foreign.profile), other_head.profile)
+        self.assertEqual(self.acting(self.hr).get(f'/api/v1/employees/{foreign.profile.id}/').status_code, 404)

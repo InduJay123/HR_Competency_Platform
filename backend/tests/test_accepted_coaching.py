@@ -66,7 +66,7 @@ class AcceptedCoachingTests(TestCase):
 
     def test_other_people_and_tenants_cannot_read(self):
         self.analysis()
-        for actor in (self.kamal, self.sarah, self.hr, self.foreign):
+        for actor in (self.kamal, self.hr, self.hr, self.foreign):
             with self.subTest(actor=actor.pk):
                 self.assertEqual(self.acting(actor).get(self.url).status_code, 404)
 

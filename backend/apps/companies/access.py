@@ -162,7 +162,7 @@ class AccessRequestViewSet(viewsets.ReadOnlyModelViewSet):
         class Decision(serializers.Serializer):
             decision = serializers.ChoiceField(choices=["APPROVED", "REJECTED"])
             note = serializers.CharField(max_length=2000)
-            role = serializers.ChoiceField(choices=["EMPLOYEE", "MANAGER", "HR"], default="EMPLOYEE")
+            role = serializers.ChoiceField(choices=["EMPLOYEE", "HR"], default="EMPLOYEE")
 
         payload = Decision(data=request.data)
         payload.is_valid(raise_exception=True)
@@ -191,13 +191,15 @@ class AccessRequestViewSet(viewsets.ReadOnlyModelViewSet):
                     company = Company.objects.select_for_update().get(pk=obj.company_id)
                     if not company.active:
                         raise ValidationError("This company is suspended.")
+                if obj.kind != "COMPANY":
+                    from apps.organisation.services import head_of_hr
+                    head_of_hr(company.id)
                 member = Membership.objects.create(
                     company=company,
                     user=obj.user,
                     approved_at=timezone.now(),
                     is_hr=obj.kind == "COMPANY" or data["role"] == "HR",
                     is_head_hr=obj.kind == "COMPANY",
-                    is_manager=data["role"] == "MANAGER",
                 )
                 EmployeeProfile.objects.create(
                     company=company,

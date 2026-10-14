@@ -67,8 +67,8 @@ export const tourSteps: Record<
       path: "/hr/employees",
     },
     {
-      title: "Confirm reporting lines",
-      copy: "Open an employee profile to set their manager. Resolve missing relationships; circular and self-reporting lines are rejected.",
+      title: "View reporting lines",
+      copy: "Every employee reports directly to the company's Head of HR. The people directory shows this automatically.",
       path: "/hr/employees",
     },
     {

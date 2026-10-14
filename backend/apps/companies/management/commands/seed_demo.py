@@ -8,7 +8,6 @@ from django.db import transaction
 
 from apps.companies.models import Company, Membership
 from apps.organisation.models import Department, EmployeeProfile, JobRole
-from apps.organisation.services import set_manager
 from apps.tasks.services import assign_work
 
 
@@ -41,7 +40,7 @@ class Command(BaseCommand):
                 username=email, email=email, first_name=name.title(), last_name=last, password=password
             )
             member = Membership.objects.create(
-                company=company, user=user, is_manager=manager, is_hr=hr, is_head_hr=hr
+                company=company, user=user, is_hr=hr, is_head_hr=hr
             )
             role = JobRole.objects.create(company=company, name=title)
             EmployeeProfile.objects.create(
@@ -54,10 +53,8 @@ class Command(BaseCommand):
                 senior_leader=name == "sarah",
             )
             people[name] = member
-        set_manager(people["kavindi"], people["nimal"].profile.id, people["sarah"].profile.id, 1)
-        set_manager(people["kavindi"], people["kamal"].profile.id, people["nimal"].profile.id, 1)
         assign_work(
-            people["sarah"],
+            people["kavindi"],
             {
                 "title": "Customer handover playbook",
                 "expected_outcome": "Every client has an agreed handover owner and a complete checklist.",

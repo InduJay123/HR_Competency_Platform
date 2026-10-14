@@ -172,8 +172,7 @@ export function AssignWork({
       </p>
       {!people.length && (
         <p className="empty">
-          No active direct reports are available. Ask HR to confirm your
-          reporting relationships before assigning work.
+          No active employees are available for Head of HR to assign work to.
         </p>
       )}
       <form onSubmit={submit}>

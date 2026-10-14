@@ -32,8 +32,8 @@ it("uses resolved manager names even when the manager is outside the visible row
         id: "xyz",
         first_name: "xyz",
         last_name: "xyz",
-        manager_id: "dinaya",
-        manager_name: "Dinaya Nuu",
+        manager_id: "abc",
+        manager_name: "abc abc",
       },
       {
         id: "unassigned",
@@ -41,6 +41,7 @@ it("uses resolved manager names even when the manager is outside the visible row
         last_name: "Person",
         manager_id: null,
         manager_name: "",
+        is_head_hr: true,
       },
     ],
   });
@@ -48,12 +49,17 @@ it("uses resolved manager names even when the manager is outside the visible row
   const dinaya = await screen.findByRole("row", {
     name: /Dinaya Nuu.*abc abc/,
   });
-  expect(within(dinaya).getByRole("cell", { name: "abc abc" })).toBeTruthy();
-  const xyz = screen.getByRole("row", { name: /xyz xyz.*Dinaya Nuu/ });
-  expect(within(xyz).getByRole("cell", { name: "Dinaya Nuu" })).toBeTruthy();
+  expect(
+    within(dinaya).getByRole("cell", { name: "abc abc — Head of HR" }),
+  ).toBeTruthy();
+  const xyz = screen.getByRole("row", { name: /xyz xyz.*abc abc/ });
+  expect(
+    within(xyz).getByRole("cell", { name: "abc abc — Head of HR" }),
+  ).toBeTruthy();
   const unassigned = screen.getByRole("row", { name: /Unassigned Person/ });
   expect(
-    within(unassigned).getByRole("cell", { name: "Outside this view" }),
+    within(unassigned).getByRole("cell", { name: "No reporting manager" }),
   ).toBeTruthy();
-  expect(api).toHaveBeenCalledWith("employees/?page=1");
+  expect(api).toHaveBeenCalledWith("employees/?page=1&scope=team");
+  expect(screen.queryByRole("combobox")).toBeNull();
 });

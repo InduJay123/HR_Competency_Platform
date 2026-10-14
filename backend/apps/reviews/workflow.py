@@ -6,7 +6,7 @@ from rest_framework.exceptions import PermissionDenied
 def require_participant(member, review):
     if member.id == review.employee.membership_id:
         return "employee"
-    if member.id == review.manager.membership_id:
+    if member.id == review.responsible_manager.membership_id:
         return "manager"
     raise PermissionDenied("Only the employee or assigned manager can confirm their own participation.")
 
@@ -14,7 +14,7 @@ def require_participant(member, review):
 def require_content_access(member, review):
     if not member.is_head_hr and member.id not in (
         review.employee.membership_id,
-        review.manager.membership_id,
+        review.responsible_manager.membership_id,
         review.reviewer_id,
     ):
         raise PermissionDenied("Review content is private to its participants and Head of HR.")

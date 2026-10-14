@@ -21,7 +21,7 @@ class ComparisonActions:
     def comparison(self, request, pk=None):
         review = self.get_object()
         member = membership(request)
-        if member.id not in [review.employee.membership_id, review.manager.membership_id, review.reviewer_id]:
+        if member.id not in [review.employee.membership_id, review.responsible_manager.membership_id, review.reviewer_id]:
             raise PermissionDenied("Only review participants can access the comparison.")
         if not review.prior_midyear_id:
             raise ValidationError("This review has no prior Mid-Year baseline.")
@@ -32,7 +32,7 @@ class ComparisonActions:
             values = data.validated_data
             with transaction.atomic():
                 review = lock(member, review, values["version"])
-                if member.id != review.manager.membership_id or review.state not in [
+                if member.id != review.responsible_manager.membership_id or review.state not in [
                     "OPEN",
                     "PREPARING",
                     "REVISION_REQUESTED",
@@ -59,7 +59,7 @@ class ComparisonActions:
                 }
                 touch(member, review, "comparison.saved")
         show = (
-            member.id == review.manager.membership_id
+            member.id == review.responsible_manager.membership_id
             or review.state in ["ACKNOWLEDGEMENT_PENDING", "FINALISED"]
             or (
                 member.id == review.reviewer_id

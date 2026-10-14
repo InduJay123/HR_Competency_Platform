@@ -69,7 +69,7 @@ class CoachingTests(TestCase):
 
     def test_manager_cannot_request(self):
         self.ready()
-        result = self.acting(self.sarah).post(
+        result = self.acting(self.hr).post(
             f"/api/v1/reviews/{self.review.id}/ai-coaching/", {"version": self.review.version}, format="json"
         )
         self.assertEqual(result.status_code, 403)
