@@ -100,7 +100,6 @@ export default function Login() {
               />
             </div>
           </label>
-          <small>Use the company email linked to your invitation.</small>
           <label>
             Password
             <div className="password-field">

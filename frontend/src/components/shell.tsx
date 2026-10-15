@@ -180,7 +180,7 @@ export function Shell({ children }: { children: ReactNode }) {
             ["My development", "/employee/development"],
           ];
   links.push(
-    ["Growth tools", role === "manager" ? "/manager/growth" : "/employee/growth"],
+    ["Growth tools", data.contexts?.includes("manager") ? "/manager/growth" : "/employee/growth"],
     ["Review history", "/employee/review-history"],
   );
   if (data.contexts?.includes("manager") && role !== "manager") {
@@ -194,7 +194,7 @@ export function Shell({ children }: { children: ReactNode }) {
   }
   const chief = !!data.contexts?.includes("manager");
   const stewardGuy = !chief && !data.contexts?.includes("hr");
-  const visibleLinks = chief ? links.filter(([, url]) => !["/manager/dashboard", "/manager/team"].includes(url)) : links;
+  const visibleLinks = chief ? links.filter(([, url]) => !["/manager/dashboard", "/manager/team", "/manager/reviews"].includes(url)) : links;
   return (
     <SessionContext value={data}>
       <Tours allowed={data.contexts || []} onContextChange={change}>

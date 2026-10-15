@@ -23,6 +23,8 @@ type Entry = {
   can_edit: boolean;
   perspective: string;
   owner_name: string;
+  subject_name: string;
+  subject_designation: string;
   created_at: string;
 };
 const specs = {
@@ -61,18 +63,23 @@ export function TeamGrowth({
   initialSubject?: string;
 }) {
   const session = useSession();
-  const [people, setPeople] = useState<Employee[] | null>(null);
-  const [subject, setSubject] = useState(initialSubject);
-  const [kind, setKind] = useState<Kind | null>(null);
+  const [entries, setEntries] = useState<Entry[] | null>(null);
+  const [search, setSearch] = useState("");
+  const [kind, setKind] = useState("");
   const [error, setError] = useState("");
+  const chief = !!session.contexts?.includes("manager");
   useEffect(() => {
+    if (!chief) return;
     let alive = true;
-    Promise.all([
-      api<Employee>("auth/profile/"),
-      allPages<Employee>("employees/"),
-    ])
-      .then(([me, employees]) => {
-        if (alive) setPeople(employees.filter((p) => p.manager_id === me.id));
+    const query = initialSubject
+      ? "&subject=" + encodeURIComponent(initialSubject)
+      : "";
+    allPages<Entry>("growth/?scope=team" + query)
+      .then((rows) => {
+        if (alive)
+          setEntries(
+            rows.filter((row) => row.shared && row.perspective === "SELF"),
+          );
       })
       .catch((e) => {
         if (alive) setError(e.message);
@@ -80,58 +87,122 @@ export function TeamGrowth({
     return () => {
       alive = false;
     };
-  }, [session.company_id]);
-  const employee = people?.find((p) => p.id === subject);
+  }, [session.company_id, chief, initialSubject]);
+  if (!chief) return <Feedback error="Chief Steward access is required." />;
+  const filtered = (entries || []).filter(
+    (entry) =>
+      (!kind || entry.kind === kind) &&
+      entry.subject_name
+        .toLocaleLowerCase()
+        .includes(search.trim().toLocaleLowerCase()),
+  );
+  const groups = new Map<string, Entry[]>();
+  filtered.forEach((entry) =>
+    groups.set(entry.subject, [...(groups.get(entry.subject) || []), entry]),
+  );
   return (
     <>
-      <Link className="growth-back" href="/manager/team">
-        ← My team
-      </Link>
+      <div className="page-heading">
+        <div>
+          <h1>Growth Tools</h1>
+          <p className="subtitle">
+            Shared development activity from your Steward Guys.
+          </p>
+        </div>
+      </div>
+      {initialSubject && (
+        <Link className="growth-back" href="/manager/growth">
+          View all Steward Guys
+        </Link>
+      )}
+      <div className="growth-toolbar">
+        <label className="filter-label">
+          Search Steward Guys
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name"
+          />
+        </label>
+        <label className="filter-label">
+          Growth area
+          <select value={kind} onChange={(e) => setKind(e.target.value)}>
+            <option value="">All growth areas</option>
+            {(Object.keys(specs) as Kind[]).map((key) => (
+              <option key={key} value={key}>
+                {specs[key].title}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <Feedback error={error} />
-      {!people ? (
-        error ? null : (
-          <Loading />
-        )
+      {!entries ? (
+        !error && <Loading />
+      ) : !entries.length ? (
+        <Card title="Shared Growth Tools">
+          <p>No Growth Tools have been shared with you yet.</p>
+        </Card>
+      ) : !filtered.length ? (
+        <Card title="No matching entries">
+          <p>Try another Steward Guy name or growth area.</p>
+        </Card>
       ) : (
-        <>
-          <label className="filter-label">
-            Steward Guy
-            <select
-              value={employee ? subject : ""}
-              onChange={(e) => {
-                setSubject(e.target.value);
-                setKind(null);
-              }}
-            >
-              <option value="">Select a Steward Guy</option>
-              {people.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.first_name} {p.last_name}
-                </option>
+        Array.from(groups, ([subject, rows]) => (
+          <section key={subject} className="growth-person-group">
+            <div className="page-heading">
+              <div>
+                <h2>{rows[0].subject_name}</h2>
+                <p className="subtitle">{rows[0].subject_designation}</p>
+              </div>
+            </div>
+            <div className="growth-grid">
+              {rows.map((entry) => (
+                <article key={entry.id} className="growth-entry">
+                  <p className="eyebrow">
+                    {specs[entry.kind].title} ? {entry.category}
+                  </p>
+                  <small>
+                    <time dateTime={entry.created_at}>
+                      {new Date(entry.created_at).toLocaleDateString()}
+                    </time>
+                  </small>
+                  <h3>{entry.title}</h3>
+                  <p className="growth-copy">{entry.details}</p>
+                  {entry.outcome && (
+                    <>
+                      <small>
+                        {entry.kind === "CAPABILITY"
+                          ? "DEVELOPMENT OPPORTUNITY"
+                          : "WHAT CHANGED / WHO BENEFITED"}
+                      </small>
+                      <p className="growth-copy">{entry.outcome}</p>
+                    </>
+                  )}
+                  {entry.support && (
+                    <>
+                      <small>SUPPORT AND NEXT STEP</small>
+                      <p className="growth-copy">{entry.support}</p>
+                    </>
+                  )}
+                  <div className="growth-entry-footer">
+                    <small>Shared with Chief Steward</small>
+                    {entry.evidence_url && (
+                      <a
+                        href={entry.evidence_url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open linked evidence
+                      </a>
+                    )}
+                  </div>
+                </article>
               ))}
-            </select>
-          </label>
-          {employee ? (
-            kind ? (
-              <GrowthPage
-                key={`${subject}:${kind}`}
-                kind={kind}
-                teamSubject={subject}
-                onBack={() => setKind(null)}
-              />
-            ) : (
-              <GrowthHub onSelect={setKind} />
-            )
-          ) : (
-            <Card title="Growth tools">
-              <p>
-                {people.length
-                  ? "Select a Steward Guy to view their shared Growth Tools."
-                  : "No Steward Guys currently report to you."}
-              </p>
-            </Card>
-          )}
-        </>
+            </div>
+          </section>
+        ))
       )}
     </>
   );
@@ -140,6 +211,8 @@ export function TeamGrowth({
 export function GrowthHub({
   onSelect,
 }: { onSelect?: (kind: Kind) => void } = {}) {
+  const session = useSession();
+  if (session.contexts?.includes("manager")) return <TeamGrowth />;
   return (
     <>
       <div className="page-heading">
@@ -181,8 +254,8 @@ export function GrowthHub({
           <div className="review-banner">
             <strong>Capture your growth and contribution</strong>
             <p>
-              Use these independent tools to record your development. Private records
-              remain private unless you choose to share them.
+              Use these independent tools to record your development. Private
+              records remain private unless you choose to share them.
             </p>
             <Link href="/employee/reviews">Open My Review →</Link>
           </div>
@@ -196,6 +269,23 @@ export function GrowthHub({
 }
 
 export function GrowthPage({
+  kind,
+  teamSubject,
+  onBack,
+}: {
+  kind: Kind;
+  teamSubject?: string;
+  onBack?: () => void;
+}) {
+  const session = useSession();
+  if (session.contexts?.includes("manager"))
+    return <TeamGrowth initialSubject={teamSubject} />;
+  return (
+    <PersonalGrowthPage kind={kind} teamSubject={teamSubject} onBack={onBack} />
+  );
+}
+
+function PersonalGrowthPage({
   kind,
   teamSubject,
   onBack,
@@ -312,7 +402,7 @@ export function GrowthPage({
       (!category || x.category === category) &&
       (kind !== "CAPABILITY" || x.perspective === perspective),
   );
-  const canAdd = !teamSubject || kind === "CAPABILITY";
+  const canAdd = !teamSubject;
   function item(x: Entry) {
     return (
       <article key={x.id} className="growth-entry">
@@ -349,10 +439,10 @@ export function GrowthPage({
               ? x.perspective === "MANAGER"
                 ? "Shared with the Steward Guy"
                 : "Shared with Chief Steward"
-              : "Personal record"}{" "}
+              : "Private"}{" "}
             ·{" "}
             {x.perspective === "MANAGER"
-              ? "Manager observation"
+              ? "Chief Steward observation"
               : "Self reflection"}
           </small>
           {x.can_edit && (
@@ -438,7 +528,7 @@ export function GrowthPage({
                 setPage(1);
               }}
             >
-              Manager perspective
+              Chief Steward perspective
             </button>
             <Link
               href={
@@ -548,8 +638,7 @@ export function GrowthPage({
         </strong>
         <p>
           Add who benefited, what changed, your role and the evidence that
-          supports it. These records do not automatically become approved
-          appraisal evidence.
+          supports it. Growth Tools are independent from formal reviews.
         </p>
       </div>
       <dialog
@@ -644,7 +733,10 @@ export function GrowthPage({
               />
               Share with Chief Steward
             </label>
-            <small>Manager observations are visible to the Steward Guy.</small>
+            <small>
+              Unchecked entries stay private. Share only what you want your
+              Chief Steward to view.
+            </small>
             <div className="actions">
               <Button disabled={busy}>
                 {busy ? "Saving…" : "Save record"}
