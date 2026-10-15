@@ -60,29 +60,32 @@ services:
 
 
   worker:
-      build:
-        context: ./backend
+    build:
+      context: ./backend
 
-      env_file:
-        - .env
+    env_file:
+      - .env
 
-      environment:
-        DJANGO_SETTINGS_MODULE: config.settings.docker
-        REDIS_URL: redis://redis:6379/0
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.docker
+      REDIS_URL: redis://redis:6379/0
 
-      command:
-        - celery
-        - -A
-        - config
-        - worker
-        - -l
-        - info
+    extra_hosts:
+      - "vmi3604779.contaboserver.net:host-gateway"
 
-      depends_on:
-        redis:
-          condition: service_healthy
+    command:
+      - celery
+      - -A
+      - config
+      - worker
+      - -l
+      - info
 
-      restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    restart: unless-stopped
 
 
   beat:
