@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
+import { pictureError } from "@/lib/profile-picture";
 import type { PersonalProfile } from "@/lib/types";
 import { dateTime } from "./access";
 import { Card, Button, Feedback, Loading } from "./ui";
@@ -12,6 +13,7 @@ export function Account() {
     [error, setError] = useState(""),
     [success, setSuccess] = useState(""),
     [busy, setBusy] = useState(false),
+    [uploading, setUploading] = useState(false),
     [tab, setTab] = useState("Profile");
   useEffect(() => {
     api<PersonalProfile>("auth/profile/")
@@ -44,7 +46,14 @@ export function Account() {
     }
   }
   async function upload(file?: File) {
-    if (!file || !profile) return;
+    if (!file || !profile || busy) return;
+    const validation = pictureError(file);
+    if (validation) {
+      setError(validation);
+      setSuccess("");
+      return;
+    }
+    setUploading(true);
     setBusy(true);
     setError("");
     setSuccess("");
@@ -62,6 +71,7 @@ export function Account() {
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      setUploading(false);
       setBusy(false);
     }
   }
@@ -119,22 +129,31 @@ export function Account() {
               Keep your personal identity clear and up to date.
             </p>
             <div className="profile-identity">
-              {profile.photo_url ? (
-                <Image
-                  className="profile-photo"
-                  unoptimized
-                  width={64}
-                  height={64}
-                  src={profile.photo_url}
-                  alt="Your profile"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <span className="profile-initials">
-                  {profile.first_name[0]}
-                  {profile.last_name[0]}
-                </span>
-              )}
+              <button
+                type="button"
+                aria-label="Choose profile picture"
+                disabled={busy}
+                onClick={() =>
+                  document.getElementById("profile-photo-input")?.click()
+                }
+              >
+                {profile.photo_url ? (
+                  <Image
+                    className="profile-photo"
+                    unoptimized
+                    width={64}
+                    height={64}
+                    src={profile.photo_url}
+                    alt="Your profile"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span className="profile-initials">
+                    {profile.first_name[0]}
+                    {profile.last_name[0]}
+                  </span>
+                )}
+              </button>
               <div>
                 <h2>
                   {profile.first_name} {profile.last_name}
@@ -147,11 +166,12 @@ export function Account() {
                 </p>
               </div>
               <label className="button neutral photo-upload">
-                Change photo
+                {uploading ? "Uploading..." : "Change photo"}
                 <input
+                  id="profile-photo-input"
                   aria-label="Change profile photo"
                   type="file"
-                  accept="image/png,image/jpeg"
+                  accept="image/png,image/jpeg,image/webp"
                   disabled={busy}
                   onChange={(e) => {
                     void upload(e.target.files?.[0]);
@@ -162,7 +182,7 @@ export function Account() {
             </div>
             <div className="photo-hint">
               <small>
-                PNG or JPEG, up to 2 MB. Photos are cropped to a square.
+                JPG, PNG or WEBP, up to 5 MB and 10 megapixels.
               </small>
               {profile.photo_url && (
                 <button
@@ -238,20 +258,7 @@ export function Account() {
                     autoComplete="organization-title"
                   />
                 </label>
-                <label>
-                  Employment company
-                  <input
-                    name="employment_company"
-                    defaultValue={profile.employment_company}
-                    placeholder={profile.company_name}
-                    maxLength={180}
-                    autoComplete="organization"
-                  />
-                  <small>
-                    Your professional profile; this does not change workspace
-                    access.
-                  </small>
-                </label>
+                
               </div>
               <div className="form-grid">
                 <label>
@@ -298,12 +305,17 @@ export function Account() {
                 <dt>Department</dt>
                 <dd>{profile.department_name || "Not assigned"}</dd>
                 <dt>Reporting manager</dt>
-                <dd>{profile.is_head_hr ? "No reporting manager" : `${profile.manager_name} — Chief Steward`}</dd>
+                <dd>
+                  {profile.is_head_hr
+                    ? "No reporting manager"
+                    : `${profile.manager_name} — Chief Steward`}
+                </dd>
                 <dt>Joining date</dt>
                 <dd>{profile.joined_on || "Not recorded"}</dd>
               </dl>
               <small>
-                All Steward Guys report directly to Chief Steward. HR manages joining dates and access.
+                All Steward Guys report directly to Chief Steward. HR manages
+                joining dates and access.
               </small>
             </Card>
             <Card title="Security and notifications">

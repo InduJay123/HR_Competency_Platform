@@ -55,6 +55,9 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
         from django.http import Http404, HttpResponse
 
         obj = self.get_object()
+        if obj.membership.user.profile_picture_storage_path:
+            from apps.accounts.photo import picture_response
+            return picture_response(obj.membership.user)
         if not obj.avatar_data:
             raise Http404()
         response = HttpResponse(bytes(obj.avatar_data), content_type="image/png")

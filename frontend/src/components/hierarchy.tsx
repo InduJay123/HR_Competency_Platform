@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { allPages } from "@/lib/api";
 import type { Employee } from "@/lib/types";
@@ -29,15 +30,28 @@ export function Hierarchy() {
         className={`hierarchy-person ${person.is_head_hr ? "manager" : ""}`}
         href={`/hr/employees/${person.id}`}
       >
-        <span className="avatar-initials" aria-hidden="true">
-          {person.first_name[0]}
-          {person.last_name[0]}
-        </span>
+        {person.photo_url ? (
+          <Image
+            unoptimized
+            width={40}
+            height={40}
+            className="avatar"
+            src={person.photo_url}
+            alt=""
+          />
+        ) : (
+          <span className="avatar-initials" aria-hidden="true">
+            {person.first_name[0]}
+            {person.last_name[0]}
+          </span>
+        )}
         <span>
           <strong>
             {person.first_name} {person.last_name}
           </strong>
-          <small>{person.is_head_hr ? "Chief Steward" : person.designation}</small>
+          <small>
+            {person.is_head_hr ? "Chief Steward" : person.designation}
+          </small>
         </span>
       </Link>
     );
