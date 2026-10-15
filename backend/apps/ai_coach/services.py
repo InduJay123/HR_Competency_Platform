@@ -17,7 +17,7 @@ from .schema import OUTPUT_SCHEMA, PROMPT_VERSION
 
 
 def configured():
-    return bool(settings.N8N_WEBHOOK_URL and settings.N8N_WEBHOOK_TOKEN and settings.OPENAI_MODEL)
+    return bool(settings.N8N_WEBHOOK_URL and settings.OPENAI_MODEL)
 
 
 def pillar_reviews(review, forms):
@@ -143,7 +143,7 @@ def validate_output(output, source_ids):
 
             for item in coaching[group]:
                 if (
-                    not item["source_ids"]
+                    (group != "support_options" and not item["source_ids"])
                     or not set(item["source_ids"]).issubset(source_ids)
                 ):
                     raise ValueError(

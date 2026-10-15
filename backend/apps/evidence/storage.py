@@ -28,11 +28,11 @@ def endpoint(key, *, bucket=None):
     return f"{base}/storage/v1/object/{quote(bucket or settings.SUPABASE_STORAGE_BUCKET)}/{quote(key)}"
 
 
-def put(key, content, mime, *, bucket=None):
+def put(key, content, mime, *, bucket=None, upsert=False):
     if bucket is None and settings.PRIVATE_STORAGE_BACKEND == "local" and settings.DEBUG:
         path = local_path(key)
         path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("xb") as stream:
+        with path.open("wb" if upsert else "xb") as stream:
             stream.write(content)
         return
     try:
@@ -42,7 +42,7 @@ def put(key, content, mime, *, bucket=None):
             headers={
                 "Authorization": f"Bearer {settings.SUPABASE_SERVICE_KEY}",
                 "Content-Type": mime,
-                "x-upsert": "false",
+                "x-upsert": "true" if upsert else "false",
             },
             timeout=(5, 30),
             allow_redirects=False,

@@ -1,5 +1,7 @@
 import json
+import logging
 from datetime import timedelta
+from urllib.parse import urlsplit
 
 import requests
 from celery import shared_task
@@ -13,6 +15,8 @@ from apps.reviews.models import Review
 from .models import Analysis
 from .schema import INSTRUCTIONS, OUTPUT_SCHEMA
 from .services import validate_output
+
+logger = logging.getLogger(__name__)
 
 
 def enqueue(analysis_id):
@@ -69,14 +73,17 @@ def run_analysis(self, analysis_id):
             },
         },
     }
+    endpoint = urlsplit(settings.N8N_WEBHOOK_URL)
+    host, path = endpoint.hostname, endpoint.path
     try:
+        # This webhook intentionally has Authentication=None. json= supplies Content-Type.
         response = requests.post(
             settings.N8N_WEBHOOK_URL,
             json=body,
-            headers={"X-BFL-Token": settings.N8N_WEBHOOK_TOKEN, "X-Request-ID": str(obj.id)},
             timeout=(5, 80),
             allow_redirects=False,
         )
+        logger.info("Coaching webhook host=%s path=%s status=%s", host, path, response.status_code)
         response.raise_for_status()
         if len(response.content) > 250000:
             raise ValueError("Response too large")
@@ -93,6 +100,8 @@ def run_analysis(self, analysis_id):
         output = json.loads(text)
         validate_output(output, {s["id"] for s in obj.input_snapshot["sources"]})
     except (requests.Timeout, requests.ConnectionError) as exc:
+        logger.warning("Coaching webhook unavailable host=%s path=%s error=%s timeout=(5,80)",
+                       host, path, type(exc).__name__)
         changed = Analysis.objects.filter(id=obj.id, state="RUNNING", attempts=attempt).update(
             state="RETRYING" if self.request.retries < 2 else "FAILED", error_code="PROVIDER_UNAVAILABLE"
         )
@@ -102,7 +111,9 @@ def run_analysis(self, analysis_id):
                 countdown=15 * (self.request.retries + 1),
             ) from exc
         return
-    except Exception:
+    except Exception as exc:
+        # Exception messages / response bodies may contain provider secrets or source text.
+        logger.warning("Coaching webhook failed host=%s path=%s error=%s", host, path, type(exc).__name__)
         Analysis.objects.filter(id=obj.id, state="RUNNING", attempts=attempt).update(
             state="FAILED", error_code="INVALID_OR_FAILED_RESPONSE"
         )

@@ -7,160 +7,187 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { GrowthPage, TeamGrowth } from "./growth";
-import { api, allPages } from "@/lib/api";
-
+import { GrowthHub, GrowthPage, TeamGrowth } from "./growth";
+import { api, allPages, post } from "@/lib/api";
+const role = vi.hoisted(() => ({ chief: true }));
 vi.mock("@/lib/api", () => ({
   api: vi.fn(),
   allPages: vi.fn(),
   post: vi.fn(),
 }));
-vi.mock("./shell", () => ({ useSession: () => ({ company_id: "company" }) }));
-const manager = {
-  id: "manager",
-  first_name: "Manager",
-  last_name: "One",
-  manager_id: null,
+vi.mock("./shell", () => ({
+  useSession: () => ({
+    company_id: "company",
+    contexts: role.chief ? ["employee", "manager", "hr"] : ["employee"],
+  }),
+}));
+const entry = {
+  id: "entry",
+  subject: "steward",
+  subject_name: "Dinaya Nuu",
+  subject_designation: "Assistant Manager",
+  kind: "CONTRIBUTION",
+  category: "Mentoring",
+  title: "Handover coaching",
+  details: "Helped a colleague",
+  outcome: "Better handovers",
+  support: "Practice",
+  evidence_url: "https://example.test/evidence",
+  shared: true,
+  archived: false,
+  version: 1,
+  can_edit: true,
+  perspective: "SELF",
+  owner_name: "Dinaya Nuu",
+  created_at: "2026-10-01",
 };
-const employee = {
-  id: "employee",
-  first_name: "Steward Guy",
-  last_name: "One",
-  manager_id: "manager",
+const person = {
+  id: "steward",
+  first_name: "Dinaya",
+  last_name: "Nuu",
+  manager_id: "chief",
 };
-const teammate = {
-  id: "teammate",
-  first_name: "Steward Guy",
-  last_name: "Two",
-  manager_id: "manager",
-};
-let empty = false;
 beforeEach(() => {
-  empty = false;
-  vi.clearAllMocks();
-  HTMLDialogElement.prototype.close = vi.fn();
-  HTMLDialogElement.prototype.showModal = vi.fn();
-  vi.mocked(allPages).mockResolvedValue([manager, employee, teammate]);
-  vi.mocked(api).mockImplementation(async (path) => {
-    if (path === "auth/profile/") return manager;
-    const params = new URLSearchParams(path.split("?")[1]);
-    const subject = params.get("subject");
-    const records = empty
-      ? []
-      : [
-          {
-            id: `${subject}-entry`,
-            subject,
-            kind: params.get("kind"),
-            category: "Mentoring",
-            title: `${subject} record`,
-            details: "Existing details",
-            outcome: "",
-            support: "",
-            evidence_url: "https://example.com/evidence",
-            shared: true,
-            archived: false,
-            version: 1,
-            can_edit: subject === "manager",
-            perspective: "SELF",
-            owner_name: subject,
-            created_at: "2026-10-01",
-          },
-        ];
-    return {
-      results: records,
-      count: records.length,
-      next: null,
-      previous: null,
-    };
+  role.chief = true;
+  vi.resetAllMocks();
+  HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) {
+    this.removeAttribute("open");
   });
+  HTMLDialogElement.prototype.showModal = vi.fn(function (
+    this: HTMLDialogElement,
+  ) {
+    this.setAttribute("open", "");
+  });
+  vi.mocked(allPages).mockResolvedValue([entry]);
+  vi.mocked(api).mockImplementation(async (path) =>
+    path === "auth/profile/" ? person : { results: [entry], count: 1 },
+  );
 });
 afterEach(cleanup);
 
-it.each(["Contributions and Evidence", "Capability Map", "Legacy Tracker"])(
-  "loads selected Steward Guy's shared %s in team context",
-  async (tool) => {
-    render(<TeamGrowth initialSubject="employee" />);
-    fireEvent.click(
-      await screen.findByRole("button", { name: `Open ${tool}` }),
-    );
-    expect(await screen.findByText("employee record")).toBeTruthy();
-    expect(screen.queryByText("manager record")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Archive" })).toBeNull();
-    expect(
-      screen
-        .getByRole("link", { name: /Open linked evidence/ })
-        .getAttribute("href"),
-    ).toBe("https://example.com/evidence");
-    expect(
-      vi
-        .mocked(api)
-        .mock.calls.some(
-          ([path]) =>
-            path.includes("subject=employee") && path.includes("scope=team"),
-        ),
-    ).toBe(true);
-    if (tool === "Capability Map")
-      expect(
-        screen.getByRole("button", { name: "Add observation" }),
-      ).toBeTruthy();
-    else
-      expect(
-        screen.queryByRole("button", {
-          name: /Add contribution|Record contribution/,
-        }),
-      ).toBeNull();
-    fireEvent.change(screen.getByLabelText("Steward Guy"), {
-      target: { value: "teammate" },
-    });
-    expect(screen.queryByText("employee record")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: `Open ${tool}` }));
-    expect(await screen.findByText("teammate record")).toBeTruthy();
-  },
-);
-
-it("shows an empty state for a Steward Guy with no shared records", async () => {
-  empty = true;
-  render(<TeamGrowth initialSubject="employee" />);
-  fireEvent.click(
-    await screen.findByRole("button", {
-      name: "Open Contributions and Evidence",
-    }),
-  );
+it("shows attributed shared entries, search and filters without any write controls", async () => {
+  vi.mocked(allPages).mockResolvedValue([
+    entry,
+    {
+      ...entry,
+      id: "second",
+      subject: "second",
+      subject_name: "Alex Test",
+      title: "Knowledge sharing",
+    },
+    { ...entry, id: "private", shared: false, title: "Private secret" },
+  ]);
+  render(<TeamGrowth />);
+  expect(await screen.findByText("Handover coaching")).toBeTruthy();
+  expect(screen.getByText("Dinaya Nuu")).toBeTruthy();
+  expect(screen.getAllByText("Assistant Manager").length).toBe(2);
+  expect(screen.getByText("Alex Test")).toBeTruthy();
+  expect(screen.queryByText("Private secret")).toBeNull();
   expect(
-    await screen.findByText(
-      "No Growth Tools records have been shared with you yet.",
-    ),
+    screen.queryByRole("button", {
+      name: /add|create|edit|archive|delete|record contribution/i,
+    }),
+  ).toBeNull();
+  expect(allPages).toHaveBeenCalledWith("growth/?scope=team");
+  fireEvent.change(screen.getByLabelText("Search Steward Guys"), {
+    target: { value: "dinaya" },
+  });
+  expect(screen.queryByText("Alex Test")).toBeNull();
+  expect(screen.getByText("Handover coaching")).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Growth area"), {
+    target: { value: "LEGACY" },
+  });
+  expect(screen.getByText("No matching entries")).toBeTruthy();
+});
+
+it("shows a useful empty state", async () => {
+  vi.mocked(allPages).mockResolvedValue([]);
+  render(<TeamGrowth />);
+  expect(
+    await screen.findByText("No Growth Tools have been shared with you yet."),
   ).toBeTruthy();
 });
 
-it.each([undefined, "manager", "unrelated"])(
-  "never falls back to the manager's records for selection %s",
-  async (initialSubject) => {
-    render(<TeamGrowth initialSubject={initialSubject} />);
+it("preserves subject bookmarks without falling back to personal entries", async () => {
+  render(<TeamGrowth initialSubject="steward" />);
+  await screen.findByText("Handover coaching");
+  expect(allPages).toHaveBeenCalledWith("growth/?scope=team&subject=steward");
+  expect(
+    screen
+      .getByRole("link", { name: "View all Steward Guys" })
+      .getAttribute("href"),
+  ).toBe("/manager/growth");
+});
+
+it.each(["hub", "CONTRIBUTION", "CAPABILITY", "LEGACY"])(
+  "Chief opening personal %s gets the read-only workspace",
+  async (kind) => {
+    render(
+      kind === "hub" ? (
+        <GrowthHub />
+      ) : (
+        <GrowthPage kind={kind as "CONTRIBUTION" | "CAPABILITY" | "LEGACY"} />
+      ),
+    );
     await screen.findByText(
-      "Select a Steward Guy to view their shared Growth Tools.",
+      "Shared development activity from your Steward Guys.",
     );
     expect(
-      vi.mocked(api).mock.calls.some(([path]) => path.startsWith("growth/")),
-    ).toBe(false);
-    expect(screen.queryByRole("option", { name: "Manager One" })).toBeNull();
+      screen.queryByRole("button", {
+        name: /add|create|edit|archive|record contribution/i,
+      }),
+    ).toBeNull();
+    expect(api).not.toHaveBeenCalled();
   },
 );
 
-it("keeps the personal Growth Tools query and editing controls", async () => {
+it("Steward Guy can create with explicit sharing and see private/shared badges", async () => {
+  role.chief = false;
+  vi.mocked(allPages).mockResolvedValue([person]);
+  vi.mocked(api).mockImplementation(async (path) =>
+    path === "auth/profile/"
+      ? person
+      : {
+          results: [
+            entry,
+            {
+              ...entry,
+              id: "private",
+              shared: false,
+              title: "My private reflection",
+            },
+          ],
+          count: 2,
+        },
+  );
+  vi.mocked(post).mockResolvedValue(entry);
   render(<GrowthPage kind="CONTRIBUTION" />);
-  expect(await screen.findByText("manager record")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Edit" })).toBeTruthy();
+  await screen.findByText("Handover coaching");
+  expect(screen.getByText(/Shared with Chief Steward/)).toBeTruthy();
+  expect(screen.getByText(/Private/)).toBeTruthy();
+  expect(screen.getAllByRole("button", { name: "Edit" })).toHaveLength(2);
+  expect(screen.getAllByRole("button", { name: "Archive" })).toHaveLength(2);
+  fireEvent.click(screen.getByRole("button", { name: "Add contribution" }));
+  const visibility = screen.getByLabelText(
+    "Share with Chief Steward",
+  ) as HTMLInputElement;
+  expect(visibility.checked).toBe(false);
+  fireEvent.click(visibility);
+  fireEvent.change(screen.getByLabelText("Title"), {
+    target: { value: "New contribution" },
+  });
+  fireEvent.change(screen.getByLabelText("Your contribution and evidence"), {
+    target: { value: "My work" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save record" }));
   await waitFor(() =>
-    expect(
-      vi
-        .mocked(api)
-        .mock.calls.some(
-          ([path]) =>
-            path.includes("subject=manager") && !path.includes("scope=team"),
-        ),
-    ).toBe(true),
+    expect(post).toHaveBeenCalledWith(
+      "growth/",
+      expect.objectContaining({
+        shared: true,
+        subject: "steward",
+        title: "New contribution",
+      }),
+    ),
   );
 });

@@ -54,16 +54,30 @@ class GrowthInvitationTests(TestCase):
             self.client.patch(url, {"version": 1, "title": "Stale"}, format="json").status_code, 409
         )
 
-    def test_manager_capability_observation_is_shared_and_separate(self):
-        self.client = self.acting(self.manager)
-        entry = self.entry(kind="CAPABILITY", category="Strategic Judgment", subject=str(self.me.profile.id))
-        self.assertTrue(entry["shared"])
-        self.assertEqual(entry["perspective"], "MANAGER")
-        r = self.acting(self.me).get("/api/v1/growth/?kind=CAPABILITY&perspective=MANAGER")
-        self.assertEqual(r.data["count"], 1)
-        self.assertEqual(
-            self.acting(self.me).get("/api/v1/growth/?kind=CAPABILITY&perspective=SELF").data["count"], 0
-        )
+    def test_chief_cannot_create_personal_or_steward_entries(self):
+        client = self.acting(self.manager)
+        for subject in [None, str(self.manager.profile.id), str(self.me.profile.id)]:
+            for kind, category in [("CONTRIBUTION", "Mentoring"), ("CAPABILITY", "Strategic Judgment"), ("LEGACY", "People")]:
+                body = {"kind": kind, "category": category, "title": "Denied", "details": "Read only"}
+                if subject:
+                    body["subject"] = subject
+                self.assertEqual(client.post("/api/v1/growth/", body, format="json").status_code, 403)
+        self.assertFalse(GrowthEntry.objects.exists())
+
+    def legacy_observation(self):
+        return GrowthEntry.objects.create(company=self.company, owner=self.manager, subject=self.me.profile,
+            kind="CAPABILITY", category="Strategic Judgment", title="Historical observation", details="Preserved", shared=True)
+
+    def test_historical_observations_preserved_read_only_for_recipient(self):
+        entry = self.legacy_observation()
+        url = f"/api/v1/growth/{entry.id}/"
+        response = self.acting(self.me).get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data["can_edit"])
+        self.assertEqual(self.acting(self.me).patch(url, {"version": 1, "details": "Changed"}, format="json").status_code, 403)
+        self.assertEqual(self.acting(self.manager).get(url).status_code, 404)
+        entry.refresh_from_db()
+        self.assertEqual(entry.details, "Preserved")
 
     def test_team_reads_only_selected_employees_shared_records_for_all_tools(self):
         other_manager = self.person("other-manager", self.company, manager=True)
@@ -77,14 +91,14 @@ class GrowthInvitationTests(TestCase):
                 self.client = self.acting(teammate)
                 self.entry(kind=kind, category=category, shared=True)
                 self.client = self.acting(self.manager)
-                own = self.entry(kind=kind, category=category, shared=True)
+                GrowthEntry.objects.create(company=self.company, owner=self.manager, subject=self.manager.profile, kind=kind, category=category, title="Historical personal", details="Keep", shared=True)
                 before = list(GrowthEntry.objects.order_by("id").values())
                 query = f"/api/v1/growth/?scope=team&subject={self.me.profile.id}&kind={kind}"
                 response = self.client.get(query)
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual([x["id"] for x in response.data["results"]], [shared["id"]])
                 self.assertFalse(response.data["results"][0]["can_edit"])
-                self.assertEqual(self.client.get(f"/api/v1/growth/?kind={kind}").data["results"][0]["id"], own["id"])
+                self.assertEqual(self.client.get(f"/api/v1/growth/?kind={kind}").data["count"], 2)
                 personal = self.acting(self.me).get(f"/api/v1/growth/?kind={kind}")
                 self.assertEqual({x["id"] for x in personal.data["results"]}, {private["id"], shared["id"]})
                 for outsider in [other_manager, unrelated, self.foreign]:
@@ -98,7 +112,7 @@ class GrowthInvitationTests(TestCase):
                 self.assertEqual(list(GrowthEntry.objects.order_by("id").values()), before)
         for subject in ["", "invalid", str(self.manager.profile.id)]:
             self.assertEqual(self.client.get(f"/api/v1/growth/?scope=team&subject={subject}").data["count"], 0)
-        self.assertEqual(self.client.get("/api/v1/growth/?scope=team").data["count"], 0)
+        self.assertEqual(self.client.get("/api/v1/growth/?scope=team").data["count"], 6)
 
     def test_existing_records_follow_current_reporting_assignment_without_changes(self):
         shared = self.entry(shared=True)
@@ -118,15 +132,15 @@ class GrowthInvitationTests(TestCase):
 
     def test_team_scope_preserves_capability_observations_but_requires_current_assignment(self):
         self.client = self.acting(self.manager)
-        observation = self.entry(kind="CAPABILITY", category="Strategic Judgment", subject=str(self.me.profile.id))
+        observation = self.legacy_observation()
         query = f"/api/v1/growth/?scope=team&subject={self.me.profile.id}&perspective=MANAGER"
-        self.assertEqual(self.client.get(query).data["results"][0]["id"], observation["id"])
+        self.assertEqual(self.client.get(query).data["count"], 0)
         from apps.companies.models import Membership
         replacement = self.person("replacement", self.company)
         Membership.objects.filter(pk=self.hr.pk).update(is_head_hr=False)
         Membership.objects.filter(pk=replacement.pk).update(is_head_hr=True, is_hr=True)
         self.assertEqual(self.client.get(query).data["count"], 0)
-        self.assertEqual(self.client.get(f"/api/v1/growth/{observation['id']}/?scope=team").status_code, 404)
+        self.assertEqual(self.client.get(f"/api/v1/growth/{observation.id}/?scope=team").status_code, 404)
 
     def test_foreign_subject_and_invalid_category_are_rejected(self):
         r = self.client.post(
@@ -155,6 +169,32 @@ class GrowthInvitationTests(TestCase):
         self.assertEqual(
             self.client.patch(url, {"version": 2, "archived": False}, format="json").status_code, 200
         )
+
+    def test_unsharing_revokes_chief_access_and_peer_cannot_write(self):
+        entry = self.entry(shared=True)
+        url = f"/api/v1/growth/{entry['id']}/"
+        peer = self.person("peer", self.company)
+        peer_client = self.acting(peer)
+        self.assertEqual(peer_client.patch(url, {"version": 1, "title": "Hijack"}, format="json").status_code, 404)
+        self.assertEqual(peer_client.post("/api/v1/growth/", {
+            "subject": str(self.me.profile.id), "kind": "CAPABILITY", "category": "Strategic Judgment",
+            "title": "Hijack", "details": "Another person's entry",
+        }, format="json").status_code, 403)
+        self.assertEqual(self.client.patch(url, {"version": 1, "shared": False}, format="json").status_code, 200)
+        self.assertEqual(self.acting(self.hr).get(url).status_code, 404)
+        self.assertEqual(self.acting(self.hr).get("/api/v1/growth/").data["count"], 0)
+        self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertEqual(self.client.delete(url).status_code, 405)
+
+    def test_foreign_chief_and_inactive_subject_are_excluded(self):
+        entry = self.entry(shared=True)
+        foreign_chief = self.person("foreign-chief", self.other, hr=True)
+        client = self.acting(foreign_chief)
+        self.assertEqual(client.get("/api/v1/growth/?scope=team").data["count"], 0)
+        self.assertEqual(client.get(f"/api/v1/growth/{entry['id']}/").status_code, 404)
+        self.me.active = False
+        self.me.save()
+        self.assertEqual(self.acting(self.hr).get("/api/v1/growth/?scope=team").data["count"], 0)
 
     def test_invitation_accepts_once_and_preserves_workspace(self):
         user = self.me.user

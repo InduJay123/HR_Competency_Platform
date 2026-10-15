@@ -65,7 +65,9 @@ class ProfileTrainerTests(TestCase):
         self.assertNotIn("phone", r.data["results"][0])
         self.assertNotIn("contact_email", r.data["results"][0])
 
-    def test_avatar_upload_authorisation_and_validation(self):
+    @patch("apps.evidence.storage.get")
+    @patch("apps.evidence.storage.put")
+    def test_avatar_upload_authorisation_and_validation(self, put, get):
         photo = io.BytesIO()
         Image.new("RGB", (20, 40), "blue").save(photo, "PNG")
         r = self.client.post(
@@ -74,6 +76,7 @@ class ProfileTrainerTests(TestCase):
             format="multipart",
         )
         self.assertEqual(r.status_code, 200)
+        get.return_value = put.call_args.args[1]
         url = r.data["photo_url"]
         self.assertEqual(self.client.get("/api/v1/employees/").data["results"][0]["photo_url"], url)
         response = self.client.get(url)

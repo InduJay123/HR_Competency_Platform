@@ -230,12 +230,6 @@ export function Coach({ review, oversight = false, onSummary, onSaved }: {
                 {item.uncertainty && (
                   <small>{item.uncertainty}</small>
                 )}
-
-                {item.source_ids.length > 0 && (
-                  <small>
-                    Sources: {item.source_ids.join(", ")}
-                  </small>
-                )}
               </div>
             ))}
           </div>

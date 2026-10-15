@@ -57,10 +57,13 @@ it.each(["employee-member", "manager-member", "head-hr"])("renders saved coachin
   session.member = member;
   vi.mocked(api).mockResolvedValue({ configured: false, analyses: [{ id: "old-analysis", round: 1,
     state: "SUCCEEDED", decision: "", created_at: "2026-01-01", output: { pillar_coaching: pillarCoaching({ strengths: [{
-      observation: "Preserved coaching result", question: "What helped?", uncertainty: "Reported", source_ids: [] }],
+      observation: "Preserved coaching result", question: "What helped?", uncertainty: "Reported", source_ids: ["98ed8bda-45a6-4d62-a1b4-8f20525f7b37"] }],
       gaps: [], support_options: [], limitations: [] }) } }] });
   render(<Coach review={review} />);
   expect(await screen.findByText("Preserved coaching result")).toBeTruthy();
+  expect(screen.queryByText(/98ed8bda-45a6-4d62-a1b4-8f20525f7b37|Sources:/)).toBeNull();
+  expect(screen.getByText(/What helped/)).toBeTruthy();
+  expect(screen.getByText("Reported")).toBeTruthy();
   for (const pillar of ["Context", "Character", "Capability", "Continuity", "Contribution"])
     expect(screen.getByRole("heading", { name: `${pillar} Coaching` })).toBeTruthy();
   expect(screen.queryAllByRole("button", { name: "Run AI Coaching" })).toHaveLength(member === "employee-member" ? 1 : 0);

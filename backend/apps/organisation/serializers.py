@@ -47,6 +47,9 @@ class EmployeeSerializer(serializers.ModelSerializer):
         return manager.membership.user.get_full_name() if manager else ""
 
     def get_photo_url(self, obj):
+        user = obj.membership.user
+        if user.profile_picture_storage_path:
+            return f"/api/v1/employees/{obj.id}/photo/?v={user.profile_picture_version}"
         has_avatar = obj.has_avatar if hasattr(obj, "has_avatar") else bool(obj.avatar_data)
         if has_avatar:
             return f"/api/v1/employees/{obj.id}/photo/?v={obj.version}"

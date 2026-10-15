@@ -183,9 +183,7 @@ export function Trainer() {
               ×
             </button>
           </div>
-          <div className="trainer-motion-control">
-            <MotionToggle />
-          </div>
+          
           <div className="trainer-conversation-row">
             <label className="trainer-history">
               <select aria-label="Saved training conversations" value={selected} disabled={busy}
@@ -195,19 +193,15 @@ export function Trainer() {
               </select>
             </label>
             <button className="trainer-new-chat" type="button" aria-label="New chat" title="New chat" disabled={busy} onClick={() => choose("")}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
               <span>New chat</span>
             </button>
           </div>
-          <p className="trainer-availability"><span className={available ? "online-dot" : "offline-dot"} />{available ? "Live AI training" : "Learning guides"}</p>
+          
           <div className="trainer-scroll">
             {!messages.length && (
               <>
                 <h2>What would you like to grow?</h2>
-                <p>
-                  Practise a skill, prepare a conversation or make your next
-                  outcome clearer.
-                </p>
+                
                 <div className="trainer-lessons">
                   {lessons.map((l, i) => (
                     <button key={l.title} onClick={() => setLesson(i)}>
@@ -416,8 +410,7 @@ export function Trainer() {
             <span id="trainer-attachment-help" className="sr-only">PDF, DOCX, TXT · max 10 MB</span>
           </div>
           <p className="trainer-note">
-            AI can make mistakes. Use your judgement and avoid sharing
-            confidential Steward Guy information.{" "}
+            AI can make mistakes. {" "}
             <Link href="/employee/guide" onClick={close}>
               Stewardship Guide
             </Link>

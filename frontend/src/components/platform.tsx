@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { pictureError } from "@/lib/profile-picture";
 import { api, allPages, post, session } from "@/lib/api";
 import type { Session } from "@/lib/types";
 import { Brand } from "./brand";
@@ -122,6 +124,38 @@ export function Platform() {
     [success, setSuccess] = useState(""),
     [search, setSearch] = useState(""),
     [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  async function uploadPicture(file?: File) {
+    if (!file || uploading) return;
+    const validation = pictureError(file);
+    if (validation) {
+      setError(validation);
+      return;
+    }
+    setUploading(true);
+    setError("");
+    try {
+      const body = new FormData();
+      body.append("photo", file);
+      const result = await api<{ photo_url: string }>("auth/profile/photo/", {
+        method: "POST",
+        body,
+      });
+      setUser((current) =>
+        current?.user
+          ? {
+              ...current,
+              user: { ...current.user, photo_url: result.photo_url },
+            }
+          : current,
+      );
+      window.dispatchEvent(new Event("bfl-profile-updated"));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  }
   async function refresh() {
     const [o, c] = await Promise.all([
       api<Overview>("platform/overview/"),
@@ -216,7 +250,34 @@ export function Platform() {
           ))}
         </nav>
         <div className="platform-person">
-          <span className="avatar-initials">BE</span>
+          <label className="photo-upload">
+            {user.user?.photo_url ? (
+              <Image
+                unoptimized
+                width={48}
+                height={48}
+                className="avatar"
+                src={user.user.photo_url}
+                alt="Your profile"
+              />
+            ) : (
+              <span className="avatar-initials">
+                {user.user?.first_name[0]}
+                {user.user?.last_name[0]}
+              </span>
+            )}
+            <span>{uploading ? "Uploading..." : "Change photo"}</span>
+            <input
+              aria-label="Change profile photo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              disabled={uploading}
+              onChange={(e) => {
+                void uploadPicture(e.target.files?.[0]);
+                e.target.value = "";
+              }}
+            />
+          </label>
           <strong>
             {user.user?.first_name} {user.user?.last_name}
           </strong>
@@ -589,8 +650,8 @@ function Pricing({
               />
               <small>
                 {company.people} active memberships;{" "}
-                {company.declared_employees ?? "Not recorded"} declared
-                Steward Guys
+                {company.declared_employees ?? "Not recorded"} declared Steward
+                Guys
               </small>
             </label>
             <label>

@@ -2,17 +2,18 @@ import json
 from datetime import timedelta
 from unittest.mock import Mock, patch
 
+import requests
 from django.test import TestCase, override_settings
 from django.utils import timezone
 from jsonschema import ValidationError
 
 from apps.ai_coach.models import Analysis
 from apps.ai_coach.schema import INSTRUCTIONS, OUTPUT_SCHEMA
-from apps.ai_coach.services import make_input, request_analysis, validate_output
+from apps.ai_coach.services import configured, make_input, request_analysis, validate_output
 from apps.ai_coach.tasks import reconcile_interrupted_runs, run_analysis
 
 from . import test_reviews as fixture
-from .coaching_fixtures import context_coaching
+from .coaching_fixtures import PILLAR_NAMES, context_coaching, empty_pillar_coaching
 
 
 @override_settings(
@@ -121,6 +122,34 @@ class CoachingTests(TestCase):
         with self.assertRaises(ValidationError):
             validate_output(valid["pillar_coaching"]["context"], {"allowed"})
 
+    def test_citation_rules_for_each_group_and_pillar(self):
+        for pillar in PILLAR_NAMES:
+            for group in ("strengths", "gaps", "support_options"):
+                for citations in (["allowed"], [], ["unknown"], ["btfl-stewardship-guide:chunk:23"],
+                                  ["allowed", "btfl-stewardship-guide:chunk:23"]):
+                    with self.subTest(pillar=pillar, group=group, citations=citations):
+                        output = empty_pillar_coaching()
+                        output["pillar_coaching"][pillar][group] = [{
+                            "observation": "A coaching observation", "source_ids": citations,
+                            "question": "What would help?", "uncertainty": "",
+                        }]
+                        if citations == ["allowed"] or (not citations and group == "support_options"):
+                            validate_output(output, {"allowed"})
+                        else:
+                            with self.assertRaises(ValueError):
+                                validate_output(output, {"allowed"})
+
+    def test_limitations_remain_strings_only(self):
+        for pillar in PILLAR_NAMES:
+            output = empty_pillar_coaching()
+            output["pillar_coaching"][pillar]["limitations"] = ["No validated evidence supplied."]
+            validate_output(output, {"allowed"})
+            for invalid in (42, {"observation": "Missing evidence", "source_ids": []}):
+                with self.subTest(pillar=pillar, invalid=invalid):
+                    output["pillar_coaching"][pillar]["limitations"] = [invalid]
+                    with self.assertRaises(ValidationError):
+                        validate_output(output, {"allowed"})
+
     @patch("apps.ai_coach.tasks.requests.post")
     def test_successful_coaching_never_changes_assessment(self, http):
         self.ready()
@@ -129,6 +158,12 @@ class CoachingTests(TestCase):
         self.review.save(update_fields=["hr_assessment"])
         obj = request_analysis(self.nimal, self.review, self.review.version)
         output = self.output(obj.input_snapshot["sources"][0]["id"])
+        # Methodology-derived suggestions are valid without employee evidence citations.
+        for pillar in output["pillar_coaching"].values():
+            pillar["support_options"] = [{
+                "observation": "Consider structured feedback sessions.",
+                "source_ids": [], "question": "What support would help?", "uncertainty": "",
+            }]
         http.return_value = Mock(
             content=b"{}",
             json=lambda: {
@@ -143,6 +178,7 @@ class CoachingTests(TestCase):
         obj.refresh_from_db()
         self.review.refresh_from_db()
         self.assertEqual(obj.state, "SUCCEEDED")
+        self.assertEqual(obj.output, output)
         self.assertEqual(self.review.hr_assessment, assessment)
         self.assertEqual(self.review.state, "SUBMITTED")
         sent = http.call_args.kwargs["json"]["request"]
@@ -159,6 +195,62 @@ class CoachingTests(TestCase):
         })
         self.assertFalse(sent["store"])
         self.assertNotIn("tools", sent)
+        self.assertEqual(http.call_args.args, ("https://automation.example/webhook/bfl",))
+        self.assertEqual(set(http.call_args.kwargs), {"json", "timeout", "allow_redirects"})
+        self.assertEqual(set(body), {"run_id", "input_hash", "request"})
+        prepared = requests.Request("POST", http.call_args.args[0], json=body).prepare()
+        self.assertEqual(prepared.headers["Content-Type"], "application/json")
+        self.assertNotIn("Authorization", prepared.headers)
+        self.assertNotIn("X-BFL-Token", prepared.headers)
+        self.assertNotIn("test-only", prepared.body.decode())
+        self.assertEqual(obj.provider_response_id, "provider-1")
+
+    @override_settings(N8N_WEBHOOK_TOKEN="")
+    def test_empty_token_does_not_block_success(self):
+        self.assertTrue(configured())
+        self.test_successful_coaching_never_changes_assessment()
+
+    @override_settings()
+    def test_absent_token_setting_does_not_block_success(self):
+        from django.conf import settings
+        del settings.N8N_WEBHOOK_TOKEN
+        self.assertTrue(configured())
+        self.test_successful_coaching_never_changes_assessment()
+
+    @patch("apps.ai_coach.tasks.requests.post")
+    def test_http_500_preserves_provider_failure(self, http):
+        self.ready()
+        obj = request_analysis(self.nimal, self.review, self.review.version)
+        response = requests.Response()
+        response.status_code = 500
+        response._content = b"sensitive provider body"
+        http.return_value = response
+        with self.assertLogs("apps.ai_coach.tasks", level="INFO") as logs:
+            run_analysis.run(str(obj.id))
+        obj.refresh_from_db()
+        self.assertEqual(obj.state, "FAILED")
+        self.assertEqual(obj.error_code, "INVALID_OR_FAILED_RESPONSE")
+        self.assertIn("status=500", " ".join(logs.output))
+        self.assertNotIn("sensitive provider body", " ".join(logs.output))
+
+    @patch("apps.ai_coach.tasks.requests.post")
+    def test_timeout_and_connection_failure_are_provider_unavailable(self, http):
+        self.ready()
+        obj = request_analysis(self.nimal, self.review, self.review.version)
+        for error in [requests.Timeout, requests.ConnectionError]:
+            with self.subTest(error=error.__name__):
+                Analysis.objects.filter(pk=obj.pk).update(state="QUEUED")
+                http.side_effect = error("sensitive exception text")
+                run_analysis.push_request(retries=2)
+                try:
+                    with self.assertLogs("apps.ai_coach.tasks", level="WARNING") as logs:
+                        run_analysis.run(str(obj.id))
+                finally:
+                    run_analysis.pop_request()
+                obj.refresh_from_db()
+                self.assertEqual(obj.state, "FAILED")
+                self.assertEqual(obj.error_code, "PROVIDER_UNAVAILABLE")
+                self.assertNotIn("sensitive exception text", " ".join(logs.output))
 
     @patch("apps.ai_coach.tasks.requests.post")
     def test_invalid_response_is_failed_and_human_review_remains_available(self, http):

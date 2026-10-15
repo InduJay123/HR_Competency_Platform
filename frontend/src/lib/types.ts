@@ -14,7 +14,13 @@ export type Session = {
   authenticated: boolean;
   is_platform_admin?: boolean;
   csrf_token: string;
-  user?: { id: string; first_name: string; last_name: string; email: string };
+  user?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    photo_url?: string;
+  };
   memberships?: Membership[];
   company_id?: string;
   context?: Context;

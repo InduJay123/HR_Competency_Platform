@@ -93,6 +93,7 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 N8N_WEBHOOK_URL = os.environ.get("N8N_WEBHOOK_URL", "")
+# Legacy compatibility only; formal AI Coaching uses an unauthenticated webhook.
 N8N_WEBHOOK_TOKEN = os.environ.get("N8N_WEBHOOK_TOKEN", "")
 OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "")
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

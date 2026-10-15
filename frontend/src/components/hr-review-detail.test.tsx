@@ -84,7 +84,7 @@ it("keeps submissions and audit records in closed disclosures and accepted coach
   for (const element of screen.getAllByText("Accepted observation")) {
     if (!aiHistory.contains(element)) expect(element.closest("details")).toBeNull();
   }
-  expect(screen.getByText(/source-uuid/).closest("details")).toBeTruthy();
+  expect(screen.queryByText(/source-uuid/)).toBeNull();
   expect(screen.queryByText(/secret-hash|INTERNAL_FAILURE/)).toBeNull();
   await waitFor(() => expect(screen.queryByLabelText(/Reason for proceeding without AI/)).toBeNull());
   for (const pillar of ["Context", "Character", "Capability", "Continuity", "Contribution"])

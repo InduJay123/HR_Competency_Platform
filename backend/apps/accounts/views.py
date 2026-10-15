@@ -86,6 +86,7 @@ class SessionView(APIView):
                     "first_name": request.user.first_name,
                     "last_name": request.user.last_name,
                     "email": request.user.email,
+                    "photo_url": request.user.profile_picture_url,
                 },
                 "memberships": [
                     {
@@ -413,6 +414,8 @@ class ProfileView(APIView):
         )
 
         with transaction.atomic():
+            # Match photo uploads' lock order to serialize identity changes.
+            get_user_model().objects.select_for_update().get(pk=request.user.pk)
             profile = (
                 EmployeeProfile.objects
                 .select_for_update()
@@ -470,6 +473,12 @@ class ProfileView(APIView):
             if data.validated_data.get(
                 "remove_photo"
             ):
+                user = get_user_model().objects.select_for_update().get(pk=request.user.pk)
+                user.profile_picture_storage_path = ""
+                user.profile_picture_version += 1
+                user.save(update_fields=["profile_picture_storage_path", "profile_picture_version"])
+                EmployeeProfile.objects.filter(membership__user=user).update(avatar_data=None, photo_url="")
+                profile.membership.user = user
                 profile.avatar_data = None
                 profile.photo_url = ""
 

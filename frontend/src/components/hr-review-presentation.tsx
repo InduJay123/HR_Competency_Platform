@@ -507,47 +507,6 @@ export function HrCoaching({
                 </div>
               )}
             </dl>
-
-            {analysis.output?.pillar_coaching && (
-              <details>
-                <summary>
-                  View recorded guidance and source provenance
-                </summary>
-
-                <h4>Source references</h4>
-
-                {PILLARS.flatMap(
-                  ({ key: pillarKey, title }) => {
-                    const pillar =
-                      analysis.output!
-                        .pillar_coaching[
-                        pillarKey
-                      ];
-
-                    return COACHING_GROUPS.flatMap(
-                      ([groupKey, groupTitle]) =>
-                        pillar[groupKey].map(
-                          (item, index) => (
-                            <p
-                              className={
-                                styles.provenance
-                              }
-                              key={`${pillarKey}-${groupKey}-${index}`}
-                            >
-                              {title} ·{" "}
-                              {groupTitle}{" "}
-                              {index + 1}:{" "}
-                              {item.source_ids.join(
-                                ", ",
-                              )}
-                            </p>
-                          ),
-                        ),
-                    );
-                  },
-                )}
-              </details>
-            )}
           </div>
         ))}
 
