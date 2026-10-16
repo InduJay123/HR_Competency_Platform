@@ -114,7 +114,8 @@ class ProfileTrainerTests(TestCase):
         self.assertFalse(TrainerMessage.objects.exists())
 
     @override_settings(OPENAI_API_KEY="test-only", OPENAI_TRAINER_MODEL="configured-test-model")
-    def test_live_adapter_sends_only_conversation_and_persists_reply(self):
+    @patch("apps.ai_coach.trainer.retrieve_trainer_knowledge", return_value=[])
+    def test_live_adapter_sends_only_conversation_and_persists_reply(self, retrieval):
         c = self.conversation()
         result = Mock(content=b"valid")
         result.json.return_value = {
@@ -134,6 +135,7 @@ class ProfileTrainerTests(TestCase):
             )
         self.assertEqual(r.status_code, 200)
         body = provider.call_args.kwargs["json"]
+        provider.assert_called_once()
         self.assertFalse(body["store"])
         self.assertEqual(body["input"], [{"role": "user", "content": "Help me delegate"}])
         self.assertEqual(c.messages.count(), 2)
