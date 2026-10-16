@@ -45,6 +45,8 @@ let review: Review;
 let analyses: Analysis[];
 
 beforeEach(() => {
+  HTMLDialogElement.prototype.showModal = vi.fn(function (this: HTMLDialogElement) { this.open = true; });
+  HTMLDialogElement.prototype.close = vi.fn(function (this: HTMLDialogElement) { this.open = false; });
   review = structuredClone(baseReview);
   analyses = [structuredClone(accepted)];
   vi.mocked(api).mockImplementation(async (path) => {
@@ -54,7 +56,7 @@ beforeEach(() => {
   });
   vi.mocked(post).mockResolvedValue({});
 });
-afterEach(() => { cleanup(); vi.resetAllMocks(); });
+afterEach(() => { cleanup(); vi.resetAllMocks(); vi.restoreAllMocks(); });
 
 async function show() {
   render(<ReviewDetail oversight />);
@@ -181,7 +183,7 @@ it("preserves finalisation gating and confirmation", async () => {
   await show();
   expect(screen.queryByRole("button", { name: "Share for acknowledgement" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Validate and Finalise Review" }));
-  fireEvent.click(screen.getByRole("button", { name: "Confirm Complete" }));
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Finalisation" }));
   await waitFor(() => expect(post).toHaveBeenCalledWith("reviews/review-1/complete/", { version: 7, reason: "" }));
 });
 

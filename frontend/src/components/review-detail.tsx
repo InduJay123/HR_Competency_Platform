@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, post } from "@/lib/api";
@@ -10,6 +10,7 @@ import {
   type Review,
 } from "@/lib/reviews";
 import { Button, Card, Feedback, Loading, Badge } from "./ui";
+import { ConfirmDialog } from "./confirm-dialog";
 import { useSession } from "./shell";
 import { ReviewForm } from "./review-form";
 import { ReviewWorkflow } from "./review-workflow";
@@ -395,6 +396,12 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
     [reason, setReason] = useState(""),
     [busy, setBusy] = useState(false),
     [confirmation, setConfirmation] = useState("");
+  const submitting = useRef(false);
+  function requestConfirmation(name: string) {
+    setError("");
+    setSuccess("");
+    setConfirmation(name);
+  }
   const reload = useCallback(async () => {
     setReview(await api<Review>(`reviews/${id}/`));
   }, [id]);
@@ -410,7 +417,8 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
     };
   }, [id]);
   async function action(name: string) {
-    if (!review) return;
+    if (!review || submitting.current) return;
+    submitting.current = true;
     setBusy(true);
     setError("");
     try {
@@ -433,6 +441,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
     } catch (e) {
       setError((e as Error).message);
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }
@@ -484,7 +493,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
           commitments → acknowledgement → final record
         </p>
       </div>
-      <Feedback error={error} success={success} />
+      <Feedback error={confirmation ? "" : error} success={success} />
       <HrWorkflow review={review} coaching={currentCoaching} />
       <PillarReview review={review} />
       {own && review.state !== "FINALISED" && (!consolidated || !review.forms?.some(f => f.kind === own && f.submitted_at)) && (
@@ -557,7 +566,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
               </p>
               <Button
                 disabled={busy || review.state === "FINALISED" || !review.workflow?.commitments_complete || !review.hr_assessment?.overall}
-                onClick={() => setConfirmation("acknowledge")}
+                onClick={() => requestConfirmation("acknowledge")}
               >
                 Acknowledge Review
               </Button>
@@ -573,7 +582,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
           <strong>Cannot finalise review</strong><p>Missing:</p>
           <ul>{review.workflow.missing.map(item => <li key={item}>{item}</li>)}</ul>
         </div>}
-        <Button disabled={busy || !review.workflow || !!review.workflow.missing.length} onClick={() => setConfirmation("complete")}>Validate and Finalise Review</Button>
+        <Button disabled={busy || !review.workflow || !!review.workflow.missing.length} onClick={() => requestConfirmation("complete")}>Validate and Finalise Review</Button>
       </Card>}
       {hr && review.state !== "FINALISED" && (
         <Card title="Request a formal revision">
@@ -593,7 +602,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
           <Button
             variant="neutral"
             disabled={busy || !reason.trim()}
-            onClick={() => setConfirmation("revision")}
+            onClick={() => requestConfirmation("revision")}
           >
             Request revision
           </Button>
@@ -601,23 +610,19 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
         </Card>
       )}
       {confirmation && (
-        <Card title="Confirm action">
-          <p>
-            {confirmation === "complete"
-              ? "Finalisation permanently seals the agreed record."
-              : confirmation === "revision"
-                ? "Both participants must submit again in a new round."
-                : "Record your acknowledgement of the shared review."}
-          </p>
-          <div className="actions">
-            <Button disabled={busy} onClick={() => action(confirmation)}>
-              Confirm {human(confirmation)}
-            </Button>
-            <Button variant="neutral" onClick={() => setConfirmation("")}>
-              Cancel
-            </Button>
-          </div>
-        </Card>
+        <ConfirmDialog
+          title={confirmation === "complete" ? "Finalise review" : "Confirm action"}
+          description={confirmation === "complete"
+            ? "Validate the completed review and create the final record."
+            : confirmation === "revision"
+              ? "Both participants must submit again in a new round."
+              : "Record your acknowledgement of the shared review."}
+          confirmLabel={confirmation === "complete" ? "Confirm Finalisation" : `Confirm ${human(confirmation)}`}
+          loading={busy}
+          error={error}
+          onConfirm={() => action(confirmation)}
+          onCancel={() => { if (!submitting.current) { setConfirmation(""); setError(""); } }}
+        />
       )}
       {review.conversation?.discussion && (
         <Card title="Historical review notes">

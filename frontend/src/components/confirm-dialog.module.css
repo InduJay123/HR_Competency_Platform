@@ -1,0 +1,46 @@
+.dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(460px, calc(100% - 32px));
+  max-width: calc(100% - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 24px 64px color-mix(in srgb, var(--ink) 24%, transparent);
+}
+.dialog::backdrop {
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+.dialog h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+}
+.dialog > p {
+  margin: 0 0 20px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+.actions button {
+  white-space: normal;
+}
+@media (max-width: 480px) {
+  .dialog {
+    padding: 24px;
+  }
+  .actions {
+    flex-direction: column;
+  }
+  .actions button {
+    width: 100%;
+  }
+}
