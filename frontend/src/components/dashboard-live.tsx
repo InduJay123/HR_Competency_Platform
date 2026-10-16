@@ -291,12 +291,7 @@ export function Dashboard({ role }: { role: "employee" | "manager" | "hr" }) {
             <Card title="Cycle progress by department">
               <div className="actions">
                 <p>{data.people} active people</p>
-                <a
-                  className="button neutral"
-                  href="/api/v1/reports/reviews.csv"
-                >
-                  Download review progress CSV
-                </a>
+                
               </div>
               {data.departments.length ? (
                 <div className="table-scroll">
