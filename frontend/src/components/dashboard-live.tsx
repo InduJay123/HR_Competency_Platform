@@ -7,6 +7,7 @@ import { useSession } from "./shell";
 import { Card, Feedback, Loading } from "./ui";
 import { ProgressScene } from "./workspace-motion";
 import { PurposeJourney } from "./purpose-journey";
+import { BillingSummary } from "./billing-summary";
 type Overview = {
   scope: string;
   as_of: string;
@@ -59,6 +60,7 @@ export function Dashboard({ role }: { role: "employee" | "manager" | "hr" }) {
   );
   return (
     <>
+      <BillingSummary key={session.company_id} />
       <section className="company-hero dashboard-company-hero">
         <div>
           <p className="eyebrow">

@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "apps.accounts",
     "apps.companies",
+    "apps.billing",
     "apps.organisation",
     "apps.audit",
     "apps.tasks",
@@ -86,6 +87,7 @@ CELERY_TASK_TIME_LIMIT = 120
 CELERY_BROKER_CONNECTION_TIMEOUT = 3
 CELERY_TASK_PUBLISH_RETRY = False
 CELERY_BEAT_SCHEDULE = {
+    "annual-billing-check": {"task": "apps.billing.tasks.issue_annual_invoices", "schedule": 86400.0},
     "daily-due-reminders": {"task": "apps.notifications.tasks.send_due_reminders", "schedule": 86400.0},
     "recover-interrupted-coaching": {
         "task": "apps.ai_coach.tasks.reconcile_interrupted_runs",

@@ -1,0 +1,76 @@
+.billing-page {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.billing-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.5rem 0;
+  border-bottom: 1px solid #d8e1df;
+  padding-bottom: 0.75rem;
+}
+.billing-tabs button {
+  background: transparent;
+  color: inherit;
+  border: 1px solid #d8e1df;
+  border-radius: 0.5rem;
+  padding: 0.7rem 1rem;
+  cursor: pointer;
+}
+.billing-tabs button[aria-selected="true"] {
+  background: #174f49;
+  color: white;
+}
+.billing-tabs button:focus-visible {
+  outline: 3px solid #c39847;
+  outline-offset: 2px;
+}
+.billing-facts,
+.billing-settings,
+.billing-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.billing-facts dd {
+  margin: 0.3rem 0;
+  font-weight: 600;
+}
+.billing-page .card {
+  margin-block: 1rem;
+  min-width: 0;
+}
+.billing-page label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-block: 0.8rem;
+  min-width: 0;
+}
+.billing-page input,
+.billing-page select,
+.billing-page textarea {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.billing-page input[type="checkbox"] {
+  align-self: flex-start;
+}
+.billing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block: 1rem;
+}
+@media (max-width: 480px) {
+  .billing-tabs button {
+    flex: 1 1 130px;
+  }
+  .billing-page .button {
+    white-space: normal;
+  }
+}

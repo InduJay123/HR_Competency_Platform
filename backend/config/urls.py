@@ -47,6 +47,7 @@ router.register("organisation/roles", JobRoleViewSet, basename="role")
 router.register("tasks", WorkViewSet, basename="task")
 router.register("notifications", NotificationViewSet, basename="notification")
 urlpatterns = [
+    path("api/v1/", include("apps.billing.urls")),
     path("api/v1/review-history/", ReviewHistoryView.as_view()),
     path("api/v1/review-history/people/", HistoryPeopleView.as_view()),
     path("api/v1/auth/register/", RegisterView.as_view()),

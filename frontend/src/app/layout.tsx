@@ -7,6 +7,7 @@ import "./platform.css";
 import "./workspace-motion.css";
 import "./steward-refinement.css";
 import "./purpose-journey.css";
+import "./billing.css";
 import { WorkspaceMotion } from "@/components/workspace-motion";
 export const metadata: Metadata = {
   title: "Beyond the Finish Line",

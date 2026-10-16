@@ -193,6 +193,7 @@ export function Shell({ children }: { children: ReactNode }) {
     );
   }
   const chief = !!data.contexts?.includes("manager");
+  if (chief) links.push(["Billing", "/hr/billing"]);
   const stewardGuy = !chief && !data.contexts?.includes("hr");
   const visibleLinks = chief ? links.filter(([, url]) => !["/manager/dashboard", "/manager/team", "/manager/reviews"].includes(url)) : links;
   return (

@@ -6,6 +6,7 @@ import { pictureError } from "@/lib/profile-picture";
 import { api, allPages, post, session } from "@/lib/api";
 import type { Session } from "@/lib/types";
 import { Brand } from "./brand";
+import { Billing } from "./billing";
 import { RequestQueue, dateTime } from "./access";
 import { Button, Card, Feedback, Loading } from "./ui";
 
@@ -110,10 +111,10 @@ function RecordContent({ value }: { value: unknown }) {
   return <span>{String(value)}</span>;
 }
 
-export function Platform() {
+export function Platform({ initialView = "Overview" }: { initialView?: string }) {
   const router = useRouter();
   const [user, setUser] = useState<Session | null>(null),
-    [view, setView] = useState("Overview"),
+    [view, setView] = useState(initialView),
     [overview, setOverview] = useState<Overview | null>(null),
     [companies, setCompanies] = useState<Company[]>([]),
     [selected, setSelected] = useState<Company | null>(null),
@@ -232,7 +233,7 @@ export function Platform() {
         <Brand />
         <span className="platform-label">PLATFORM ADMINISTRATION</span>
         <nav>
-          {["Overview", "Company requests", "Companies"].map((t) => (
+          {["Overview", "Company requests", "Companies", "Billing & Payments"].map((t) => (
             <button
               key={t}
               aria-current={view === t ? "page" : undefined}
@@ -307,6 +308,7 @@ export function Platform() {
           <span className="badge">Platform oversight</span>
         </header>
         <Feedback error={error} success={success} />
+        {view === "Billing & Payments" && <Billing platform />}
         {busy && <p role="status">Loading company details…</p>}
         {view === "Overview" && overview && (
           <>
