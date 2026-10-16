@@ -391,10 +391,7 @@ export function HistoryComparison({
         </small>
       </Card>
       <Card title="Pillar comparison">
-        <p className="chart-subtitle">
-          Outcome changes refer to each cycle’s own target; they are not a score
-          of personal growth. Expand a pillar to read its context.
-        </p>
+        
         {data.pillar_comparison.map((p) => (
           <details className={styles.pillar} key={p.pillar}>
             <summary>

@@ -1,11 +1,39 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
-import { api, post, allPages } from "@/lib/api";
+import { api, post, allPages, ApiError } from "@/lib/api";
 import type { Page } from "@/lib/types";
 import { human, type Commitment, type Evidence } from "@/lib/reviews";
 import { Badge, Button, Card, Feedback, Loading } from "./ui";
-function Action({ item, reload }: { item: Commitment; reload: () => void }) {
+import { useSession } from "./shell";
+import {
+  DevelopmentFilters,
+  type FollowUpFilters,
+} from "./development-filters";
+import styles from "./development.module.css";
+export type FollowUpCommitment = Commitment & {
+  employee_details: {
+    id: string;
+    name: string;
+    designation: string;
+    department: string;
+    photo_url: string;
+  };
+  owner_name: string;
+  overdue: boolean;
+};
+type DevelopmentPage = Page<FollowUpCommitment> & {
+  summary: Record<string, number>;
+  as_of: string;
+};
+export function CommitmentCard({
+  item,
+  reload,
+}: {
+  item: FollowUpCommitment;
+  reload: () => void;
+}) {
   const [status, setStatus] = useState(item.status),
     [notes, setNotes] = useState(""),
     [error, setError] = useState(""),
@@ -65,8 +93,44 @@ function Action({ item, reload }: { item: Commitment; reload: () => void }) {
     }
   }
   return (
-    <Card title={item.action}>
-      <Badge>{human(item.status)}</Badge>
+    <Card>
+      <div className={styles.identity}>
+        {item.employee_details.photo_url && (
+          <Image
+            src={item.employee_details.photo_url}
+            alt={`${item.employee_details.name}'s profile`}
+            width={44}
+            height={44}
+            unoptimized
+          />
+        )}
+        <div>
+          <strong>{item.employee_details.name}</strong>
+          <p>
+            {[
+              item.employee_details.designation || "Steward Guy",
+              item.employee_details.department,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        </div>
+      </div>
+      {item.owner !== item.employee && (
+        <p className={styles.owner}>Commitment owner: {item.owner_name}</p>
+      )}
+      <h2 className={styles.title}>{item.action}</h2>
+      <div className={styles.status}>
+        <Badge>{human(item.status)}</Badge>
+        <strong>
+          {item.overdue ? "Overdue · " : ""}Due{" "}
+          {new Date(`${item.due_date}T12:00:00`).toLocaleDateString(undefined, {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })}
+        </strong>
+      </div>
       <p>
         <strong>Success:</strong> {item.success_measure}
       </p>
@@ -74,7 +138,6 @@ function Action({ item, reload }: { item: Commitment; reload: () => void }) {
         <strong>Manager support:</strong> {item.manager_support}
       </p>
       <p>
-        Due {item.due_date} ·{" "}
         <Link href={`/employee/reviews/${item.review}`}>
           Original agreed record
         </Link>
@@ -173,46 +236,136 @@ function Action({ item, reload }: { item: Commitment; reload: () => void }) {
     </Card>
   );
 }
-export function Development() {
-  const [data, setData] = useState<Page<Commitment> | null>(null),
-    [page, setPage] = useState(1),
-    [error, setError] = useState("");
-  const reload = () =>
-    api<Page<Commitment>>(`development/?page=${page}`)
-      .then(setData)
-      .catch((e) => setError(e.message));
-  useEffect(() => {
-    api<Page<Commitment>>(`development/?page=${page}`)
-      .then(setData)
-      .catch((e) => setError(e.message));
-  }, [page]);
+export function Development({ team = false }: { team?: boolean }) {
+  const session = useSession();
   return (
-    <>
+    <DevelopmentWorkspace key={`${session.company_id}:${team}`} team={team} />
+  );
+}
+function DevelopmentWorkspace({ team }: { team: boolean }) {
+  const [filters, setFilters] = useState<FollowUpFilters>({
+    search: "",
+    employee: "",
+    status: "",
+    department: "",
+    due: "",
+  });
+  const [page, setPage] = useState(1);
+  const params = new URLSearchParams({ page: String(page) });
+  for (const [key, value] of Object.entries(filters))
+    if (value) params.set(key, value);
+  return (
+    <div className={styles.workspace}>
       <h1>Development follow-up</h1>
       <p className="subtitle">
         Turn agreed commitments into progress, with clear ownership and manager
         support.
       </p>
+      {team && (
+        <DevelopmentFilters
+          value={filters}
+          onChange={(value) => {
+            setFilters(value);
+            setPage(1);
+          }}
+        />
+      )}
+      <CommitmentResults
+        key={params.toString()}
+        query={params.toString()}
+        page={page}
+        onPage={setPage}
+        filters={filters}
+      />
+    </div>
+  );
+}
+function CommitmentResults({
+  query,
+  page,
+  onPage,
+  filters,
+}: {
+  query: string;
+  page: number;
+  onPage: (page: number) => void;
+  filters: FollowUpFilters;
+}) {
+  const [data, setData] = useState<DevelopmentPage | null>(null),
+    [error, setError] = useState(""),
+    [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    api<DevelopmentPage>(`development/?${query}`)
+      .then((value) => {
+        if (alive) {
+          setData(value);
+          setError("");
+        }
+      })
+      .catch((e) => {
+        if (!alive) return;
+        if (e instanceof ApiError && e.status === 404 && page > 1)
+          onPage(page - 1);
+        else setError(e.message);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [query, refresh, page, onPage]);
+  const filtered = Object.values(filters).some(Boolean);
+  return (
+    <>
       <Feedback error={error} />
+      {data && (
+        <div
+          className={styles.summary}
+          aria-label="Commitment counts for current filters"
+        >
+          <strong>
+            {data.summary.total}{" "}
+            {data.summary.total === 1 ? "commitment" : "commitments"}
+          </strong>
+          {["NOT_STARTED", "IN_PROGRESS", "SUPPORT_NEEDED", "COMPLETE"].map(
+            (s) => (
+              <span key={s}>
+                {data.summary[s]} {human(s)}
+              </span>
+            ),
+          )}
+          <small>All matching results · As of {data.as_of}</small>
+        </div>
+      )}
       {!data ? (
-        <Loading />
+        !error && <Loading />
       ) : !data.count ? (
-        <Card title="Your next chapter">
+        <Card>
           <p>
-            Development commitments appear here after a review is finalised. The
-            original agreement stays in the saved review.
+            {filters.employee &&
+            !filters.search &&
+            !filters.status &&
+            !filters.department &&
+            !filters.due
+              ? "No development commitments are recorded for this Steward Guy."
+              : filtered
+                ? "No commitments match these filters."
+                : "No development commitments are available."}
           </p>
         </Card>
       ) : (
         <>
           {data.results.map((c) => (
-            <Action key={`${c.id}-${c.version}`} item={c} reload={reload} />
+            <CommitmentCard
+              key={`${c.id}-${c.version}`}
+              item={c}
+              reload={() => setRefresh((n) => n + 1)}
+            />
           ))}
           <div className="paging">
             <Button
               variant="neutral"
               disabled={!data.previous}
-              onClick={() => setPage(page - 1)}
+              onClick={() => onPage(page - 1)}
             >
               Previous
             </Button>
@@ -220,7 +373,7 @@ export function Development() {
             <Button
               variant="neutral"
               disabled={!data.next}
-              onClick={() => setPage(page + 1)}
+              onClick={() => onPage(page + 1)}
             >
               Next
             </Button>

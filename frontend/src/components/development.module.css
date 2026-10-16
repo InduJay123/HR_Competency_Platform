@@ -1,0 +1,109 @@
+.workspace {
+  min-width: 0;
+}
+.workspace > section {
+  margin-bottom: 20px;
+  overflow-wrap: anywhere;
+}
+.identity {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.identity img {
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.identity strong {
+  font-size: 16px;
+}
+.identity p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.owner {
+  color: var(--muted);
+}
+.title {
+  font-size: 18px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 14px 0;
+}
+.status strong {
+  font-size: 13px;
+}
+.filterPanel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+}
+.filters {
+  display: grid;
+  grid-template-columns: 2fr repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+.filters label {
+  min-width: 0;
+  margin: 0;
+}
+.filters input,
+.filters select {
+  width: 100%;
+  min-width: 0;
+}
+.filterActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  grid-column: 1 / -1;
+  margin-bottom: 12px;
+}
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  align-items: center;
+  margin: 20px 0;
+}
+.summary small {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+.workspace details {
+  margin-top: 16px;
+}
+.workspace summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.workspace button {
+  white-space: normal;
+  max-width: 100%;
+}
+.workspace fieldset {
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .identity {
+    align-items: flex-start;
+  }
+}
