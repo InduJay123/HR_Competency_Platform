@@ -1,0 +1,103 @@
+.workspace {
+  display: grid;
+  gap: 20px;
+  min-width: 0;
+}
+.workspace > * {
+  min-width: 0;
+}
+.pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.pair > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.years,
+.person {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.person img {
+  border-radius: 50%;
+  object-fit: cover;
+}
+.person p {
+  overflow-wrap: anywhere;
+}
+.progress {
+  font-size: 20px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.pillar {
+  border-top: 1px solid var(--border);
+  padding: 16px 0;
+  overflow-wrap: anywhere;
+}
+.pillar summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.pillar summary strong {
+  margin-left: 16px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.fields {
+  margin: 0;
+}
+.fields div {
+  margin: 0 0 16px;
+}
+.fields dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.fields dd {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+}
+.prose {
+  white-space: pre-wrap;
+}
+.history {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.history li {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding: 16px 0;
+  overflow-wrap: anywhere;
+}
+.history p {
+  margin: 4px 0;
+}
+.history a {
+  flex-shrink: 0;
+}
+.workspace select,
+.workspace input {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+@media (max-width: 700px) {
+  .pair {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .history li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

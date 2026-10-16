@@ -27,6 +27,7 @@ from apps.organisation.views import DepartmentViewSet, EmployeeViewSet, JobRoleV
 from apps.reports.views import OverviewView, ReviewExportView
 from apps.reviews.targets import TargetViewSet
 from apps.reviews.views import CycleViewSet, ReviewViewSet
+from apps.reviews.history import HistoryPeopleView, ReviewHistoryView
 from apps.tasks.views import WorkViewSet
 
 router = DefaultRouter()
@@ -46,6 +47,8 @@ router.register("organisation/roles", JobRoleViewSet, basename="role")
 router.register("tasks", WorkViewSet, basename="task")
 router.register("notifications", NotificationViewSet, basename="notification")
 urlpatterns = [
+    path("api/v1/review-history/", ReviewHistoryView.as_view()),
+    path("api/v1/review-history/people/", HistoryPeopleView.as_view()),
     path("api/v1/auth/register/", RegisterView.as_view()),
     path("api/v1/auth/requests/", MyRequestsView.as_view()),
     path("api/v1/platform/overview/", PlatformOverview.as_view()),

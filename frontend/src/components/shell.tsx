@@ -181,7 +181,7 @@ export function Shell({ children }: { children: ReactNode }) {
           ];
   links.push(
     ["Growth tools", data.contexts?.includes("manager") ? "/manager/growth" : "/employee/growth"],
-    ["Review history", "/employee/review-history"],
+    ["Review history", data.contexts?.includes("manager") ? "/hr/review-history" : "/employee/review-history"],
   );
   if (data.contexts?.includes("manager") && role !== "manager") {
     links.push(
