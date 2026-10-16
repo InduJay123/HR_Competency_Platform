@@ -29,6 +29,7 @@ def company_data(company):
         "market": company.market,
         "declared_employees": company.declared_employees,
         "active": company.active,
+        "suspension_reason": company.suspension_reason if not company.active else None,
         "created_at": company.created_at,
         "approved_at": company.approved_at,
         "people": Membership.objects.filter(company=company, active=True, user__is_superuser=False).count(),
@@ -98,14 +99,19 @@ class PlatformCompanyViewSet(viewsets.ViewSet):
         class Change(serializers.Serializer):
             active = serializers.BooleanField()
             note = serializers.CharField(max_length=2000)
+            suspension_reason = serializers.ChoiceField(choices=Company.SuspensionReason.choices, default=Company.SuspensionReason.ADMIN_SUSPENDED)
 
         data = Change(data=request.data)
         data.is_valid(raise_exception=True)
-        company.active = data.validated_data["active"]
-        company.save(update_fields=["active", "updated_at"])
-        PlatformEvent.objects.create(
-            actor=request.user, company=company, action="company.access_changed", details=data.validated_data
-        )
+        from django.db import transaction
+        with transaction.atomic():
+            company = Company.objects.select_for_update().get(pk=company.pk)
+            company.active = data.validated_data["active"]
+            company.suspension_reason = data.validated_data["suspension_reason"] if not company.active else Company.SuspensionReason.ADMIN_SUSPENDED
+            company.save(update_fields=["active", "suspension_reason", "updated_at"])
+            PlatformEvent.objects.create(
+                actor=request.user, company=company, action="company.access_changed", details=data.validated_data
+            )
         return Response(company_data(company))
 
     @action(detail=True, methods=["get"])

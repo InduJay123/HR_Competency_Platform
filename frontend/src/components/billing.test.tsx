@@ -133,7 +133,7 @@ it("rejects oversized files and accepts supported formats", () => {
 
 it("shows all Super Admin tabs and refreshes after approval", async () => {
   render(<Billing platform />);
-  await screen.findByText("total companies");
+  await screen.findByText("Total companies");
   expect(screen.getAllByRole("tab")).toHaveLength(4);
   fireEvent.click(screen.getByRole("tab", { name: "Company Invoices" }));
   expect(screen.getByText(invoice.invoice_number)).toBeTruthy();
@@ -154,7 +154,7 @@ it("shows all Super Admin tabs and refreshes after approval", async () => {
 
 it("requires a rejection reason and refreshes the verification state", async () => {
   render(<Billing platform />);
-  await screen.findByText("total companies");
+  await screen.findByText("Total companies");
   fireEvent.click(screen.getByRole("tab", { name: "Payment Proofs" }));
   expect(
     (screen.getByRole("button", { name: "Reject" }) as HTMLButtonElement)
@@ -178,7 +178,7 @@ it("requires a rejection reason and refreshes the verification state", async () 
 it("shows upload server errors", async () => {
   vi.mocked(post).mockRejectedValue(new Error("Verification unavailable"));
   render(<Billing platform />);
-  await screen.findByText("total companies");
+  await screen.findByText("Total companies");
   fireEvent.click(screen.getByRole("tab", { name: "Payment Proofs" }));
   fireEvent.click(screen.getByRole("button", { name: "Approve" }));
   expect((await screen.findByRole("alert")).textContent).toContain(

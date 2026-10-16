@@ -5,11 +5,16 @@ from common.models import Entity, TenantEntity
 
 
 class Company(Entity):
+    class SuspensionReason(models.TextChoices):
+        BILLING_OVERDUE = "BILLING_OVERDUE", "Outstanding billing"
+        ADMIN_SUSPENDED = "ADMIN_SUSPENDED", "Administrative suspension"
+
     name = models.CharField(max_length=180)
     slug = models.SlugField(unique=True)
     tagline = models.CharField(max_length=240, blank=True)
     logo_url = models.URLField(blank=True)
     active = models.BooleanField(default=True)
+    suspension_reason = models.CharField(max_length=24, choices=SuspensionReason.choices, default="ADMIN_SUSPENDED")
     stewardship_code = models.CharField(max_length=24, unique=True, null=True, editable=False)
     employee_sequence = models.PositiveIntegerField(default=0, editable=False)
     nature = models.CharField(max_length=180, blank=True)

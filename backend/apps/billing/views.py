@@ -22,7 +22,7 @@ from .services import audit, ensure_current_invoices, ensure_invoice, today
 
 
 def chief(request):
-    member = membership(request)
+    member = membership(request, suspended_access="billing")
     require_manager(member)
     return member
 

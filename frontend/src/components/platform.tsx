@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { pictureError } from "@/lib/profile-picture";
@@ -30,6 +30,7 @@ type Company = {
   market: string;
   declared_employees: number | null;
   active: boolean;
+  suspension_reason?: "BILLING_OVERDUE" | "ADMIN_SUSPENDED" | null;
   created_at: string;
   approved_at: string;
   people: number;
@@ -113,6 +114,7 @@ function RecordContent({ value }: { value: unknown }) {
 
 export function Platform({ initialView = "Overview" }: { initialView?: string }) {
   const router = useRouter();
+  const photoInput = useRef<HTMLInputElement>(null);
   const [user, setUser] = useState<Session | null>(null),
     [view, setView] = useState(initialView),
     [overview, setOverview] = useState<Overview | null>(null),
@@ -210,6 +212,7 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
       await post(`platform/companies/${selected.id}/access/`, {
         active: !selected.active,
         note: new FormData(e.currentTarget).get("note"),
+        suspension_reason: new FormData(e.currentTarget).get("suspension_reason") || "ADMIN_SUSPENDED",
       });
       await open(selected);
       await refresh();
@@ -251,7 +254,7 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
           ))}
         </nav>
         <div className="platform-person">
-          <label className="photo-upload">
+          <div className="platform-profile-avatar">
             {user.user?.photo_url ? (
               <Image
                 unoptimized
@@ -267,8 +270,12 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
                 {user.user?.last_name[0]}
               </span>
             )}
-            <span>{uploading ? "Uploading..." : "Change photo"}</span>
-            <input
+          </div>
+          <strong>{user.user?.first_name} {user.user?.last_name}</strong>
+          <small>Platform Super Admin</small>
+          <small className="platform-profile-email">{user.user?.email}</small>
+          <Button type="button" variant="neutral" disabled={uploading} onClick={() => photoInput.current?.click()}>{uploading ? "Uploading..." : "Change photo"}</Button>
+            <input ref={photoInput} hidden
               aria-label="Change profile photo"
               type="file"
               accept="image/jpeg,image/png,image/webp"
@@ -278,11 +285,6 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
                 e.target.value = "";
               }}
             />
-          </label>
-          <strong>
-            {user.user?.first_name} {user.user?.last_name}
-          </strong>
-          <small>Platform super admin</small>
           <Button
             type="button"
             variant="neutral"
@@ -415,7 +417,7 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
                   <Card title={c.name} key={c.id}>
                     <div className="action-row">
                       <span className="badge">{c.stewardship_code}</span>
-                      <span>{c.active ? "Active" : "Suspended"}</span>
+                      <span className={`badge${c.active ? "" : " suspension-badge"}`}>{c.active ? "Active" : "Suspended"}</span>
                     </div>
                     <p>
                       {c.nature || "Industry not specified"} ·{" "}
@@ -451,7 +453,7 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
               <div>
                 <p className="eyebrow">
                   {selected.stewardship_code} ·{" "}
-                  {selected.active ? "ACTIVE" : "SUSPENDED"}
+                  <span className={`badge${selected.active ? "" : " suspension-badge"}`}>{selected.active ? "Active" : "Suspended"}</span>
                 </p>
                 <h1>{selected.name}</h1>
                 <p>{selected.tagline || "A new chapter in stewardship."}</p>
@@ -505,61 +507,16 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
                 </table>
               </div>
             </Card>
-            <Card title="Company stewardship reports">
-              <p>
-                Finalised records only. Opening a record is recorded in the
-                platform audit log.
-              </p>
-              <div className="review-state-strip">
-                {selected.review_states?.map((s) => (
-                  <span key={s.state} className="badge">
-                    {s.state.replaceAll("_", " ")} · {s.total}
-                  </span>
-                ))}
-              </div>
-              {reports.length ? (
-                reports.map((r) => (
-                  <div className="report-row" key={r.id}>
-                    <div>
-                      <strong>{r.employee}</strong>
-                      <p>
-                        {r.kind.replaceAll("_", " ")} {r.year} ·{" "}
-                        {dateTime(r.finalised_at)}
-                      </p>
-                    </div>
-                    <Button
-                      variant="neutral"
-                      onClick={async () => {
-                        try {
-                          setRecord(await api(`platform/reports/${r.id}/`));
-                        } catch (e) {
-                          setError((e as Error).message);
-                        }
-                      }}
-                    >
-                      Read final record
-                    </Button>
-                  </div>
-                ))
-              ) : (
-                <p className="empty">No finalised stewardship reports yet.</p>
-              )}
-              {record !== null && (
-                <section className="saved-report">
-                  <Button variant="neutral" onClick={() => setRecord(null)}>
-                    Close record
-                  </Button>
-                  <RecordContent value={record} />
-                </section>
-              )}
-            </Card>
+            
             <Card title="Company access">
               <p>
                 {selected.active
-                  ? "Suspending access prevents all company members from entering the workspace. Saved records are retained."
+                  ? "Suspending access blocks company operations. For outstanding billing, the Chief Steward retains Billing and My account access. Saved records are retained."
                   : "Restore access for approved company members."}
               </p>
               <form onSubmit={access}>
+                {selected.active && <label>Suspension reason<select name="suspension_reason" defaultValue="ADMIN_SUSPENDED"><option value="ADMIN_SUSPENDED">Administrative suspension</option><option value="BILLING_OVERDUE">Outstanding yearly billing</option></select></label>}
+                {!selected.active && <p>Suspension reason: {selected.suspension_reason === "BILLING_OVERDUE" ? "Outstanding yearly billing" : "Administrative suspension"}</p>}
                 <label>
                   Reason
                   <textarea required name="note" maxLength={2000} />

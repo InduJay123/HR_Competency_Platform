@@ -41,7 +41,7 @@ class ProfilePhotoView(APIView):
         # Identity always comes from the authenticated session, never form data.
         member = None
         if request.session.get("company_id") and not request.user.is_superuser:
-            member = membership(request)
+            member = membership(request, suspended_access="account")
         photo = request.FILES.get("photo")
         formats = {".jpg": ("JPEG", "image/jpeg"), ".jpeg": ("JPEG", "image/jpeg"),
                    ".png": ("PNG", "image/png"), ".webp": ("WEBP", "image/webp")}

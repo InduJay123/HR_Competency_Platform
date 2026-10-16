@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import { api, post } from "@/lib/api";
-import { Button, Card, Feedback, Loading } from "./ui";
+import { Badge, Button, Card, Feedback, Loading } from "./ui";
 
 type Proof = {
   id: string;
@@ -63,10 +63,15 @@ export function proofError(file: File) {
 
 function InvoiceCard({ invoice: i }: { invoice: Invoice }) {
   return (
-    <Card title={i.invoice_number}>
-      <p>
-        {i.company_name} · Billing year {i.billing_year}
-      </p>
+    <Card>
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">Billing year {i.billing_year}</p>
+          <h2>{i.invoice_number}</h2>
+          <p className="subtitle">{i.company_name}</p>
+        </div>
+        <InvoiceStatus invoice={i} />
+      </div>
       <dl className="billing-facts">
         <div>
           <dt>Annual fee</dt>
@@ -92,18 +97,18 @@ function InvoiceCard({ invoice: i }: { invoice: Invoice }) {
           <dt>Due</dt>
           <dd>{i.due_at}</dd>
         </div>
-        <div>
-          <dt>Status</dt>
-          <dd>
-            {labels[i.status]}
-            {i.is_overdue && " · Overdue"}
-          </dd>
-        </div>
       </dl>
       {i.paid_at && (
-        <p>Verified on {new Date(i.paid_at).toLocaleDateString()}</p>
+        <p className="subtitle">
+          Verified on {new Date(i.paid_at).toLocaleDateString()}
+        </p>
       )}
-      <div className="billing-actions">
+      {i.status === "PAYMENT_PROOF_SUBMITTED" && (
+        <p className="billing-note">
+          Payment proof submitted. Awaiting Super Admin verification.
+        </p>
+      )}
+      <div className="actions">
         <a
           className="button neutral"
           href={i.pdf_url}
@@ -121,7 +126,7 @@ function InvoiceCard({ invoice: i }: { invoice: Invoice }) {
           <a href={p.file_url} target="_blank" rel="noreferrer">
             Payment proof
           </a>{" "}
-          · {labels[p.status]}
+          <ProofStatus status={p.status} />
           {p.rejection_reason && `: ${p.rejection_reason}`}
         </p>
       ))}
@@ -129,21 +134,127 @@ function InvoiceCard({ invoice: i }: { invoice: Invoice }) {
   );
 }
 
+function ProofStatus({ status }: { status: Proof["status"] }) {
+  return (
+    <span
+      className={
+        status === "APPROVED"
+          ? "billing-status-success"
+          : status === "REJECTED"
+            ? "billing-status-error"
+            : undefined
+      }
+    >
+      <Badge>{labels[status]}</Badge>
+    </span>
+  );
+}
+
+function InvoiceStatus({ invoice }: { invoice: Invoice }) {
+  return (
+    <span className="billing-statuses">
+      <span
+        className={
+          invoice.status === "PAID" ? "billing-status-success" : undefined
+        }
+      >
+        <Badge>
+          {invoice.status === "PAYMENT_PROOF_SUBMITTED"
+            ? "Proof submitted"
+            : labels[invoice.status]}
+        </Badge>
+      </span>
+      {invoice.is_overdue && (
+        <span className="billing-status-warning">
+          <Badge>Overdue</Badge>
+        </span>
+      )}
+    </span>
+  );
+}
+
+function InvoiceTable({
+  invoices,
+  platform = false,
+}: {
+  invoices: Invoice[];
+  platform?: boolean;
+}) {
+  return (
+    <Card>
+      <div
+        className="table-scroll"
+        role="region"
+        aria-label={platform ? "Company invoices" : "Invoice history"}
+        tabIndex={0}
+      >
+        <table className="billing-table">
+          <caption className="billing-caption">
+            {platform ? "Company invoices" : "Annual invoice history"}
+          </caption>
+          <thead>
+            <tr>
+              {platform && <th scope="col">Company</th>}
+              <th scope="col">Year</th>
+              <th scope="col">Invoice</th>
+              <th scope="col">Amount</th>
+              <th scope="col">Issued</th>
+              <th scope="col">Due</th>
+              <th scope="col">Status</th>
+              <th scope="col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoices.map((i) => (
+              <tr key={i.id}>
+                {platform && <td>{i.company_name}</td>}
+                <td>{i.billing_year}</td>
+                <th scope="row">{i.invoice_number}</th>
+                <td>{money(i)}</td>
+                <td>{i.issued_at}</td>
+                <td>{i.due_at}</td>
+                <td>
+                  <InvoiceStatus invoice={i} />
+                </td>
+                <td>
+                  <div className="billing-row-actions">
+                    <a href={i.pdf_url} target="_blank" rel="noreferrer">
+                      View invoice
+                    </a>
+                    <a href={`${i.pdf_url}?download=1`}>Download PDF</a>
+                  </div>
+                  {i.proofs.length > 0 && (
+                    <details className="billing-proof-history">
+                      <summary>Payment proofs ({i.proofs.length})</summary>
+                      {i.proofs.map((p) => (
+                        <p key={p.id}>
+                          <a href={p.file_url} target="_blank" rel="noreferrer">
+                            View proof
+                          </a>{" "}
+                          <ProofStatus status={p.status} />
+                          {p.rejection_reason && (
+                            <small>{p.rejection_reason}</small>
+                          )}
+                        </p>
+                      ))}
+                    </details>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
 const settingsGroups = {
-  "Annual billing": [
-    "annual_fee",
-    "currency",
-    "invoice_prefix",
-    "issue_month",
-    "issue_day",
-    "due_days",
-    "tax_rate",
-  ],
+  "Annual billing": ["annual_fee", "currency", "invoice_prefix"],
   "Invoice issuer": [
     "issuer_name",
     "issuer_address",
     "issuer_registration_number",
-    "tax_number",
     "issuer_email",
     "issuer_phone",
   ],
@@ -155,6 +266,37 @@ const settingsGroups = {
     "swift_code",
     "payment_instructions",
   ],
+  "Invoice timing": ["issue_month", "issue_day", "due_days"],
+  Tax: ["tax_number", "tax_rate"],
+};
+const fieldLabels: Record<string, string> = {
+  annual_fee: "Annual default fee",
+  currency: "Currency",
+  invoice_prefix: "Invoice prefix",
+  issuer_name: "Legal / company name",
+  issuer_address: "Address",
+  issuer_registration_number: "Registration number",
+  issuer_email: "Email",
+  issuer_phone: "Phone",
+  bank_name: "Bank name",
+  bank_account_name: "Account name",
+  bank_account_number: "Account number",
+  bank_branch: "Branch",
+  swift_code: "SWIFT code",
+  payment_instructions: "Payment instructions",
+  issue_month: "Issue month",
+  issue_day: "Issue day",
+  due_days: "Payment due period (days)",
+  tax_number: "Tax / VAT number",
+  tax_rate: "Tax / VAT rate (%)",
+};
+const metricLabels: Record<string, string> = {
+  total_companies: "Total companies",
+  invoices_issued: "Invoices issued",
+  paid: "Paid",
+  awaiting_payment: "Awaiting payment",
+  proofs_awaiting_review: "Proofs awaiting review",
+  overdue: "Overdue",
 };
 const numeric = new Set([
   "annual_fee",
@@ -259,10 +401,16 @@ export function Billing({ platform = false }: { platform?: boolean }) {
   );
   return (
     <section className="billing-page">
-      <h1>{platform ? "Billing & Payments" : "Billing"}</h1>
-      <p>Yearly company billing and payment verification.</p>
+      <div className="page-heading">
+        <div>
+          <h1>{platform ? "Billing & Payments" : "Billing"}</h1>
+          <p className="subtitle">
+            Yearly company billing and payment verification.
+          </p>
+        </div>
+      </div>
       <div
-        className="billing-tabs"
+        className="account-tabs billing-tabs"
         role="tablist"
         aria-label="Billing sections"
       >
@@ -272,6 +420,7 @@ export function Billing({ platform = false }: { platform?: boolean }) {
             role="tab"
             id={`billing-tab-${index}`}
             aria-selected={tab === name}
+            aria-current={tab === name ? "page" : undefined}
             aria-controls={`billing-panel-${index}`}
             tabIndex={tab === name ? 0 : -1}
             onClick={() => setTab(name)}
@@ -302,7 +451,7 @@ export function Billing({ platform = false }: { platform?: boolean }) {
           aria-labelledby={`billing-tab-${tabs.indexOf(tab)}`}
         >
           {platform && tab !== "Billing Settings" && (
-            <label>
+            <label className="billing-year">
               Billing year
               <input
                 aria-label="Billing year"
@@ -321,24 +470,28 @@ export function Billing({ platform = false }: { platform?: boolean }) {
             (current ? (
               <InvoiceCard invoice={current} />
             ) : (
-              <p>
-                No annual invoice is available for the current billing year.
-              </p>
+              <Card>
+                <p className="empty">
+                  No annual invoice is available for the current billing year.
+                </p>
+              </Card>
             ))}
           {tab === "Invoice History" &&
             (invoices.length ? (
-              invoices.map((i) => <InvoiceCard key={i.id} invoice={i} />)
+              <InvoiceTable invoices={invoices} />
             ) : (
-              <p>No previous invoices are available.</p>
+              <Card>
+                <p className="empty">No previous invoices are available.</p>
+              </Card>
             ))}
           {tab === "Upload Payment Proof" &&
             (current?.status === "AWAITING_PAYMENT" ? (
               <Card title="Upload Payment Proof">
-                <p>
+                <p className="subtitle">
                   {current.invoice_number} · {money(current)} · Due{" "}
                   {current.due_at}
                 </p>
-                <form onSubmit={upload}>
+                <form className="billing-upload" onSubmit={upload}>
                   <label>
                     Payment proof file
                     <input
@@ -372,17 +525,22 @@ export function Billing({ platform = false }: { platform?: boolean }) {
                 </form>
               </Card>
             ) : (
-              <p>
-                {current?.status === "PAYMENT_PROOF_SUBMITTED"
-                  ? "Payment proof submitted. Awaiting Super Admin verification."
-                  : "No payment proof is currently required."}
-              </p>
+              <Card>
+                <p className="empty">
+                  {current?.status === "PAYMENT_PROOF_SUBMITTED"
+                    ? "Payment proof submitted. Awaiting Super Admin verification."
+                    : "No payment proof is currently required."}
+                </p>
+              </Card>
             ))}
           {tab === "Overview" && (
-            <div className="billing-facts">
+            <div className="stats billing-metrics">
               {Object.entries(overview).map(([key, value]) => (
-                <Card key={key} title={key.replaceAll("_", " ")}>
-                  <strong>{value}</strong>
+                <Card
+                  key={key}
+                  title={metricLabels[key] || key.replaceAll("_", " ")}
+                >
+                  <div className="stat-value">{value}</div>
                 </Card>
               ))}
             </div>
@@ -427,97 +585,144 @@ export function Billing({ platform = false }: { platform?: boolean }) {
                 </label>
               </div>
               {shownInvoices.length ? (
-                shownInvoices.map((i) => <InvoiceCard key={i.id} invoice={i} />)
+                <InvoiceTable invoices={shownInvoices} platform />
               ) : (
-                <p>No invoices match these filters.</p>
+                <Card>
+                  <p className="empty">No invoices match these filters.</p>
+                </Card>
               )}
             </>
           )}
           {tab === "Payment Proofs" && (
             <>
               {!proofs.some((p) => p.status === "PENDING") && (
-                <p>No payment proofs are awaiting verification.</p>
+                <p className="empty">
+                  No payment proofs are awaiting verification.
+                </p>
               )}
-              {proofs.map((p) => (
-                <Card
-                  key={p.id}
-                  title={`${p.company_name} · ${p.invoice_number}`}
-                >
-                  <p>
-                    {p.currency} {p.amount} · {labels[p.status]}
-                  </p>
-                  <p>
-                    Submitted by {p.submitted_by} on{" "}
-                    {new Date(p.created_at).toLocaleString()}
-                  </p>
-                  <p>
-                    Payment date: {p.payment_date} · Reference:{" "}
-                    {p.transaction_reference}
-                  </p>
-                  <a
-                    className="button neutral"
-                    href={p.file_url}
-                    target="_blank"
-                    rel="noreferrer"
+              {proofs.length > 0 && (
+                <Card>
+                  <div
+                    className="table-scroll"
+                    role="region"
+                    aria-label="Payment proofs"
+                    tabIndex={0}
                   >
-                    View Proof
-                  </a>
-                  {p.rejection_reason && (
-                    <p>Rejection reason: {p.rejection_reason}</p>
-                  )}
-                  {p.status === "PENDING" && (
-                    <>
-                      <label>
-                        Rejection reason
-                        <textarea
-                          value={reasons[p.id] || ""}
-                          maxLength={2000}
-                          onChange={(e) =>
-                            setReasons({ ...reasons, [p.id]: e.target.value })
-                          }
-                        />
-                      </label>
-                      <div className="billing-actions">
-                        <Button
-                          disabled={busy}
-                          onClick={() =>
-                            void action(
-                              () =>
-                                post(
-                                  `platform/billing/payment-proofs/${p.id}/approve/`,
-                                  {},
-                                ),
-                              "Payment approved. Invoice marked paid.",
-                            )
-                          }
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          variant="neutral"
-                          disabled={busy || !reasons[p.id]?.trim()}
-                          onClick={() =>
-                            void action(
-                              () =>
-                                post(
-                                  `platform/billing/payment-proofs/${p.id}/reject/`,
-                                  { rejection_reason: reasons[p.id] },
-                                ),
-                              "Payment proof rejected. The company can submit a replacement.",
-                            )
-                          }
-                        >
-                          Reject
-                        </Button>
-                      </div>
-                    </>
-                  )}
+                    <table className="billing-table billing-proof-table">
+                      <caption className="billing-caption">
+                        Payment proof verification
+                      </caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Company / Invoice</th>
+                          <th scope="col">Amount</th>
+                          <th scope="col">Payment date / Reference</th>
+                          <th scope="col">Submitted</th>
+                          <th scope="col">Status</th>
+                          <th scope="col">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {proofs.map((p) => (
+                          <tr key={p.id}>
+                            <th scope="row">
+                              {p.company_name}
+                              <small>{p.invoice_number}</small>
+                            </th>
+                            <td>
+                              {p.currency} {p.amount}
+                            </td>
+                            <td>
+                              {p.payment_date}
+                              <small>{p.transaction_reference}</small>
+                            </td>
+                            <td>
+                              {new Date(p.created_at).toLocaleString()}
+                              <small>{p.submitted_by}</small>
+                            </td>
+                            <td>
+                              <ProofStatus status={p.status} />
+                            </td>
+                            <td>
+                              <a
+                                className="billing-proof-link"
+                                href={p.file_url}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                View Proof
+                              </a>
+                              {p.rejection_reason && (
+                                <p className="billing-rejection-note">
+                                  Rejection reason: {p.rejection_reason}
+                                </p>
+                              )}
+                              {p.status === "PENDING" && (
+                                <>
+                                  <label>
+                                    Rejection reason
+                                    <textarea
+                                      rows={2}
+                                      value={reasons[p.id] || ""}
+                                      maxLength={2000}
+                                      onChange={(e) =>
+                                        setReasons({
+                                          ...reasons,
+                                          [p.id]: e.target.value,
+                                        })
+                                      }
+                                    />
+                                  </label>
+                                  <div className="actions">
+                                    <Button
+                                      disabled={busy}
+                                      onClick={() =>
+                                        void action(
+                                          () =>
+                                            post(
+                                              `platform/billing/payment-proofs/${p.id}/approve/`,
+                                              {},
+                                            ),
+                                          "Payment approved. Invoice marked paid.",
+                                        )
+                                      }
+                                    >
+                                      Approve
+                                    </Button>
+                                    <Button
+                                      variant="neutral"
+                                      disabled={busy || !reasons[p.id]?.trim()}
+                                      onClick={() =>
+                                        void action(
+                                          () =>
+                                            post(
+                                              `platform/billing/payment-proofs/${p.id}/reject/`,
+                                              {
+                                                rejection_reason: reasons[p.id],
+                                              },
+                                            ),
+                                          "Payment proof rejected. The company can submit a replacement.",
+                                        )
+                                      }
+                                    >
+                                      Reject
+                                    </Button>
+                                  </div>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </Card>
-              ))}
+              )}
             </>
           )}
           {tab === "Billing Settings" && (
             <form
+              className="billing-settings-form"
               onSubmit={(e) => {
                 e.preventDefault();
                 void action(
@@ -531,16 +736,30 @@ export function Billing({ platform = false }: { platform?: boolean }) {
               }}
             >
               <p>Billing frequency: Yearly</p>
-              <p>
+              <p className="subtitle">
                 Changes apply to new invoices. Existing invoice amounts and
                 issuer/payment details remain unchanged.
               </p>
               {Object.entries(settingsGroups).map(([title, fields]) => (
-                <Card key={title} title={title}>
-                  <div className="billing-settings">
+                <section
+                  key={title}
+                  className="billing-settings-section"
+                  aria-label={title}
+                >
+                  <h2>{title}</h2>
+                  <div className="form-grid">
                     {fields.map((key) => (
-                      <label key={key}>
-                        {key.replaceAll("_", " ")}
+                      <label
+                        key={key}
+                        className={
+                          ["issuer_address", "payment_instructions"].includes(
+                            key,
+                          )
+                            ? "full"
+                            : undefined
+                        }
+                      >
+                        {fieldLabels[key]}
                         {["issuer_address", "payment_instructions"].includes(
                           key,
                         ) ? (
@@ -579,9 +798,9 @@ export function Billing({ platform = false }: { platform?: boolean }) {
                       </label>
                     ))}
                   </div>
-                </Card>
+                </section>
               ))}
-              <label>
+              <label className="check-label">
                 <input
                   type="checkbox"
                   checked={!!settings.active}

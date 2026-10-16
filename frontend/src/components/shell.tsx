@@ -19,6 +19,7 @@ import { CompanyLogo } from "./company-logo";
 import { Trainer } from "./trainer";
 import { Tours } from "./tours";
 import { NavIcon, routeIcon } from "./nav-icon";
+import { RestrictedWorkspace } from "./restricted-workspace";
 
 const SessionContext = createContext<Session | null>(null);
 export const useSession = () => useContext(SessionContext)!;
@@ -34,7 +35,7 @@ export function Shell({ children }: { children: ReactNode }) {
     menuButton = useRef<HTMLButtonElement>(null),
     restoreMenuFocus = useRef(false);
   useEffect(() => {
-    if (data && path.startsWith("/manager") && !data.contexts?.includes("manager")) {
+    if (data && !data.restricted_access && path.startsWith("/manager") && !data.contexts?.includes("manager")) {
       router.replace("/employee/dashboard");
     }
   }, [data, path, router]);
@@ -82,7 +83,13 @@ export function Shell({ children }: { children: ReactNode }) {
         .catch(() => undefined);
     };
     window.addEventListener("bfl-profile-updated", refresh);
-    return () => window.removeEventListener("bfl-profile-updated", refresh);
+    window.addEventListener("bfl-company-suspended", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.removeEventListener("bfl-profile-updated", refresh);
+      window.removeEventListener("bfl-company-suspended", refresh);
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
   useEffect(() => {
     let alive = true;
@@ -110,7 +117,7 @@ export function Shell({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [router]);
+  }, [router, path]);
   async function change(context: Context) {
     if (!confirmLeaveDraft()) return false;
     try {
@@ -143,6 +150,7 @@ export function Shell({ children }: { children: ReactNode }) {
     }
   }
   if (!data) return error ? <Feedback error={error} /> : <Loading />;
+  if (data.restricted_access) return <SessionContext value={data}><RestrictedWorkspace data={data}>{children}</RestrictedWorkspace></SessionContext>;
   if (path.startsWith("/manager") && !data.contexts?.includes("manager")) return <Loading />;
   const company = data.memberships?.find(
       (m) => m.company_id === data.company_id,

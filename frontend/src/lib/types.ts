@@ -11,6 +11,10 @@ export type Membership = {
   vision?: string;
 };
 export type Session = {
+  restricted_access?: boolean;
+  suspension_reason?: "BILLING_OVERDUE" | "ADMIN_SUSPENDED" | null;
+  suspension_message?: string;
+  billing_access?: boolean;
   authenticated: boolean;
   is_platform_admin?: boolean;
   csrf_token: string;

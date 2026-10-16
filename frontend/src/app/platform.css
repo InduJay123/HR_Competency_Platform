@@ -273,8 +273,13 @@
   padding: 30px 22px;
   display: flex;
   flex-direction: column;
-  gap: 30px;
-  min-height: 100vh;
+  gap: 20px;
+  height: 100dvh;
+  min-height: 0;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  overflow: visible;
 }
 .platform-label {
   font-size: 9px;
@@ -308,8 +313,33 @@
   margin-top: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-top: 35px;
+  gap: 6px;
+  padding-top: 16px;
+  min-width: 0;
+  align-items: flex-start;
+}
+.platform-profile-avatar { margin-bottom: 6px; }
+.platform-profile-avatar .avatar, .platform-profile-avatar .avatar-initials { width: 48px; height: 48px; margin: 0; }
+.platform-profile-email { overflow-wrap: anywhere; }
+.platform-person .button { padding: 8px 12px; margin-top: 6px; }
+.platform-person input[hidden] { display: none; }
+.suspension-badge { color: #8a2929; background: #fff3f1; border: 1px solid #efd1ca; }
+.suspension-notice { padding: 18px 20px; border: 1px solid #efd1ca; border-radius: var(--radius); background: #fff3f1; margin-bottom: 24px; }
+.suspension-notice strong { color: #8a2929; }
+.suspension-notice p { margin: 12px 0; }
+.restricted-nav { width: 224px; flex-shrink: 0; padding: 24px 18px; border-right: 1px solid var(--border); display: flex; flex-direction: column; gap: 24px; }
+.restricted-nav nav { display: flex; flex-direction: column; gap: 8px; }
+.restricted-nav nav a { padding: 12px; color: var(--ink); border-radius: 8px; }
+.restricted-nav nav a[aria-current] { color: var(--primary); background: var(--tint); }
+.restricted-caption { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
+@media (min-width: 761px) and (max-height: 760px) {
+  .platform-nav { padding-top: 16px; padding-bottom: 16px; gap: 12px; }
+  .platform-nav nav { gap: 4px; }
+  .platform-nav nav button { padding: 10px 12px; }
+  .platform-person { padding-top: 10px; }
+}
+@media (min-width: 761px) and (max-height: 640px) {
+  .platform-nav { overflow-y: auto; }
 }
 .platform-person strong {
   font-size: 14px;
@@ -715,6 +745,8 @@
   }
   .platform-nav {
     min-height: auto;
+    height: auto;
+    position: static;
     border-right: 0;
     border-bottom: 1px solid #e9edf3;
     padding: 18px;
@@ -734,17 +766,21 @@
   }
   .platform-person {
     padding: 0;
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
     flex-wrap: wrap;
     margin: 0;
   }
   .platform-person .avatar-initials {
-    display: none;
+    display: inline-flex;
   }
   .platform-person .button {
-    margin-left: auto;
+    margin-left: 0;
   }
+  .restricted-workspace { flex-direction: column; }
+  .restricted-nav { width: 100%; border-right: 0; border-bottom: 1px solid var(--border); gap: 16px; }
+  .restricted-nav nav { flex-direction: row; flex-wrap: wrap; }
+  .restricted-nav > .button { align-self: flex-start; }
   .platform-main {
     padding: 0 18px 30px;
   }

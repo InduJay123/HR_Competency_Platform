@@ -36,6 +36,9 @@ export async function api<T>(
     },
   });
   const data = await response.json().catch(() => null);
+  if (data?.error?.code === "COMPANY_SUSPENDED" && typeof window !== "undefined") {
+    window.dispatchEvent(new Event("bfl-company-suspended"));
+  }
   if (!response.ok)
     throw new ApiError(
       response.status,

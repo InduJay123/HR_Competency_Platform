@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 
 from apps.companies.models import Membership
 from common.permissions import membership
+from common.suspension import eligible_memberships, restricted_state, billing_suspended
 
 
 class LoginThrottle(SimpleRateThrottle):
@@ -58,15 +59,7 @@ class SessionView(APIView):
                 }
             )
 
-        memberships = (
-            Membership.objects
-            .select_related("company")
-            .filter(
-                user=request.user,
-                active=True,
-                company__active=True,
-            )
-        )
+        memberships = eligible_memberships(request.user)
 
         current = memberships.filter(
             company_id=request.session.get("company_id")
@@ -80,6 +73,7 @@ class SessionView(APIView):
             {
                 "authenticated": True,
                 "is_platform_admin": request.user.is_superuser,
+                **restricted_state(current),
                 "csrf_token": csrf,
                 "user": {
                     "id": request.user.id,
@@ -93,12 +87,13 @@ class SessionView(APIView):
                         "id": m.id,
                         "company_id": m.company_id,
                         "name": m.company.name,
-                        "tagline": m.company.tagline,
-                        "logo_url": m.company.display_logo_url,
+                        "tagline": m.company.tagline if m.company.active else "",
+                        "logo_url": m.company.display_logo_url if m.company.active else "",
                         "stewardship_code": m.company.stewardship_code,
-                        "mission": m.company.mission,
-                        "vision": m.company.vision,
-                        "contexts": m.contexts,
+                        "mission": m.company.mission if m.company.active else "",
+                        "vision": m.company.vision if m.company.active else "",
+                        "contexts": m.contexts if m.company.active else [],
+                        **restricted_state(m),
                     }
                     for m in memberships
                 ],
@@ -110,7 +105,7 @@ class SessionView(APIView):
                 "context": context,
                 "contexts": (
                     current.contexts
-                    if current
+                    if current and current.company.active
                     else []
                 ),
             }
@@ -150,11 +145,7 @@ class LoginView(APIView):
                 "Unable to sign in with these credentials."
             )
 
-        eligible = Membership.objects.filter(
-            user=user,
-            active=True,
-            company__active=True,
-        )
+        eligible = eligible_memberships(user).order_by("-company__active", "created_at")
 
         role = data.validated_data["role"]
 
@@ -243,7 +234,8 @@ class LoginView(APIView):
                 "authenticated": True,
                 "csrf_token": get_token(request),
                 "redirect": (
-                    f"/{selected}/dashboard"
+                    ("/hr/billing" if billing_suspended(member) else "/employee/account")
+                    if member and not member.company.active else f"/{selected}/dashboard"
                     if member
                     else "/auth/request-status"
                 ),
@@ -268,12 +260,7 @@ class ContextView(APIView):
             request.data.get("company_id")
         )
 
-        member = Membership.objects.filter(
-            user=request.user,
-            company_id=company,
-            active=True,
-            company__active=True,
-        ).first()
+        member = eligible_memberships(request.user).filter(company_id=company).first()
 
         context = request.data.get(
             "context"
@@ -298,7 +285,8 @@ class ContextView(APIView):
             {
                 "company_id": company,
                 "context": context,
-                "contexts": member.contexts,
+                "contexts": member.contexts if member.company.active else [],
+                **restricted_state(member),
             }
         )
 
@@ -312,7 +300,7 @@ class ProfileView(APIView):
 
         profile = get_object_or_404(
             EmployeeProfile,
-            membership=membership(request),
+            membership=membership(request, suspended_access="account"),
         )
 
         return Response(
@@ -330,7 +318,7 @@ class ProfileView(APIView):
         from apps.organisation.serializers import SelfProfileSerializer
         from common.exceptions import Conflict
 
-        member = membership(request)
+        member = membership(request, suspended_access="account")
 
         class ProfileInput(serializers.Serializer):
             version = serializers.IntegerField(

@@ -1,76 +1,202 @@
+/* Shared BTFL components supply the visual system; these rules arrange billing content. */
 .billing-page {
   min-width: 0;
   max-width: 100%;
   overflow-wrap: anywhere;
 }
+.billing-page > .page-heading .subtitle {
+  margin-bottom: 0;
+}
 .billing-tabs {
-  display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 1.5rem 0;
-  border-bottom: 1px solid #d8e1df;
-  padding-bottom: 0.75rem;
+  gap: 0 24px;
 }
 .billing-tabs button {
-  background: transparent;
-  color: inherit;
-  border: 1px solid #d8e1df;
-  border-radius: 0.5rem;
-  padding: 0.7rem 1rem;
-  cursor: pointer;
-}
-.billing-tabs button[aria-selected="true"] {
-  background: #174f49;
-  color: white;
-}
-.billing-tabs button:focus-visible {
-  outline: 3px solid #c39847;
-  outline-offset: 2px;
-}
-.billing-facts,
-.billing-settings,
-.billing-filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
-  gap: 1rem;
-  margin: 1rem 0;
-}
-.billing-facts dd {
-  margin: 0.3rem 0;
-  font-weight: 600;
+  min-height: 44px;
 }
 .billing-page .card {
-  margin-block: 1rem;
   min-width: 0;
 }
-.billing-page label {
+.billing-page .card .page-heading {
+  margin-bottom: 20px;
+}
+.billing-page .card .eyebrow {
+  margin-bottom: 4px;
+}
+.billing-page .card .page-heading h2 {
+  margin-bottom: 4px;
+}
+.billing-page .card .page-heading .subtitle {
+  margin-bottom: 0;
+}
+.billing-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  gap: 16px 24px;
+  margin: 0 0 24px;
+}
+.billing-facts dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.billing-facts dd {
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+.billing-note {
+  padding: 12px 16px;
+  border-left: 2px solid var(--primary);
+  background: var(--tint);
+}
+.billing-statuses,
+.billing-row-actions {
   display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin-block: 0.8rem;
-  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.billing-statuses .badge {
+  white-space: normal;
+}
+/* Shared alert semantics, applied only to compact status badges. */
+.billing-status-success .badge {
+  color: #166247;
+  background: #effaf4;
+}
+.billing-status-error .badge {
+  color: #8a2929;
+  background: #fff3f1;
+}
+.billing-status-warning .badge {
+  color: var(--ink);
+  background: var(--tint);
+}
+.billing-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 24px;
+}
+.billing-metrics .card {
+  margin-bottom: 0;
+}
+.billing-year {
+  max-width: 180px;
+}
+.billing-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 280px));
+  gap: 20px;
 }
 .billing-page input,
 .billing-page select,
 .billing-page textarea {
-  max-width: 100%;
   min-width: 0;
-  box-sizing: border-box;
+  max-width: 100%;
 }
-.billing-page input[type="checkbox"] {
-  align-self: flex-start;
+.billing-upload {
+  max-width: 640px;
 }
-.billing-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-block: 1rem;
+.billing-table tbody th {
+  background: transparent;
+  color: var(--ink);
+  font-size: inherit;
+  font-weight: 500;
+  min-width: 180px;
 }
-@media (max-width: 480px) {
+.billing-table td,
+.billing-table th {
+  vertical-align: top;
+}
+.billing-table tbody small {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+}
+.billing-table {
+  font-variant-numeric: tabular-nums;
+  min-width: 920px;
+  overflow-wrap: normal;
+}
+.billing-table td {
+  min-width: 112px;
+}
+.billing-table td:last-child {
+  min-width: 180px;
+}
+.billing-proof-table td:last-child {
+  min-width: 240px;
+}
+.billing-table tbody tr:hover {
+  background: var(--tint);
+}
+.billing-caption {
+  text-align: left;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.billing-row-actions {
+  gap: 8px 16px;
+}
+.billing-proof-history {
+  margin-top: 12px;
+}
+.billing-proof-history summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.billing-proof-history p {
+  margin: 8px 0;
+}
+.billing-proof-link {
+  display: inline-block;
+  margin-bottom: 12px;
+}
+.billing-proof-table textarea {
+  min-height: 68px;
+}
+.billing-rejection-note {
+  margin-top: 8px;
+}
+.billing-settings-form {
+  max-width: 880px;
+}
+.billing-settings-section {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin-top: 20px;
+}
+.billing-settings-section h2 {
+  margin-bottom: 16px;
+}
+.billing-settings-form .check-label input {
+  margin: 0;
+}
+.billing-page .empty {
+  margin-bottom: 0;
+}
+.billing-page .table-scroll:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .billing-tabs {
+    gap: 0 16px;
+  }
   .billing-tabs button {
-    flex: 1 1 130px;
+    text-align: left;
+  }
+  .billing-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .billing-filters,
+  .billing-settings-form .form-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
   .billing-page .button {
     white-space: normal;
+  }
+}
+@media (max-width: 380px) {
+  .billing-metrics {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

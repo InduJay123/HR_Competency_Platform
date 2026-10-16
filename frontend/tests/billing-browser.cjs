@@ -45,10 +45,28 @@ const path = require("node:path");
           await page.getByRole("tabpanel").waitFor();
           const dimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, width: window.innerWidth }));
           assert.ok(dimensions.scroll <= dimensions.width + 1, `${platform ? "Admin" : "Chief"} ${tab} overflows at ${width}: ${JSON.stringify(dimensions)}`);
+          const tabStyle = await page.getByRole("tab", { name: tab, exact: true }).evaluate(el => {
+            const style = getComputedStyle(el);
+            return { color: style.color, border: style.borderBottomColor, background: style.backgroundColor };
+          });
+          assert.equal(tabStyle.color, "rgb(36, 93, 235)");
+          assert.equal(tabStyle.border, "rgb(36, 93, 235)");
+          assert.equal(tabStyle.background, "rgb(255, 255, 255)");
+          if (tab === "Invoice History" || tab === "Company Invoices") {
+            const cellWidth = await page.locator(".billing-table tbody th").first().evaluate(el => el.getBoundingClientRect().width);
+            assert.ok(cellWidth >= 180, "Invoice identifiers should remain readable on narrow screens");
+          }
+          if (width === 375 || width === 1440) await page.screenshot({ path: path.join(output, `${platform ? "admin" : "chief"}-${tab.replaceAll(" ", "-")}-${width}.png`), fullPage: true });
           checks++;
         }
         if (width === 375) await page.screenshot({ path: path.join(output, `${platform ? "admin" : "chief"}-mobile.png`), fullPage: true });
       }
+      await page.getByRole("tab").first().focus();
+      await page.keyboard.press("ArrowRight");
+      assert.equal(await page.getByRole("tab").nth(1).getAttribute("aria-selected"), "true");
+      await page.keyboard.press("Home");
+      assert.equal(await page.getByRole("tab").first().getAttribute("aria-selected"), "true");
+      checks += 2;
       if (!platform) {
         assert.equal(await page.getByRole("link", { name: "Billing", exact: true }).count(), 1);
         await page.getByRole("tab", { name: "Upload Payment Proof" }).click();
@@ -65,7 +83,7 @@ const path = require("node:path");
         await page.getByRole("tab", { name: "Payment Proofs" }).click();
         await page.getByRole("button", { name: "Approve", exact: true }).click();
         await page.getByText("Payment approved. Invoice marked paid.").waitFor();
-        await page.getByRole("tabpanel").getByText("LKR 1000.00 · Approved", { exact: true }).waitFor();
+        await page.getByRole("tabpanel").getByText("Approved", { exact: true }).waitFor();
         assert.equal(await page.getByRole("button", { name: "Approve", exact: true }).count(), 0);
         proof = { ...proof, status: "PENDING" };
         await page.reload();
@@ -73,6 +91,13 @@ const path = require("node:path");
         await page.getByLabel("Rejection reason").fill("Unclear reference");
         await page.getByRole("button", { name: "Reject", exact: true }).click();
         await page.getByText("Rejection reason: Unclear reference", { exact: true }).waitFor();
+        await page.getByRole("tab", { name: "Billing Settings" }).click();
+        await page.getByLabel("Annual default fee").fill("1500");
+        const saved = page.waitForRequest(request => request.url().includes("platform/billing/settings/") && request.method() === "PUT");
+        await page.getByRole("button", { name: "Save Billing Settings" }).click();
+        assert.equal((await saved).postDataJSON().annual_fee, 1500);
+        await page.getByText("Billing settings saved. Eligible annual invoices are available.").waitFor();
+        checks++;
         checks += 3;
       }
       await context.close();
