@@ -18,7 +18,9 @@ export function RestrictedWorkspace({
   const router = useRouter();
   const [error, setError] = useState("");
   const billing =
-    data.suspension_reason === "BILLING_OVERDUE" && data.billing_access;
+    data.authenticated && data.restricted_access &&
+    (data.allowed_areas?.includes("billing") ??
+      (data.suspension_reason === "BILLING_OVERDUE" && data.billing_access));
   const destination = billing ? "/hr/billing" : "/employee/account";
   const allowed =
     path === "/employee/account" || (billing && path === "/hr/billing");
@@ -38,7 +40,7 @@ export function RestrictedWorkspace({
           <span className="badge suspension-badge">Company suspended</span>
           <p className="restricted-caption">
             {billing
-              ? "Outstanding billing"
+              ? data.suspension_label || "Outstanding billing"
               : "Contact the Platform Administrator"}
           </p>
         </div>
@@ -82,16 +84,20 @@ export function RestrictedWorkspace({
           >
             <strong>
               {billing
-                ? "Company access temporarily suspended due to outstanding billing."
-                : "Company access is temporarily suspended. Contact the Platform Administrator."}
+                ? "Company access restricted"
+                : "Company access is temporarily suspended."}
             </strong>
+            {billing && <p>Outstanding annual billing</p>}
+            <p style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+              <strong>Reason: </strong>
+              {data.suspension_note || "No suspension note was recorded."}
+            </p>
+            {!billing && <p>Contact the Platform Administrator.</p>}
             {billing && (
               <>
                 <p>
-                  Your organisation&apos;s normal workspace access is restricted
-                  until the outstanding annual invoice is resolved. You can
-                  still access Billing to review the invoice and submit payment
-                  proof.
+                  You can still access Billing to review the outstanding invoice
+                  and submit payment proof.
                 </p>
                 <Link className="button primary" href="/hr/billing">
                   Open Billing

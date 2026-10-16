@@ -11,6 +11,11 @@ export type Membership = {
   vision?: string;
 };
 export type Session = {
+  suspension_note?: string;
+  suspension_label?: string;
+  suspended_at?: string | null;
+  suspended_by?: string | null;
+  allowed_areas?: ("billing" | "account")[];
   restricted_access?: boolean;
   suspension_reason?: "BILLING_OVERDUE" | "ADMIN_SUSPENDED" | null;
   suspension_message?: string;

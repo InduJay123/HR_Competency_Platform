@@ -21,10 +21,13 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = EmployeeSerializer
 
     def get_queryset(self):
-        member = membership(self.request)
+        member = membership(self.request, suspended_access="account" if self.action == "photo" else None)
         qs = EmployeeProfile.objects.select_related("membership__user").filter(
             company=member.company, membership__user__is_superuser=False
         )
+        if not member.company.active:
+            # Account recovery permits only this membership's own photo.
+            qs = qs.filter(membership=member)
         if not member.is_hr or (
             self.action == "list" and self.request.query_params.get("include_inactive") != "true"
         ):

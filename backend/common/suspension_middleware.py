@@ -30,6 +30,11 @@ class SuspendedCompanyMiddleware:
         if member.is_head_hr:
             if request.path in self.ACCOUNT_PATHS:
                 return self.get_response(request)
+            own_photo = re.fullmatch(r"/api/v1/employees/([0-9a-fA-F-]{36})/photo/", request.path)
+            if own_photo and request.method in {"GET", "HEAD"}:
+                from apps.organisation.models import EmployeeProfile
+                if EmployeeProfile.objects.filter(pk=own_photo[1], membership=member, company=member.company).exists():
+                    return self.get_response(request)
             billing_file = re.fullmatch(r"/api/v1/billing/(?:invoices/[0-9a-fA-F-]{36}/pdf|payment-proofs/[0-9a-fA-F-]{36}/file)/", request.path)
             if billing_suspended(member) and (request.path in self.BILLING_PATHS or billing_file):
                 return self.get_response(request)

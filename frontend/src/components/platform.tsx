@@ -31,6 +31,7 @@ type Company = {
   declared_employees: number | null;
   active: boolean;
   suspension_reason?: "BILLING_OVERDUE" | "ADMIN_SUSPENDED" | null;
+  suspension_note?: string;
   created_at: string;
   approved_at: string;
   people: number;
@@ -210,7 +211,7 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
     setBusy(true);
     try {
       await post(`platform/companies/${selected.id}/access/`, {
-        active: !selected.active,
+        active: (e.nativeEvent as SubmitEvent).submitter?.getAttribute("value") === "restore",
         note: new FormData(e.currentTarget).get("note"),
         suspension_reason: new FormData(e.currentTarget).get("suspension_reason") || "ADMIN_SUSPENDED",
       });
@@ -512,20 +513,20 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
               <p>
                 {selected.active
                   ? "Suspending access blocks company operations. For outstanding billing, the Chief Steward retains Billing and My account access. Saved records are retained."
-                  : "Restore access for approved company members."}
+                  : "Update the suspension category and note, or restore access for approved company members."}
               </p>
               <form onSubmit={access}>
-                {selected.active && <label>Suspension reason<select name="suspension_reason" defaultValue="ADMIN_SUSPENDED"><option value="ADMIN_SUSPENDED">Administrative suspension</option><option value="BILLING_OVERDUE">Outstanding yearly billing</option></select></label>}
-                {!selected.active && <p>Suspension reason: {selected.suspension_reason === "BILLING_OVERDUE" ? "Outstanding yearly billing" : "Administrative suspension"}</p>}
+                <label>Suspension reason<select key={`${selected.id}-${selected.suspension_reason}`} name="suspension_reason" defaultValue={selected.suspension_reason || "ADMIN_SUSPENDED"}><option value="ADMIN_SUSPENDED">Administrative</option><option value="BILLING_OVERDUE">Billing overdue</option></select></label>
                 <label>
-                  Reason
-                  <textarea required name="note" maxLength={2000} />
+                  Reason / note (shown to the Chief Steward)
+                  <textarea key={`${selected.id}-${selected.suspension_note}`} required name="note" maxLength={2000} defaultValue={selected.suspension_note || ""} />
                 </label>
                 <Button disabled={busy} variant="neutral">
                   {selected.active
                     ? "Suspend company access"
-                    : "Restore company access"}
+                    : "Update suspension"}
                 </Button>
+                {!selected.active && <Button disabled={busy} variant="neutral" value="restore">Restore company access</Button>}
               </form>
             </Card>
           </>
@@ -724,3 +725,4 @@ function Pricing({
     </Card>
   );
 }
+

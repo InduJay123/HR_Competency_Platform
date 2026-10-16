@@ -164,3 +164,52 @@ class SuspensionTests(TestCase):
         session.save()
         self.assertEqual(self.client.get("/api/v1/billing/current/").status_code, 403)
         self.assertEqual(self.client.get("/api/v1/auth/profile/").status_code, 403)
+
+    def test_actual_suspension_note_and_category_correction_without_reactivation(self):
+        for category in ["ADMIN_SUSPENDED", "BILLING_OVERDUE"]:
+            note = "Admin supplied explanation: " + category
+            response = self.admin.post(f"/api/v1/platform/companies/{self.company.pk}/access/", {"active": False, "suspension_reason": category, "note": note}, format="json")
+            self.assertEqual(response.status_code, 200)
+            state = self.client.get("/api/v1/auth/session/").data
+            self.assertEqual(state["suspension_note"], note)
+            self.assertEqual(state["suspension_reason"], category)
+            self.assertIsNotNone(state["suspended_at"])
+            self.assertIsNotNone(state["suspended_by"])
+            self.assertEqual(state["billing_access"], category == "BILLING_OVERDUE")
+            self.assertEqual(self.client.get("/api/v1/billing/current/").status_code, 200 if category == "BILLING_OVERDUE" else 403)
+            self.company.refresh_from_db()
+            self.assertFalse(self.company.active)
+            other = self.acting(self.other_head).get("/api/v1/auth/session/").data
+            self.assertNotIn(note, str(other))
+            self.assertNotIn(note, str(APIClient().get("/api/v1/auth/session/").data))
+
+    def test_session_allowed_areas_match_billing_permission(self):
+        state = self.client.get("/api/v1/auth/session/").data
+        self.assertEqual(state["allowed_areas"], ["billing", "account"])
+        self.assertEqual(state["suspension_label"], self.company.get_suspension_reason_display())
+        self.company.suspension_reason = "ADMIN_SUSPENDED"
+        self.company.save()
+        state = self.client.get("/api/v1/auth/session/").data
+        self.assertEqual(state["allowed_areas"], ["account"])
+        self.assertFalse(state["billing_access"])
+
+    def test_suspended_own_employee_photo_only(self):
+        from io import BytesIO
+        from PIL import Image
+        stream = BytesIO()
+        Image.new("RGB", (2, 2)).save(stream, format="PNG")
+        profile = self.head.profile
+        profile.avatar_data = stream.getvalue()
+        profile.save()
+        for category in ["BILLING_OVERDUE", "ADMIN_SUSPENDED"]:
+            self.company.suspension_reason = category
+            self.company.save()
+            response = self.client.get(f"/api/v1/employees/{profile.pk}/photo/")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.content, stream.getvalue())
+            self.assertEqual(response["Cache-Control"], "private, no-store")
+            for other in [self.staff, self.other_head]:
+                self.assertEqual(self.client.get(f"/api/v1/employees/{other.profile.pk}/photo/").status_code, 403)
+            self.assertEqual(self.client.get(f"/api/v1/employees/{profile.pk}/").status_code, 403)
+            self.assertEqual(self.client.post(f"/api/v1/employees/{profile.pk}/photo/", {}).status_code, 403)
+            self.assertEqual(self.client.get("/api/v1/auth/profile/").status_code, 200)

@@ -20,7 +20,9 @@ class IsPlatformAdmin(BasePermission):
 
 
 def company_data(company):
+    from common.suspension import suspension_details
     return {
+        **suspension_details(company),
         "id": company.id,
         "name": company.name,
         "stewardship_code": company.stewardship_code,
