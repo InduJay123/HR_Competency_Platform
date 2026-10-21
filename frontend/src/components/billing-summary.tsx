@@ -50,7 +50,7 @@ export function BillingSummary() {
             {invoice.status === "PAID"
               ? "Paid"
               : invoice.status === "PAYMENT_PROOF_SUBMITTED"
-                ? "Payment proof submitted. Awaiting Super Admin verification."
+                ? "Payment proof submitted. Awaiting Admin verification."
                 : "Awaiting payment"}
             {invoice.is_overdue && " · Overdue"} · Due {invoice.due_at}
           </p>

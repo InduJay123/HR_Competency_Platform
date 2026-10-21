@@ -95,10 +95,6 @@ export function RestrictedWorkspace({
             {!billing && <p>Contact the Platform Administrator.</p>}
             {billing && (
               <>
-                <p>
-                  You can still access Billing to review the outstanding invoice
-                  and submit payment proof.
-                </p>
                 <Link className="button primary" href="/hr/billing">
                   Open Billing
                 </Link>

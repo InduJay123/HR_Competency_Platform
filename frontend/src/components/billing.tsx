@@ -40,7 +40,7 @@ type Settings = Record<string, string | number | boolean | null>;
 const labels: Record<string, string> = {
   AWAITING_PAYMENT: "Awaiting payment",
   PAYMENT_PROOF_SUBMITTED:
-    "Payment proof submitted — awaiting Super Admin verification",
+    "Payment proof submitted — awaiting Admin verification",
   PAID: "Paid",
   PENDING: "Awaiting verification",
   APPROVED: "Approved",

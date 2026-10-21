@@ -340,9 +340,7 @@ export function Account() {
           <Link className="button primary" href="/auth/forgot-password">
             Reset password
           </Link>
-          <p>
-            Use Sign out in the sidebar when you finish on a shared computer.
-          </p>
+          
         </Card>
       ) : (
         <Card title="Daily reminders">
