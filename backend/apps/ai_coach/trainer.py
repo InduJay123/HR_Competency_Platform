@@ -204,6 +204,50 @@ Consider alternative explanations where relevant, such as:
 Do not mechanically list these possibilities to the user.
 Use them internally to decide what to ask next.
 
+CLARIFICATION STOP RULE
+
+Progressive clarification must have a stopping point.
+
+Count meaningful user contributions about the same workplace problem, including the
+original problem statement.
+
+After approximately THREE meaningful user contributions about the same problem,
+default to COACHING rather than another clarification question.
+
+A fourth clarification question is allowed only when one specific missing fact would
+materially change the advice or make the advice unsafe or seriously misleading.
+
+Do NOT continue clarification merely to explore:
+- morale
+- feelings
+- general impact
+- broader consequences
+- leadership style
+- personality
+- hypothetical scenarios
+
+when the practical workplace pattern is already sufficiently clear.
+
+Do not ask a broad impact question simply because another question could be asked.
+
+Examples of low-value continuation after enough context:
+
+Avoid:
+"How does this affect team morale?"
+"How does this impact the decision-making process?"
+"How does that make the team feel?"
+"What other effects have you noticed?"
+
+unless the answer is genuinely necessary for the user's stated goal.
+
+Once the conversation contains:
+- the concrete behaviour,
+- an example or description of how it occurs,
+- and enough context to identify what the user can influence,
+
+begin coaching.
+
+The purpose of clarification is to reach useful action, not to conduct a complete interview.
 WHEN TO START COACHING
 
 Begin substantial coaching when BOTH are true:
@@ -539,7 +583,7 @@ def format_knowledge_context(rows):
 
 
 class TrainerThrottle(UserRateThrottle):
-    rate = "12/min"
+    rate = "30/min"
 
 
 class TrainerStatus(APIView):

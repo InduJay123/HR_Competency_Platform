@@ -1,6 +1,4 @@
-import calendar
-from datetime import date, timedelta
-from decimal import ROUND_HALF_UP, Decimal
+from datetime import timedelta
 from zoneinfo import ZoneInfo
 
 from django.db import transaction
@@ -38,32 +36,26 @@ def ensure_invoice(company_id, day=None):
     config = BillingSettings.objects.filter(pk=1, active=True).first()
     if not config or not company.active:
         return None
-    issued = date(
-        day.year,
-        config.issue_month,
-        min(config.issue_day, calendar.monthrange(day.year, config.issue_month)[1]),
-    )
-    if day < issued:
-        return None
+    issued = day
     sequence, _ = InvoiceSequence.objects.get_or_create(billing_year=day.year)
     sequence = InvoiceSequence.objects.select_for_update().get(pk=sequence.pk)
     sequence.value += 1
     sequence.save(update_fields=["value"])
-    snapshot = model_to_dict(config)
+    snapshot = model_to_dict(
+        config, exclude=["invoice_prefix", "issue_month", "issue_day", "tax_number", "tax_rate"]
+    )
+    # Version the frozen presentation so historical invoices retain their tax details.
+    snapshot["billing_version"] = 2
     snapshot["annual_fee"] = str(config.annual_fee)
-    snapshot["tax_rate"] = str(config.tax_rate)
     snapshot["customer_name"] = company.name
     snapshot["customer_address"] = company.country  # No address field exists on Company.
-    tax = (config.annual_fee * config.tax_rate / Decimal(100)).quantize(
-        Decimal("0.01"), rounding=ROUND_HALF_UP
-    )
     invoice = CompanyInvoice.objects.create(
         company=company,
         billing_year=day.year,
-        invoice_number=f"{config.invoice_prefix}-{day.year}-{sequence.value:06d}",
+        invoice_number=f"BTFL-{day.year}-{sequence.value:06d}",
         amount=config.annual_fee,
-        tax_amount=tax,
-        total_amount=config.annual_fee + tax,
+        tax_amount=0,
+        total_amount=config.annual_fee,
         currency=config.currency,
         issued_at=issued,
         due_at=issued + timedelta(days=config.due_days),

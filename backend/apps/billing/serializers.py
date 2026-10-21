@@ -1,4 +1,3 @@
-import calendar
 import re
 
 from rest_framework import serializers
@@ -12,7 +11,8 @@ class SettingsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BillingSettings
-        exclude = ["id"]
+        # Retain legacy columns in the database, but no longer configure them.
+        exclude = ["id", "invoice_prefix", "issue_month", "issue_day", "tax_number", "tax_rate"]
 
     def validate(self, attrs):
         values = (
@@ -21,27 +21,19 @@ class SettingsSerializer(serializers.ModelSerializer):
             else {}
         )
         values.update(attrs)
-        month, day = values.get("issue_month", 1), values.get("issue_day", 1)
-        if not 1 <= month <= 12 or not 1 <= day <= calendar.monthrange(2000, month)[1]:
-            raise serializers.ValidationError("Enter a valid annual issue date.")
         if not 0 <= values.get("due_days", 30) <= 365:
             raise serializers.ValidationError("Due period must be between 0 and 365 days.")
-        if not 0 <= values.get("tax_rate", 0) <= 100:
-            raise serializers.ValidationError("Tax rate must be between 0 and 100.")
         fee = values.get("annual_fee")
         if fee is not None and not 0 <= fee <= 499999999999:
             raise serializers.ValidationError("Annual fee is outside the supported range.")
         if values.get("currency") and not re.fullmatch(r"[A-Z]{3}", values["currency"]):
             raise serializers.ValidationError("Currency must be a three-letter uppercase code.")
-        if values.get("invoice_prefix") and not re.fullmatch(r"[A-Za-z0-9-]{1,16}", values["invoice_prefix"]):
-            raise serializers.ValidationError("Invoice prefix may contain letters, numbers and hyphens.")
         if values.get("active") and (
             fee is None
             or any(
                 not str(values.get(k, "")).strip()
                 for k in [
                     "currency",
-                    "invoice_prefix",
                     "issuer_name",
                     "bank_name",
                     "bank_account_name",
@@ -50,7 +42,7 @@ class SettingsSerializer(serializers.ModelSerializer):
             )
         ):
             raise serializers.ValidationError(
-                "Configure annual fee, currency, prefix, issuer and bank account before activating billing."
+                "Configure annual fee, currency, issuer and bank account before activating billing."
             )
         return attrs
 

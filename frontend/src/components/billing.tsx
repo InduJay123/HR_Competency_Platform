@@ -26,6 +26,7 @@ type Invoice = {
   invoice_number: string;
   amount: string;
   tax_amount: string;
+  snapshot?: { billing_version?: number };
   total_amount: string;
   currency: string;
   issued_at: string;
@@ -79,12 +80,7 @@ function InvoiceCard({ invoice: i }: { invoice: Invoice }) {
             {i.currency} {i.amount}
           </dd>
         </div>
-        <div>
-          <dt>Tax / VAT</dt>
-          <dd>
-            {i.currency} {i.tax_amount}
-          </dd>
-        </div>
+        
         <div>
           <dt>Total</dt>
           <dd>{money(i)}</dd>
@@ -250,7 +246,7 @@ function InvoiceTable({
 }
 
 const settingsGroups = {
-  "Annual billing": ["annual_fee", "currency", "invoice_prefix"],
+  "Annual billing": ["annual_fee", "currency"],
   "Invoice issuer": [
     "issuer_name",
     "issuer_address",
@@ -266,13 +262,11 @@ const settingsGroups = {
     "swift_code",
     "payment_instructions",
   ],
-  "Invoice timing": ["issue_month", "issue_day", "due_days"],
-  Tax: ["tax_number", "tax_rate"],
+  "Payment timing": ["due_days"],
 };
 const fieldLabels: Record<string, string> = {
   annual_fee: "Annual default fee",
   currency: "Currency",
-  invoice_prefix: "Invoice prefix",
   issuer_name: "Legal / company name",
   issuer_address: "Address",
   issuer_registration_number: "Registration number",
@@ -284,11 +278,7 @@ const fieldLabels: Record<string, string> = {
   bank_branch: "Branch",
   swift_code: "SWIFT code",
   payment_instructions: "Payment instructions",
-  issue_month: "Issue month",
-  issue_day: "Issue day",
   due_days: "Payment due period (days)",
-  tax_number: "Tax / VAT number",
-  tax_rate: "Tax / VAT rate (%)",
 };
 const metricLabels: Record<string, string> = {
   total_companies: "Total companies",
@@ -298,13 +288,7 @@ const metricLabels: Record<string, string> = {
   proofs_awaiting_review: "Proofs awaiting review",
   overdue: "Overdue",
 };
-const numeric = new Set([
-  "annual_fee",
-  "issue_month",
-  "issue_day",
-  "due_days",
-  "tax_rate",
-]);
+const numeric = new Set(["annual_fee", "due_days"]);
 
 export function Billing({ platform = false }: { platform?: boolean }) {
   const tabs = platform

@@ -19,6 +19,7 @@ const invoice = {
   invoice_number: "TEST-2026-000001",
   amount: "1000",
   tax_amount: "0",
+  snapshot: { billing_version: 2 },
   total_amount: "1000",
   currency: "LKR",
   issued_at: "2026-01-01",
@@ -59,6 +60,7 @@ afterEach(() => {
 it("automatically loads the current invoice and switches Chief Steward tabs with keyboard", async () => {
   render(<Billing />);
   expect(await screen.findByText(invoice.invoice_number)).toBeTruthy();
+  expect(screen.queryByText("Tax / VAT")).toBeNull();
   expect(screen.queryByText(/Generate Invoice/i)).toBeNull();
   const current = screen.getByRole("tab", { name: "Current Invoice" });
   fireEvent.keyDown(current, { key: "ArrowRight" });
@@ -195,4 +197,50 @@ it("keeps one role-appropriate sidebar entry and responsive wrapping rules", () 
   const css = readFileSync("src/app/billing.css", "utf8");
   expect(css).toContain("flex-wrap: wrap");
   expect(css).toContain("min-width: 0");
+});
+
+it("loads simplified settings and saves activation without removed fields", async () => {
+  render(<Billing platform />);
+  await screen.findByText("Total companies");
+  fireEvent.click(screen.getByRole("tab", { name: "Billing Settings" }));
+  for (const label of [
+    "Invoice prefix",
+    "Issue month",
+    "Issue day",
+    "Tax / VAT number",
+    "Tax / VAT rate (%)",
+  ])
+    expect(screen.queryByLabelText(label)).toBeNull();
+  expect(screen.getByRole("heading", { name: "Payment timing" })).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "Tax" })).toBeNull();
+  for (const [label, value] of [
+    ["Annual default fee", "600000"],
+    ["Currency", "LKR"],
+    ["Legal / company name", "BTFL"],
+    ["Bank name", "Bank"],
+    ["Account name", "BTFL"],
+    ["Account number", "123"],
+    ["Payment due period (days)", "30"],
+  ])
+    fireEvent.change(screen.getByLabelText(label), { target: { value } });
+  fireEvent.click(screen.getByLabelText("Activate annual billing"));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Save Billing Settings" }),
+  );
+  await waitFor(() =>
+    expect(api).toHaveBeenCalledWith("platform/billing/settings/", {
+      method: "PUT",
+      body: JSON.stringify({
+        active: true,
+        annual_fee: 600000,
+        currency: "LKR",
+        issuer_name: "BTFL",
+        bank_name: "Bank",
+        bank_account_name: "BTFL",
+        bank_account_number: "123",
+        due_days: 30,
+      }),
+    }),
+  );
+  expect(await screen.findByText(/Billing settings saved/)).toBeTruthy();
 });

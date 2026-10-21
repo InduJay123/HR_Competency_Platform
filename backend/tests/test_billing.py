@@ -1,5 +1,6 @@
 import io
-from datetime import timedelta
+from datetime import date, timedelta
+from decimal import Decimal
 from unittest.mock import patch
 
 import pymupdf as fitz
@@ -187,7 +188,7 @@ class BillingTests(TestCase):
         self.invoice.status = "PAID"
         self.assertFalse(overdue(self.invoice))
 
-    def test_settings_freeze_and_future_issue(self):
+    def test_settings_freeze_and_no_fixed_issue_date(self):
         self.settings.annual_fee = 2000
         self.settings.issuer_name = "New issuer"
         self.settings.save()
@@ -198,9 +199,10 @@ class BillingTests(TestCase):
         self.settings.issue_month = 12
         self.settings.issue_day = 31
         self.settings.save()
-        self.assertIsNone(
-            ensure_invoice(self.company.pk, today().replace(year=today().year + 1, month=1, day=1))
-        )
+        day = today().replace(year=today().year + 1, month=1, day=1)
+        invoice = ensure_invoice(self.company.pk, day)
+        self.assertEqual(invoice.issued_at, day)
+        self.assertEqual(invoice.due_at, day + timedelta(days=30))
 
     def test_pdf_generation_storage_and_no_secret(self):
         response = self.client.get(f"/api/v1/billing/invoices/{self.invoice.pk}/pdf/?download=1")
@@ -209,6 +211,8 @@ class BillingTests(TestCase):
             text = "".join(page.get_text() for page in doc)
             self.assertIn(self.invoice.invoice_number, text)
             self.assertIn("Test issuer", text)
+            self.assertNotIn("Tax", text)
+            self.assertNotIn("VAT", text)
         self.assertEqual(self.put.call_args.kwargs["bucket"], "billing-invoices")
         self.invoice.refresh_from_db()
         self.assertTrue(self.invoice.invoice_storage_path.endswith(f"/{self.invoice.pk}.pdf"))
@@ -221,15 +225,97 @@ class BillingTests(TestCase):
             self.client.put("/api/v1/platform/billing/settings/", {}, format="json").status_code, 403
         )
         data = self.admin.get("/api/v1/platform/billing/settings/").data
-        data["issue_month"] = 13
+        removed = ["invoice_prefix", "issue_month", "issue_day", "tax_number", "tax_rate"]
+        for field in removed:
+            self.assertNotIn(field, data)
+        data["due_days"] = 366
         self.assertEqual(
             self.admin.put("/api/v1/platform/billing/settings/", data, format="json").status_code, 400
         )
-        data["issue_month"] = 1
+        data["due_days"] = 30
         self.assertEqual(
             self.admin.put("/api/v1/platform/billing/settings/", data, format="json").status_code, 200
         )
         self.assertTrue(CompanyInvoice.objects.filter(company=self.other).exists())
+
+    def test_activation_ignores_legacy_fields_and_keeps_operational_requirements(self):
+        self.settings.invoice_prefix = ""
+        self.settings.issue_month = 0
+        self.settings.issue_day = 0
+        self.settings.tax_rate = 999
+        self.settings.active = False
+        self.settings.save()
+        data = self.admin.get("/api/v1/platform/billing/settings/").data
+        data["active"] = True
+        for field in ["annual_fee", "currency", "issuer_name", "bank_name",
+                      "bank_account_name", "bank_account_number"]:
+            invalid = {**data, field: None if field == "annual_fee" else ""}
+            self.assertEqual(self.admin.put(
+                "/api/v1/platform/billing/settings/", invalid, format="json"
+            ).status_code, 400)
+        response = self.admin.put("/api/v1/platform/billing/settings/", data, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.settings.refresh_from_db()
+        self.assertTrue(self.settings.active)
+        self.assertEqual(self.settings.tax_rate, 999)
+        self.assertEqual(self.settings.issue_month, 0)
+
+    def test_creation_date_automatic_number_and_fee_only_despite_legacy_tax(self):
+        self.settings.tax_rate = 18
+        self.settings.tax_number = "OLD-VAT-123"
+        self.settings.issue_month = 12
+        self.settings.issue_day = 31
+        self.settings.annual_fee = Decimal("600000")
+        self.settings.save()
+        with patch("apps.billing.services.today", return_value=date(2026, 10, 21)):
+            invoice = ensure_invoice(self.other.pk)
+            self.assertEqual(ensure_invoice(self.other.pk).pk, invoice.pk)
+        self.assertRegex(invoice.invoice_number, r"^BTFL-2026-\d{6}$")
+        self.assertEqual(invoice.issued_at, date(2026, 10, 21))
+        self.assertEqual(invoice.due_at, date(2026, 11, 20))
+        self.assertEqual(invoice.total_amount, Decimal("600000"))
+        self.assertEqual(invoice.tax_amount, 0)
+        for key in ["invoice_prefix", "issue_month", "issue_day", "tax_number", "tax_rate"]:
+            self.assertNotIn(key, invoice.snapshot)
+        from apps.billing.files import render_pdf
+        with fitz.open(stream=render_pdf(invoice), filetype="pdf") as doc:
+            text = "".join(page.get_text() for page in doc)
+        self.assertNotIn("VAT", text)
+        self.assertNotIn("Tax", text)
+        self.assertNotIn("OLD-VAT-123", text)
+        self.assertIn("600,000.00", text)
+
+    def test_historical_invoice_and_proof_remain_frozen(self):
+        from apps.billing.files import render_pdf
+
+        self.invoice.snapshot.pop("billing_version")
+        self.invoice.snapshot.update(tax_rate="18.00", tax_number="OLD-VAT-123")
+        self.invoice.invoice_number = "LEGACY-2026-000001"
+        self.invoice.tax_amount = Decimal("180")
+        self.invoice.total_amount = Decimal("1180")
+        self.invoice.save()
+        self.upload()
+        self.invoice.refresh_from_db()
+        before = CompanyInvoice.objects.values().get(pk=self.invoice.pk)
+        proof_before = list(PaymentProof.objects.values())
+        pdf_before = render_pdf(self.invoice)
+        data = self.admin.get("/api/v1/platform/billing/settings/").data
+        data.update(annual_fee="600000", issuer_name="New issuer", due_days=15)
+        self.assertEqual(self.admin.put(
+            "/api/v1/platform/billing/settings/", data, format="json"
+        ).status_code, 200)
+        self.assertEqual(ensure_invoice(self.company.pk).pk, self.invoice.pk)
+        self.assertEqual(CompanyInvoice.objects.values().get(pk=self.invoice.pk), before)
+        self.assertEqual(list(PaymentProof.objects.values()), proof_before)
+        self.invoice.refresh_from_db()
+        with fitz.open(stream=pdf_before, filetype="pdf") as old_doc, fitz.open(
+            stream=render_pdf(self.invoice), filetype="pdf"
+        ) as new_doc:
+            old_text = "".join(page.get_text() for page in old_doc)
+            new_text = "".join(page.get_text() for page in new_doc)
+        self.assertEqual(old_text, new_text)
+        self.assertIn("OLD-VAT-123", new_text)
+        self.assertIn("1,180.00", new_text)
 
     def test_storage_failure_rolls_back_submission(self):
         from apps.evidence.storage import StorageUnavailable

@@ -333,7 +333,7 @@ function CommitmentResults({
               </span>
             ),
           )}
-          <small>All matching results · As of {data.as_of}</small>
+          
         </div>
       )}
       {!data ? (

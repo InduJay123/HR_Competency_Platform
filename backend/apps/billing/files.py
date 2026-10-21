@@ -49,14 +49,22 @@ def render_pdf(invoice):
 
     if overdue(invoice):
         status += " (overdue)"
+    issuer_fields = ["issuer_address", "issuer_registration_number", "issuer_email", "issuer_phone"]
+    tax_row = ""
+    if s.get("billing_version", 1) < 2:
+        issuer_fields.insert(2, "tax_number")
+        tax_row = (
+            f'<tr><td>Tax / VAT ({e(s.get("tax_rate"))}%)</td>'
+            f'<td>{invoice.tax_amount:,.2f}</td></tr>'
+        )
     html = f"""<html><body><h1>ANNUAL INVOICE</h1><h2>{e(s["issuer_name"])}</h2>
-    <p>{details(["issuer_address", "issuer_registration_number", "tax_number", "issuer_email", "issuer_phone"])}</p>
+    <p>{details(issuer_fields)}</p>
     <hr><h2>{e(invoice.invoice_number)}</h2>
     <p>Billing year: {invoice.billing_year}<br>Issued: {invoice.issued_at}<br>Due: {invoice.due_at}<br>Status: {e(status)}</p>
     <h3>Bill to</h3><p>{details(["customer_name", "customer_address"])}</p>
     <table><tr><th>Description</th><th>Amount ({e(invoice.currency)})</th></tr>
     <tr><td>Annual platform fee - {invoice.billing_year}</td><td>{invoice.amount:,.2f}</td></tr>
-    <tr><td>Tax / VAT ({e(s["tax_rate"])}%)</td><td>{invoice.tax_amount:,.2f}</td></tr>
+    {tax_row}
     <tr><th>Total due</th><th>{invoice.total_amount:,.2f}</th></tr></table>
     <h3>Payment details</h3><p>{details(["bank_name", "bank_account_name", "bank_account_number", "bank_branch", "swift_code"])}</p>
     <p>Payment reference: <b>{e(invoice.invoice_number)}</b></p>
