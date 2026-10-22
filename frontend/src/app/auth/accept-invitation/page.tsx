@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { post } from "@/lib/api";
 import { Button, Feedback, Loading } from "@/components/ui";
-import { AuthHero } from "@/components/auth-brand";
+import { AuthHero, MobileAuthBrand } from "@/components/auth-brand";
 type Invitation = {
   email: string;
   first_name: string;
@@ -45,6 +45,7 @@ export default function AcceptInvitation() {
     <main className="signin">
       <AuthHero />
       <div className="signin-form">
+        <MobileAuthBrand />
         <p className="eyebrow">
           {invite ? "INVITATION VERIFIED" : "YOUR NEXT CHAPTER"}
         </p>

@@ -6,7 +6,6 @@ import {
   createContext,
   useContext,
   useEffect,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -14,7 +13,7 @@ import { api, post, session } from "@/lib/api";
 import { confirmLeaveDraft } from "@/lib/draft-guard";
 import type { Session, Employee, Context } from "@/lib/types";
 import { Button, Feedback, Loading } from "./ui";
-import { Brand } from "./brand";
+import { Brand } from "./brand"; import { NavigationShell } from "./navigation-shell";
 import { CompanyLogo } from "./company-logo";
 import { Trainer } from "./trainer";
 import { Tours } from "./tours";
@@ -27,52 +26,14 @@ export function Shell({ children }: { children: ReactNode }) {
   const [data, setData] = useState<Session | null>(null),
     [profile, setProfile] = useState<Employee | null>(null),
     [error, setError] = useState(""),
-    [open, setOpen] = useState(false),
     [search, setSearch] = useState("");
   const router = useRouter(),
-    path = usePathname(),
-    drawer = useRef<HTMLElement>(null),
-    menuButton = useRef<HTMLButtonElement>(null),
-    restoreMenuFocus = useRef(false);
+    path = usePathname();
   useEffect(() => {
     if (data && !data.restricted_access && path.startsWith("/manager") && !data.contexts?.includes("manager")) {
       router.replace("/employee/dashboard");
     }
   }, [data, path, router]);
-  useEffect(() => {
-    if (!open) {
-      if (restoreMenuFocus.current) {
-        menuButton.current?.focus();
-        restoreMenuFocus.current = false;
-      }
-      return;
-    }
-    drawer.current?.querySelector<HTMLButtonElement>("button")?.focus();
-    function handleKey(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        restoreMenuFocus.current = true;
-        setOpen(false);
-      }
-      if (event.key === "Tab") {
-        const controls = drawer.current?.querySelectorAll<HTMLElement>(
-          "a[href],button:not([disabled]),select:not([disabled])",
-        );
-        if (!controls?.length) return;
-        const first = controls[0],
-          last = controls[controls.length - 1];
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first.focus();
-        }
-      }
-    }
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, [open]);
   useEffect(() => {
     const refresh = () => {
       session()
@@ -130,7 +91,7 @@ export function Shell({ children }: { children: ReactNode }) {
             ? "/employee/reviews"
             : `/${context}/dashboard`,
       );
-      setOpen(false);
+
       return true;
     } catch (e) {
       setError((e as Error).message);
@@ -207,33 +168,7 @@ export function Shell({ children }: { children: ReactNode }) {
   return (
     <SessionContext value={data}>
       <Tours allowed={data.contexts || []} onContextChange={change}>
-        <div className="workspace">
-          <a href="#main" className="skip-link">
-            Skip to content
-          </a>
-          <aside
-            ref={drawer}
-            className={`sidebar${open ? " expanded" : ""}${stewardGuy ? " sidebar-steward-guy" : ""}`}
-            role={open ? "dialog" : undefined}
-            aria-modal={open ? true : undefined}
-            aria-label={open ? "Workspace navigation" : undefined}
-            onClick={(event) => {
-              if ((event.target as HTMLElement).closest("a")) setOpen(false);
-            }}
-          >
-            {open && (
-              <Button
-                className="menu-toggle"
-                variant="neutral"
-                onClick={() => {
-                  restoreMenuFocus.current = true;
-                  setOpen(false);
-                }}
-              >
-                Close menu
-              </Button>
-            )}
-            <Link href={`/${role}/dashboard`} className="brand">
+        <NavigationShell className="workspace" sidebarClassName={stewardGuy ? "sidebar sidebar-steward-guy" : "sidebar"} navigation={<>            <Link href={`/${role}/dashboard`} className="brand desktop-nav-brand">
               <Brand />
             </Link>
              <span className="identity-role">{chief ? "Chief Steward" : stewardGuy ? "Steward Guy" : "Company administrator"}</span>
@@ -244,7 +179,7 @@ export function Shell({ children }: { children: ReactNode }) {
                   key={url}
                   href={url}
                   aria-current={path === url ? "page" : undefined}
-                  onClick={() => setOpen(false)}
+
                 >
                   <NavIcon name={routeIcon(url)} />
                   {label}
@@ -329,8 +264,8 @@ export function Shell({ children }: { children: ReactNode }) {
                 Sign out
               </Button>
             </div>
-          </aside>
-          <div className="workspace-main" inert={open || undefined}>
+          </>}>
+          <a href="#main" className="skip-link">Skip to content</a><div className="workspace-main">
             <header>
               {(data.memberships?.length || 0) > 1 && (
                 <label>
@@ -347,15 +282,6 @@ export function Shell({ children }: { children: ReactNode }) {
                   </select>
                 </label>
               )}
-              <Button
-                ref={menuButton}
-                variant="neutral"
-                className="menu-toggle"
-                aria-expanded={open}
-                onClick={() => setOpen(!open)}
-              >
-                Menu
-              </Button>
               <div className="workspace-company">
                 {company?.logo_url && (
                   <CompanyLogo
@@ -461,8 +387,7 @@ export function Shell({ children }: { children: ReactNode }) {
               <footer>Powered by ICORENIC PVT LTD</footer>
             </main>
           </div>
-        </div>
-        {!open && <Trainer key={`${data.company_id}:${data.user?.id}`} />}
+<Trainer key={`${data.company_id}:${data.user?.id}`} /></NavigationShell>
       </Tours>
     </SessionContext>
   );

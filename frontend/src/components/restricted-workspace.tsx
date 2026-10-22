@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { Session } from "@/lib/types";
 import { post, session } from "@/lib/api";
-import { Brand } from "./brand";
+import { Brand } from "./brand"; import { NavigationShell } from "./navigation-shell";
 import { Button, Feedback } from "./ui";
 
 export function RestrictedWorkspace({
@@ -28,12 +28,8 @@ export function RestrictedWorkspace({
     if (!allowed) router.replace(destination);
   }, [allowed, destination, router]);
   return (
-    <div className="workspace restricted-workspace">
-      <aside
-        className="restricted-nav"
-        aria-label="Restricted workspace navigation"
-      >
-        <Link href={destination} aria-label="Workspace home">
+    <NavigationShell className="workspace restricted-workspace" sidebarClassName="restricted-nav" navigation={<>
+        <Link href={destination} aria-label="Workspace home" className="desktop-nav-brand">
           <Brand />
         </Link>
         <div>
@@ -74,7 +70,7 @@ export function RestrictedWorkspace({
         >
           Sign out
         </Button>
-      </aside>
+      </>}>
       <div className="workspace-main">
         <main id="main">
           <section
@@ -109,6 +105,5 @@ export function RestrictedWorkspace({
           {allowed && children}
         </main>
       </div>
-    </div>
-  );
+    </NavigationShell> );
 }

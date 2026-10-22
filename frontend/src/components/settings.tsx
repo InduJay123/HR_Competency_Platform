@@ -169,8 +169,7 @@ export function Settings() {
               }}
             />
             <small>
-              Transparent PNG recommended. PNG or JPEG, maximum 2 MB. Select a
-              file, then click Save company details.
+              PNG or JPEG, maximum 2 MB
             </small>
           </label>
           {logo && <p>Selected logo: {logo.name}</p>}

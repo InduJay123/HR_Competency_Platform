@@ -1,6 +1,14 @@
 import { Brand } from "./brand";
 import Image from "next/image";
 
+export function MobileAuthBrand() {
+  return (
+    <div className="auth-mobile-brand">
+      <Brand compact />
+    </div>
+  );
+}
+
 export function AuthHero({ recovery = false }: { recovery?: boolean }) {
   return (
     <section className="live-auth-hero">

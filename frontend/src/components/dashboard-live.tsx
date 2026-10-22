@@ -296,7 +296,7 @@ export function Dashboard({ role }: { role: "employee" | "manager" | "hr" }) {
                 
               </div>
               {data.departments.length ? (
-                <div className="table-scroll">
+                <div className="table-scroll" role="region" aria-label="Dashboard records" tabIndex={0}>
                   <table>
                     <thead>
                       <tr>

@@ -129,7 +129,7 @@ export function People({ manage = false }: { manage?: boolean }) {
         <Card title="People and reporting">
           {data?.results.length ? (
             <>
-              <div className="table-wrap">
+              <div className="table-wrap" role="region" aria-label="Company people" tabIndex={0}>
                 <table>
                   <thead>
                     <tr>

@@ -178,7 +178,7 @@ export function Cycles() {
           <Loading />
         ) : (
           <>
-            <div className="table-scroll">
+            <div className="table-scroll" role="region" aria-label="Review cycles" tabIndex={0}>
               <table>
                 <thead>
                   <tr>

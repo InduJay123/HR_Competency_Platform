@@ -21,6 +21,7 @@ vi.mock("@/lib/api", () => ({
 }));
 vi.mock("@/components/auth-brand", () => ({
   AuthHero: () => null,
+  MobileAuthBrand: () => null,
   EmailIcon: () => null,
 }));
 beforeEach(() => {

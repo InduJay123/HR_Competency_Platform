@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { post } from "@/lib/api";
 import { Button, Feedback } from "@/components/ui";
-import { AuthHero, RecoveryMark } from "@/components/auth-brand";
+import { AuthHero, RecoveryMark, MobileAuthBrand } from "@/components/auth-brand";
 export default function Reset() {
   const [error, setError] = useState(""),
     [success, setSuccess] = useState(""),
@@ -31,6 +31,7 @@ export default function Reset() {
     <main className="signin">
       <AuthHero recovery />
       <div className="signin-form recovery-form">
+        <MobileAuthBrand />
         <Link className="auth-back" href="/auth/login">
           ← Back to sign in
         </Link>

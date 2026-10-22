@@ -63,7 +63,7 @@ export function WorkList({
         <Card>
           {data?.results.length ? (
             <>
-              <div className="table-wrap">
+              <div className="table-wrap" role="region" aria-label="Work items" tabIndex={0}>
                 <table>
                   <thead>
                     <tr>

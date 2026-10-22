@@ -1,5 +1,53 @@
 # Deployment and recovery
 
+## Responsive refinement acceptance
+
+The final presentation-only layer is `frontend/src/app/responsive-refinement.css`.
+It hides the current `.live-auth-hero` (not just the retired `.hero-crop`) at
+768px and below. Login, recovery and invitation forms reuse `MobileAuthBrand`
+inside the form panel; the desktop brand composition stays visible above that
+breakpoint. Mobile registration also hides its large blue story panel.
+
+Mobile pages use page scrolling, full-width controls, compact branding, wrapping
+headers, single-column forms and small-screen metrics. Existing workspace drawer
+and platform horizontal navigation patterns remain. Tables keep their minimum
+readable widths inside labeled, keyboard-focusable scroll regions. Account,
+billing and growth tabs scroll horizontally with visible active states. Existing
+confirmation-dialog focus behavior is retained; growth dialogs stay inset by
+16px and scroll within the viewport. Review History and Team Development use
+single-column mobile layouts. No auth, API, permission, workflow or database
+changes are part of this refinement.
+
+Browser-based viewport acceptance is still required: this agent session has no
+available browser surface, so no screenshot or DOM scroll-width checks were
+performed. Do not treat compilation/unit tests as visual production sign-off.
+Test these viewport widths with browser zoom at 100%:
+
+- Mobile: 320, 360, 375, 390, 414, 430.
+- Tablet: 768, 820, 1024.
+- Desktop: 1280, 1440, 1920.
+
+At each width check normal/admin login, Chief Steward and Steward Guy dashboards,
+Platform Admin overview/company management, both billing views, My Account,
+Review History, a populated Review Detail and Team Development, and Growth Tools.
+Open the navigation drawer, a confirmation dialog and a growth dialog. Include
+long company/person names and populated tables. Verify keyboard focus, scrollable
+tabs, full-width form fields and visible primary actions. At widths <=768px the
+blue auth panel must be absent and the logo/tagline must appear only once.
+
+In DevTools, check `document.documentElement.scrollWidth <= window.innerWidth`.
+Only tables/tabs/dialogs should have intentional internal scrolling; auth panels
+must not. Review keyboard-open behavior on an actual phone, especially recovery
+forms and dialogs. The desktop composition needs comparison against the approved
+screens at 1280/1440/1920 before release.
+
+Code verification: typecheck and production build passed; focused login, logo,
+billing, development and history tests passed (41 tests). Full lint still reports
+the existing errors in `pillar-targets.tsx` and `review-form.tsx`. Changed TSX
+files have no lint errors. An extra settings-suite run found the unchanged
+`saves external logo URLs without uploading when no file is selected` test
+failing because it expects `logo_url` in a payload that no longer sends it.
+
 ## Separate Platform Administration portal
 
 The same Next.js frontend, Django backend and database serve both portals. No

@@ -5,7 +5,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { api, post, session } from "@/lib/api";
 import type { Employee } from "@/lib/types";
-import { AuthHero, EmailIcon } from "@/components/auth-brand";
+import { AuthHero, EmailIcon, MobileAuthBrand } from "@/components/auth-brand";
 import { Button, Feedback } from "@/components/ui";
 export default function Login({
   admin = false,
@@ -86,6 +86,7 @@ export default function Login({
     <main className="signin">
       <AuthHero />
       <div className="signin-form">
+        <MobileAuthBrand />
         {brand?.logo_url && (
           <CompanyLogo
             className="signin-company-logo"
@@ -95,7 +96,7 @@ export default function Login({
             name={brand.name}
           />
         )}
-        <div className="signin-wordmark">
+        <div className={`signin-wordmark${brand ? "" : " signin-product-wordmark"}`}>
           {brand?.name || "Beyond the Finish Line"}
         </div>
         <p className="eyebrow">

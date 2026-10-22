@@ -1,15 +1,19 @@
-export function Brand({ light = false }: { light?: boolean }) {
-  const primaryText = light
-    ? "rgba(255,255,255,0.82)"
-    : "#5f6876";
+export function Brand({
+  light = false,
+  compact = false,
+}: {
+  light?: boolean;
+  compact?: boolean;
+}) {
+  const primaryText = light ? "rgba(255,255,255,0.82)" : "#5f6876";
 
   const secondaryText = light
     ? "rgba(255,255,255,0.58)"
-    : "#8a94a3";
+    : compact
+      ? "#667386"
+      : "#8a94a3";
 
-  const lineColor = light
-    ? "rgba(255,255,255,0.7)"
-    : "#265cff";
+  const lineColor = light ? "rgba(255,255,255,0.7)" : "#265cff";
 
   return (
     <div
@@ -46,8 +50,9 @@ export function Brand({ light = false }: { light?: boolean }) {
             color: secondaryText,
           }}
         >
-          <span>Presenting the future of leadership performance appraisal</span>{" "}
-          
+          <span>
+            Presenting the future of leadership performance appraisal
+          </span>{" "}
         </p>
       </div>
     </div>

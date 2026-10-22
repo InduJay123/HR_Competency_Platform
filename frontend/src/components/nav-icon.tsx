@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 const icons: Record<string, ReactNode> = {
+  camera: <><path d="M8 5L10 3H14L16 5H20V20H4V5Z" /><circle cx="12" cy="12" r="4" /></>,
+  menu: <path d="M4 6H20M4 12H20M4 18H20" />,
+  close: <path d="M6 6L18 18M18 6L6 18" />,
   home: (
     <>
       <path className="icon-wash" d="M3 10L12 3L21 10V21H3Z" />

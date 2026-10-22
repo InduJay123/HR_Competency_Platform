@@ -106,7 +106,7 @@ export function ReviewList({
           </p>
         ) : (
           <>
-            <div className="table-scroll">
+            <div className="table-scroll" role="region" aria-label="Reviews" tabIndex={0}>
               <table>
                 <thead>
                   <tr>

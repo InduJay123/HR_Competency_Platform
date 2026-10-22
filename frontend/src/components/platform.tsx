@@ -5,8 +5,9 @@ import Image from "next/image";
 import { pictureError } from "@/lib/profile-picture";
 import { api, allPages, post, session } from "@/lib/api";
 import type { Session } from "@/lib/types";
-import { Brand } from "./brand";
+import { Brand } from "./brand"; import { NavigationShell } from "./navigation-shell";
 import { Billing } from "./billing";
+import { NavIcon } from "./nav-icon";
 import { RequestQueue, dateTime } from "./access";
 import { Button, Card, Feedback, Loading } from "./ui";
 
@@ -232,9 +233,8 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
       </main>
     );
   return (
-    <div className="platform-shell">
-      <aside className="platform-nav">
-        <Brand />
+    <NavigationShell className="platform-shell" sidebarClassName="platform-nav" navigation={<>
+        <div className="desktop-nav-brand"><Brand /></div>
         <span className="platform-label">PLATFORM ADMINISTRATION</span>
         <nav>
           {["Overview", "Company requests", "Companies", "Billing & Payments"].map((t) => (
@@ -275,7 +275,10 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
           <strong>{user.user?.first_name} {user.user?.last_name}</strong>
           <small>Platform Super Admin</small>
           <small className="platform-profile-email">{user.user?.email}</small>
-          <Button type="button" variant="neutral" disabled={uploading} onClick={() => photoInput.current?.click()}>{uploading ? "Uploading..." : "Change photo"}</Button>
+          <button className="platform-photo-action" type="button" disabled={uploading} onClick={() => photoInput.current?.click()}>
+            <NavIcon name="camera" />
+            {uploading ? "Uploading..." : "Change photo"}
+          </button>
             <input ref={photoInput} hidden
               aria-label="Change profile photo"
               type="file"
@@ -304,7 +307,7 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
             Sign out
           </Button>
         </div>
-      </aside>
+      </>}>
       <main className="platform-main">
         <header className="platform-top">
           <span>Beyond the Finish Line / {view}</span>
@@ -475,7 +478,7 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
               onSaved={() => open(selected)}
             />
             <Card title="People and joining dates">
-              <div className="table-scroll">
+              <div className="table-scroll" role="region" aria-label="Platform companies" tabIndex={0}>
                 <table>
                   <thead>
                     <tr>
@@ -532,7 +535,7 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
           </>
         )}
       </main>
-    </div>
+    </NavigationShell>
   );
 }
 
