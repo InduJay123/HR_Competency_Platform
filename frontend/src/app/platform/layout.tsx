@@ -14,6 +14,6 @@ export default async function PlatformLayout({
   if (!isAdminHost(host) && !local) redirect(adminOrigin);
   const session = await adminSession(incoming);
   if (!session?.authenticated || !session?.is_platform_admin)
-    redirect(local ? "/admin/login" : "/auth/login");
+    redirect("/admin/login");
   return children;
 }

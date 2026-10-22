@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminOrigin, portalRedirect } from "@/lib/portal";
+import { portalRedirect } from "@/lib/portal";
 
 export function proxy(request: NextRequest) {
   const destination = portalRedirect(
@@ -7,7 +7,7 @@ export function proxy(request: NextRequest) {
     request.nextUrl.pathname,
   );
   if (destination)
-    return NextResponse.redirect(new URL(destination, adminOrigin));
+    return NextResponse.redirect(new URL(destination, request.url));
   return NextResponse.next();
 }
 

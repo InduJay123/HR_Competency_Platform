@@ -24,16 +24,14 @@ describe("portal routing", () => {
       ])
         expect(portalRedirect(host, path)).toBeNull();
     expect(portalRedirect("btflplatform.com", "/admin/login")).toBe(
-      new URL("/auth/login", adminOrigin).href,
+      new URL("/admin/login", adminOrigin).href,
     );
   });
   it("keeps login, reset, and logout destination on the current portal without loops", () => {
-    expect(portalRedirect(admin, "/")).toBe("/auth/login");
-    for (const path of [
-      "/auth/login",
-      "/auth/reset-password",
-      "/auth/forgot-password",
-    ]) {
+    expect(portalRedirect(admin, "/")).toBeNull();
+    expect(portalRedirect(admin, "/admin/login")).toBeNull();
+    expect(portalRedirect(admin, "/auth/login")).toBe("/admin/login");
+    for (const path of ["/auth/reset-password", "/auth/forgot-password"]) {
       expect(portalRedirect(admin, path)).toBeNull();
       expect(portalRedirect(normal, path)).toBeNull();
     }

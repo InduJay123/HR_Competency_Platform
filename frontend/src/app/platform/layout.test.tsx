@@ -38,7 +38,7 @@ it.each([
     vi.fn().mockResolvedValue({ ok: true, json: async () => session }),
   );
   await expect(Layout({ children: "secret" })).rejects.toThrow(
-    "redirect:/auth/login",
+    "redirect:/admin/login",
   );
 });
 it("renders an authorized admin and forwards the host and session to Django", async () => {
