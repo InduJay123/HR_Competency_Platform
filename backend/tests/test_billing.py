@@ -1,3 +1,4 @@
+from tests.portal_helpers import bind_admin_portal
 import io
 from datetime import date, timedelta
 from decimal import Decimal
@@ -35,6 +36,7 @@ class BillingTests(TestCase):
                 username="billing-admin", email="billing-admin@example.test", password="test"
             )
         )
+        bind_admin_portal(self.admin)
         self.settings = BillingSettings.objects.create(
             annual_fee="1000",
             currency="LKR",

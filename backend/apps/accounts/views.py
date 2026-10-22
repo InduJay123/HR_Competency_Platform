@@ -11,6 +11,7 @@ from rest_framework.views import APIView
 
 from apps.companies.models import Membership
 from common.permissions import membership
+from common.portal import is_admin_host, local_admin_available, portal_host
 from common.suspension import eligible_memberships, restricted_state, billing_suspended
 
 
@@ -114,6 +115,7 @@ class SessionView(APIView):
 
 @method_decorator(csrf_protect, name="dispatch")
 class LoginView(APIView):
+    admin_login = False
     permission_classes = [AllowAny]
     throttle_classes = [LoginThrottle]
 
@@ -144,6 +146,15 @@ class LoginView(APIView):
             raise ValidationError(
                 "Unable to sign in with these credentials."
             )
+
+        admin_mode = is_admin_host(request) or (self.admin_login and local_admin_available(request))
+        if self.admin_login and not admin_mode:
+            raise PermissionDenied("Platform Administration is available from the administrator portal.")
+        if admin_mode:
+            if not user.is_superuser:
+                raise PermissionDenied("This account does not have Platform Administration access.")
+        elif user.is_superuser:
+            raise PermissionDenied("Platform Administration is available from the administrator portal.")
 
         eligible = eligible_memberships(user).order_by("-company__active", "created_at")
 
@@ -188,6 +199,8 @@ class LoginView(APIView):
                 )
 
         login(request, user)
+        request.session["portal_host"] = portal_host(request)
+        request.session["portal_mode"] = "admin" if admin_mode else "normal"
 
         request.session.pop(
             "company_id",
@@ -241,6 +254,10 @@ class LoginView(APIView):
                 ),
             }
         )
+
+
+class AdminLoginView(LoginView):
+    admin_login = True
 
 
 class LogoutView(APIView):

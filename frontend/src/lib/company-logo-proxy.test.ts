@@ -1,6 +1,11 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { GET, POST } from "../app/api/v1/company-logo/[id]/route";
 
+vi.mock("./backend-request", () => ({
+  backendRequest: (...args: unknown[]) =>
+    fetch(...(args as Parameters<typeof fetch>)),
+}));
+
 const id = "f84cac7a-e609-4b6d-8ea7-176887e9d1bb";
 const context = { params: Promise.resolve({ id }) };
 afterEach(() => {
@@ -10,13 +15,11 @@ afterEach(() => {
 
 it("uses the runtime backend and returns PNG bytes without exposing its URL", async () => {
   vi.stubEnv("BACKEND_URL", "http://backend:8000");
-  const fetcher = vi
-    .fn()
-    .mockResolvedValue(
-      new Response(new Uint8Array([137, 80, 78, 71]), {
-        headers: { "Content-Type": "image/png" },
-      }),
-    );
+  const fetcher = vi.fn().mockResolvedValue(
+    new Response(new Uint8Array([137, 80, 78, 71]), {
+      headers: { "Content-Type": "image/png" },
+    }),
+  );
   vi.stubGlobal("fetch", fetcher);
   const result = await GET(
     new Request(`https://workspace.example.test/api/v1/company-logo/${id}/`),

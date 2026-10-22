@@ -172,7 +172,7 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
     session()
       .then(async (s) => {
         if (!s.authenticated) {
-          router.replace("/auth/login");
+          router.replace("/admin/login");
           return;
         }
         if (!s.is_platform_admin) {
@@ -295,7 +295,7 @@ export function Platform({ initialView = "Overview" }: { initialView?: string })
                 await session();
                 await post("auth/logout/", {});
                 setUser(null);
-                window.location.replace("/auth/login");
+                window.location.replace("/admin/login");
               } catch {
                 setError("Unable to sign out. Please try again.");
               }

@@ -1,3 +1,4 @@
+from tests.portal_helpers import bind_admin_portal
 from unittest.mock import patch
 from django.test import TestCase
 from django.contrib.auth import get_user_model
@@ -28,6 +29,7 @@ class SuspensionTests(TestCase):
         self.client = self.acting(self.head)
         self.admin = APIClient()
         self.admin.force_login(get_user_model().objects.create_superuser(username="suspension-admin", email="suspension-admin@example.test", password="test"))
+        bind_admin_portal(self.admin)
 
     def login(self, client=None, member=None, password="Long-secret-example-123!"):
         client = client or APIClient(enforce_csrf_checks=True)
@@ -103,7 +105,8 @@ class SuspensionTests(TestCase):
             with self.subTest(route=route):
                 response = self.client.get("/api/v1/" + route)
                 self.assertEqual(response.status_code, 403)
-                self.assertEqual(response.json()["error"]["code"], "COMPANY_SUSPENDED")
+                expected = "PORTAL_ACCESS_DENIED" if route.startswith("platform/") else "COMPANY_SUSPENDED"
+                self.assertEqual(response.json()["error"]["code"], expected)
         self.assertEqual(self.client.post("/api/v1/tasks/", {}, format="json").status_code, 403)
 
     def test_foreign_invoice_denied_before_storage(self):

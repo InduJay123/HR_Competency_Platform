@@ -32,6 +32,72 @@ class CompanyLogoStorageTests(TestCase):
         Image.new("RGBA", (40, 20), (30, 60, 200, 0)).save(output, format="PNG")
         return SimpleUploadedFile("logo.png", output.getvalue(), content_type="image/png")
 
+    def test_read_requires_selected_own_company_and_active_membership(self):
+        self.company.logo_storage_path = f"{self.company.id}/logo-{'a' * 32}.png"
+        self.company.save()
+        with patch.object(storage, "get", return_value=b"logo") as download:
+            for member in [self.hr, self.employee]:
+                client = self.acting(member)
+                response = client.get(self.url)
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.content, b"logo")
+                self.assertEqual(response["Cache-Control"], "private, no-store")
+            download.reset_mock()
+            self.assertEqual(self.acting(self.other_hr).get(self.url).status_code, 403)
+            self.assertEqual(self.public.get(self.url).status_code, 403)
+            client = self.acting(self.hr)
+            session = client.session
+            session.pop("company_id")
+            session.save()
+            self.assertEqual(client.get(self.url).status_code, 403)
+            client = self.acting(self.employee)
+            self.employee.active = False
+            self.employee.save(update_fields=["active"])
+            self.assertEqual(client.get(self.url).status_code, 403)
+            download.assert_not_called()
+
+    def test_membership_in_another_company_does_not_override_selected_company(self):
+        Membership.objects.create(user=self.hr.user, company=self.other, active=True)
+        self.other.logo_data = b"other-logo"
+        self.other.save()
+        self.assertEqual(self.acting(self.hr).get(f"/api/v1/company-logo/{self.other.id}/").status_code, 403)
+
+    def test_suspended_company_logo_remains_denied_without_storage_access(self):
+        self.company.active = False
+        self.company.save(update_fields=["active"])
+        with patch.object(storage, "get") as download:
+            for member in [self.hr, self.employee]:
+                self.assertEqual(self.acting(member).get(self.url).status_code, 403)
+            session = self.acting(self.hr).get("/api/v1/auth/session/").data
+            self.assertEqual(session["memberships"][0]["logo_url"], "")
+            download.assert_not_called()
+
+    def test_authorized_platform_admin_can_read_logo(self):
+        from django.contrib.auth import get_user_model
+        from tests.portal_helpers import bind_admin_portal
+        admin = get_user_model().objects.create_superuser(username="logo-admin", email="logo-admin@example.test", password="secret")
+        client = APIClient()
+        client.force_login(admin)
+        bind_admin_portal(client)
+        self.company.logo_data = b"logo"
+        self.company.save()
+        self.assertEqual(client.get(self.url).status_code, 200)
+        self.assertEqual(client.get(self.url, HTTP_HOST="localhost").status_code, 403)
+
+    @override_settings(ALLOWED_HOSTS=["localhost", "127.0.0.1"], LOCAL_ADMIN_LOGIN_ENABLED=True)
+    def test_bound_normal_session_keeps_original_host(self):
+        client = self.acting(self.hr)
+        session = client.session
+        session["portal_host"] = "localhost"
+        session["portal_mode"] = "normal"
+        session.save()
+        self.company.logo_data = b"logo"
+        self.company.save()
+        denied = client.get(self.url, HTTP_HOST="127.0.0.1:8000")
+        self.assertEqual(denied.status_code, 403)
+        self.assertEqual(denied.json()["error"]["code"], "PORTAL_ACCESS_DENIED")
+        self.assertEqual(client.get(self.url, HTTP_HOST="localhost:3000").status_code, 200)
+
     def test_cleanup_only_removes_exact_local_generated_urls_with_stored_logo(self):
         from importlib import import_module
         from types import SimpleNamespace
@@ -104,7 +170,7 @@ class CompanyLogoStorageTests(TestCase):
         self.assertEqual(upload.call_args.kwargs["headers"]["x-upsert"], "false")
         content = upload.call_args.kwargs["data"]
         with patch.object(storage.requests, "get", return_value=Mock(status_code=200, content=content)) as download:
-            result = self.public.get(self.url)
+            result = self.acting(self.hr).get(self.url)
         self.assertEqual(result.status_code, 200)
         self.assertEqual(result.content, content)
         self.assertEqual(result["Content-Type"], "image/png")
@@ -148,11 +214,11 @@ class CompanyLogoStorageTests(TestCase):
 
     def test_legacy_logos_and_empty_companies_need_no_storage_access(self):
         with patch.object(storage.requests, "get") as download:
-            self.assertEqual(self.public.get(self.url).status_code, 404)
+            self.assertEqual(self.acting(self.hr).get(self.url).status_code, 404)
             legacy = self.photo().read()
             self.company.logo_data = legacy
             self.company.save()
-            result = self.public.get(self.url)
+            result = self.acting(self.hr).get(self.url)
             self.assertEqual(result.content, legacy)
             download.assert_not_called()
 
@@ -160,7 +226,7 @@ class CompanyLogoStorageTests(TestCase):
         self.company.logo_storage_path = f"{self.company.id}/logo-{'a' * 32}.png"
         self.company.save()
         with patch.object(storage.requests, "get", side_effect=requests.Timeout("server-secret")):
-            result = self.public.get(self.url)
+            result = self.acting(self.hr).get(self.url)
         self.assertEqual(result.status_code, 503)
         self.assertIn("error", result.data)
         self.assertNotIn("server-secret", str(result.data))
@@ -187,5 +253,5 @@ class CompanyLogoStorageTests(TestCase):
             self.company.logo_storage_path = key
             self.company.save()
             with patch.object(storage.requests, "get") as download:
-                self.assertEqual(self.public.get(self.url).status_code, 404)
+                self.assertEqual(self.acting(self.hr).get(self.url).status_code, 404)
                 download.assert_not_called()

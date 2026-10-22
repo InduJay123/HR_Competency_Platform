@@ -1,3 +1,4 @@
+from tests.portal_helpers import bind_admin_portal
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase
@@ -26,6 +27,7 @@ class PlatformAccessTests(TestCase):
         )
         self.platform = APIClient()
         self.platform.force_login(self.admin)
+        bind_admin_portal(self.platform)
         self.public = APIClient()
 
     def registration(self, **extra):
@@ -138,6 +140,7 @@ class PlatformAccessTests(TestCase):
         self.assertEqual(r.status_code, 400)
         self.assertEqual(self.acting(self.hr).get("/api/v1/platform/overview/").status_code, 403)
         self.assertEqual(self.acting(self.hr).get("/api/v1/platform/companies/").status_code, 403)
+        self.public.defaults["HTTP_HOST"] = "admin.localhost"
         r = self.public.post(
             "/api/v1/auth/login/",
             {"email": self.admin.email, "password": "Development-password-2026!", "role": "platform"},
@@ -300,7 +303,7 @@ class PlatformAccessTests(TestCase):
         stored_logo = upload.call_args.args[1]
         stored_url = self.company.logo_url
         with patch("apps.companies.logo.storage.get", return_value=stored_logo):
-            response = self.public.get(endpoint)
+            response = self.acting(self.hr).get(endpoint)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, stored_logo)
         self.company.refresh_from_db()

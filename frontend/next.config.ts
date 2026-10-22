@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 const config: NextConfig = {
   skipTrailingSlashRedirect: true,
+  // Preserve cross-host Location headers even when the internal server URL is localhost.
+  skipProxyUrlNormalize: true,
   async rewrites() {
     return {
       fallback: [

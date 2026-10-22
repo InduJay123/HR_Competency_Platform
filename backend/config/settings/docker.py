@@ -7,6 +7,7 @@ from .production import *  # noqa: F403,F401
 # Real production continues to use production.py.
 
 DEBUG = False
+LOCAL_ADMIN_LOGIN_ENABLED = True
 # Local Docker: avoid stale Supabase connections.
 DATABASES["default"]["CONN_MAX_AGE"] = 0
 DATABASES["default"]["CONN_HEALTH_CHECKS"] = True

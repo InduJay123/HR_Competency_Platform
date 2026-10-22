@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 load_dotenv(BASE_DIR.parent / ".env", override=False)
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 DEBUG = False
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,admin.localhost").split(",")
 INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -35,6 +35,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "common.portal.PortalMiddleware",
     "common.suspension_middleware.SuspendedCompanyMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -70,11 +71,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_DOMAIN = None
+CSRF_COOKIE_DOMAIN = None
 SESSION_COOKIE_SAMESITE = "Lax"
 SESSION_COOKIE_AGE = 28800
 CSRF_COOKIE_SAMESITE = "Lax"
 CSRF_TRUSTED_ORIGINS = os.environ.get(
-    "CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000"
+    "CSRF_TRUSTED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://admin.localhost:3000"
 ).split(",")
 CORS_ALLOWED_ORIGINS = CSRF_TRUSTED_ORIGINS
 CORS_ALLOW_CREDENTIALS = True
@@ -107,6 +110,8 @@ EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.invalid")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+ADMIN_FRONTEND_URL = os.environ.get("ADMIN_FRONTEND_URL", "http://admin.localhost:3000")
+LOCAL_ADMIN_LOGIN_ENABLED = True
 PASSWORD_RESET_TIMEOUT = 3600
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
 PRIVATE_STORAGE_BACKEND = os.environ.get("PRIVATE_STORAGE_BACKEND", "supabase")

@@ -1,3 +1,4 @@
+from tests.portal_helpers import bind_admin_portal
 import io
 from unittest.mock import patch
 
@@ -110,6 +111,7 @@ class ProfilePictureStorageTests(TestCase):
         admin = get_user_model().objects.create_superuser(username="admin", email="admin@example.test", password="secret")
         client = APIClient()
         client.force_login(admin)
+        bind_admin_portal(client)
         result = client.post(self.url, {"photo": self.photo()}, format="multipart")
         self.assertEqual(result.status_code, 200)
         self.assertEqual(result.data["photo_url"], self.url + "?v=1")

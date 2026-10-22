@@ -12,7 +12,8 @@ def send_access_email(user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = default_token_generator.make_token(user)
     route = "reset-password" if user.has_usable_password() else "accept-invitation"
-    url = f"{settings.FRONTEND_URL}/auth/{route}?uid={uid}&token={token}"
+    origin = settings.ADMIN_FRONTEND_URL if user.is_superuser else settings.FRONTEND_URL
+    url = f"{origin}/auth/{route}?uid={uid}&token={token}"
     send_mail(
         "Your workspace access",
         f"Use this link to set your password:\n{url}\nIf you did not request access, ignore this message.",

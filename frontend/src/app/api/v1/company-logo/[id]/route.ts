@@ -1,3 +1,5 @@
+import { backendRequest } from "@/lib/backend-request";
+
 type Context = { params: Promise<{ id: string }> };
 
 export const dynamic = "force-dynamic";
@@ -19,6 +21,8 @@ async function proxy(request: Request, { params }: Context) {
     if (!["http:", "https:"].includes(target.protocol))
       throw new Error("Invalid backend configuration");
     const headers = new Headers();
+    headers.set("host", request.headers.get("host") || new URL(request.url).host);
+    headers.set("x-forwarded-proto", new URL(request.url).protocol.slice(0, -1));
     for (const name of [
       "cookie",
       "content-type",
@@ -29,7 +33,7 @@ async function proxy(request: Request, { params }: Context) {
       const value = request.headers.get(name);
       if (value) headers.set(name, value);
     }
-    const upstream = await fetch(target, {
+    const upstream = await backendRequest(target, {
       method: request.method,
       headers,
       body: request.method === "POST" ? await request.arrayBuffer() : undefined,

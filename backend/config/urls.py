@@ -6,6 +6,7 @@ from apps.accounts.invitation import InvitationView
 from apps.accounts.photo import ProfilePhotoView
 from apps.accounts.views import (
     ContextView,
+    AdminLoginView,
     LoginView,
     LogoutView,
     ProfileView,
@@ -66,6 +67,7 @@ urlpatterns = [
     path("api/v1/health/", lambda request: JsonResponse({"status": "ok", "service": "bfl-api"})),
     path("api/v1/auth/session/", SessionView.as_view()),
     path("api/v1/auth/login/", LoginView.as_view()),
+    path("api/v1/auth/admin-login/", AdminLoginView.as_view()),
     path("api/v1/auth/logout/", LogoutView.as_view()),
     path("api/v1/auth/context/", ContextView.as_view()),
     path("api/v1/auth/profile/", ProfileView.as_view()),

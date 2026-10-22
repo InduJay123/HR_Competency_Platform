@@ -7,7 +7,7 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import get_object_or_404
 from PIL import Image, ImageOps
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -18,12 +18,20 @@ from .models import Company
 
 
 class CompanyLogoView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
+        if request.user.is_superuser:
+            from .platform import IsPlatformAdmin
+            if not IsPlatformAdmin().has_permission(request, self):
+                raise PermissionDenied()
+        else:
+            member = membership(request)
+            if str(member.company_id) != str(pk):
+                raise PermissionDenied()
         company = get_object_or_404(Company, pk=pk, active=True)
         if company.logo_storage_path:
-            # Never let a corrupted reference turn this public route into a storage proxy.
+            # Never let a corrupted reference read another company's storage objects.
             if not re.fullmatch(
                 rf"{company.id}/logo-[0-9a-f]{{32}}\.png", company.logo_storage_path
             ):
@@ -35,7 +43,7 @@ class CompanyLogoView(APIView):
             raise Http404()
         result = HttpResponse(content, content_type="image/png")
         result["X-Content-Type-Options"] = "nosniff"
-        result["Cache-Control"] = "no-cache"
+        result["Cache-Control"] = "private, no-store"
         return result
 
     def post(self, request, pk):

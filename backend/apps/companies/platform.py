@@ -16,7 +16,10 @@ from .pricing import PricingInput, calculate
 
 class IsPlatformAdmin(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.is_superuser
+        from common.portal import is_admin_portal, portal_host
+        return (request.user.is_authenticated and request.user.is_superuser
+                and is_admin_portal(request)
+                and request.session.get("portal_host") == portal_host(request))
 
 
 def company_data(company):
