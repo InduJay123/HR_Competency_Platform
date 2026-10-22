@@ -1,3 +1,6 @@
+import logging
+
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.middleware.csrf import get_token
 from django.utils.decorators import method_decorator
@@ -149,6 +152,11 @@ class LoginView(APIView):
 
         admin_mode = is_admin_host(request) or (self.admin_login and local_admin_available(request))
         if self.admin_login and not admin_mode:
+            # No credentials, cookies, origin/referrer URLs, or forwarded headers.
+            logging.getLogger(__name__).warning(
+                "Admin login rejected by portal check: django_host=%r portal_host=%r admin_url=%r",
+                request.get_host(), portal_host(request), settings.ADMIN_FRONTEND_URL,
+            )
             raise PermissionDenied("Platform Administration is available from the administrator portal.")
         if admin_mode:
             if not user.is_superuser:

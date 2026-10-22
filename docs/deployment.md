@@ -113,6 +113,21 @@ Secure cookies and HTTPS redirects enabled. Keep `BACKEND_URL=http://backend:800
 on the frontend. Rebuild/recreate the frontend and backend, and restart workers
 with the new environment.
 
+Admin-login host validation recognizes `admin.btflplatform.com` even if
+`ADMIN_FRONTEND_URL` was left at its local default. Still set that URL correctly
+for password-reset emails. Django validates the incoming Host against
+`ALLOWED_HOSTS`; `USE_X_FORWARDED_HOST` remains false. Do not add a forwarded-host
+override to work around an internal Host: route `/api/*` directly to Django as
+shown above. Local shared-host admin login is enabled only by the development
+and local Docker settings, never by production settings.
+
+If valid credentials still receive the administrator-portal 403 after deploying,
+inspect the backend warning `Admin login rejected by portal check`. It records
+`django_host`, the normalized `portal_host`, and configured `admin_url`, without
+credentials or cookies. A `django_host` of `backend` or `localhost` in production
+indicates the proxy path is replacing Host; inspect the live Caddyfile. The live
+Caddyfile and VPS logs are not included in this repository.
+
 **Do not use the supplied prodtest settings unchanged in live production.**
 `docker-compose.prodtest.yml` currently chooses `config.settings.docker` for
 backend/worker/beat; that local-test module overrides allowed hosts and CSRF

@@ -8,6 +8,8 @@ if len(SECRET_KEY) < 50 or not os.environ.get("DATABASE_URL"):  # noqa: F405
     raise ImproperlyConfigured("Production requires a strong DJANGO_SECRET_KEY and DATABASE_URL.")
 SESSION_COOKIE_SECURE = True
 LOCAL_ADMIN_LOGIN_ENABLED = False
+FRONTEND_URL = os.environ.get("FRONTEND_URL") or "https://btflplatform.com"
+ADMIN_FRONTEND_URL = os.environ.get("ADMIN_FRONTEND_URL") or "https://admin.btflplatform.com"
 CSRF_COOKIE_SECURE = True
 SECURE_SSL_REDIRECT = True
 SECURE_HSTS_SECONDS = 31536000

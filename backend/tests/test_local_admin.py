@@ -58,3 +58,7 @@ class LocalAdminTests(TestCase):
         response = self.sign_in(self.admin)
         self.assertEqual(self.client.post("/api/v1/auth/logout/", HTTP_X_CSRFTOKEN=response.data["csrf_token"]).status_code, 200)
         self.assertEqual(self.client.get("/api/v1/platform/overview/").status_code, 403)
+
+    def test_loopback_ip_admin_login(self):
+        self.client.defaults["HTTP_HOST"] = "127.0.0.1:3000"
+        self.assertEqual(self.sign_in(self.admin).status_code, 200)

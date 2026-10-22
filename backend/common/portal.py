@@ -15,7 +15,12 @@ def portal_host(request):
 
 
 def is_admin_host(request):
-    return (portal_host(request) == urlsplit(settings.ADMIN_FRONTEND_URL).hostname
+    host = portal_host(request)
+    # The deployed portal must not depend on a missing/stale local URL setting.
+    # get_host() still enforces ALLOWED_HOSTS before this comparison.
+    if host in {"btflplatform.com", "www.btflplatform.com"}:
+        return False
+    return (host in {"admin.btflplatform.com", urlsplit(settings.ADMIN_FRONTEND_URL).hostname}
             and not local_admin_available(request))
 
 

@@ -2,6 +2,8 @@ import os
 
 from .base import *  # noqa: F403
 
+LOCAL_ADMIN_LOGIN_ENABLED = True
+
 SECRET_KEY = os.environ.get(
     "DJANGO_SECRET_KEY",
     "local-only-change-this-before-deployment"

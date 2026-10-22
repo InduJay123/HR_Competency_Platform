@@ -111,7 +111,10 @@ EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.invalid")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 ADMIN_FRONTEND_URL = os.environ.get("ADMIN_FRONTEND_URL", "http://admin.localhost:3000")
-LOCAL_ADMIN_LOGIN_ENABLED = True
+# Only explicit development settings enable the shared localhost portal.
+LOCAL_ADMIN_LOGIN_ENABLED = False
+# Caddy preserves Host. Do not allow a client-supplied forwarded host to select a portal.
+USE_X_FORWARDED_HOST = False
 PASSWORD_RESET_TIMEOUT = 3600
 DATA_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024
 PRIVATE_STORAGE_BACKEND = os.environ.get("PRIVATE_STORAGE_BACKEND", "supabase")
