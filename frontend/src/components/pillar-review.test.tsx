@@ -19,7 +19,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 it("sets five individual targets and sends explicit completion and versions", async () => {
   vi.mocked(allPages).mockResolvedValue(targets);
   render(<TargetSetup cycle={cycle} people={[{ id: "employee", name: "Alex", has_manager: true }]} onSaved={async () => {}} />);
-  fireEvent.change(screen.getByLabelText("Steward Guy"), { target: { value: "employee" } });
+  fireEvent.change(screen.getByLabelText("Steward Associate"), { target: { value: "employee" } });
   expect(await screen.findByDisplayValue("Target context")).toBeTruthy();
   expect(screen.getAllByRole("textbox")).toHaveLength(15);
   fireEvent.change(screen.getByDisplayValue("Target context"), { target: { value: "Individual coordination target" } });

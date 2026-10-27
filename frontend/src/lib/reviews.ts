@@ -131,6 +131,6 @@ export const human = (value: string) =>
     .replaceAll("_", " ")
     .toLowerCase()
     .replace(/^./, (s) => s.toUpperCase())
-    .replace(/\b[Ee]mployees\b/g, "Steward Guys")
-    .replace(/\b[Ee]mployee\b/g, "Steward Guy")
+    .replace(/\b[Ee]mployees\b/g, "Steward Associates")
+    .replace(/\b[Ee]mployee\b/g, "Steward Associate")
     .replace(/head of hr/gi, "Chief Steward");

@@ -134,12 +134,11 @@ export function Coach({ review, oversight = false, onSummary, onSaved }: {
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        <Image src="/steward.png" width={54} height={54} alt="" />
-        <span>Steward</span>
+        
       </button>
       <Card title="AI Coaching">
         <p>
-          Pillar-based coaching grounded in the original targets, Steward Guy
+          Pillar-based coaching grounded in the original targets, Steward Associate
           reflection and Chief Steward appraisal. AI provides advisory questions
           and development support only and does not assign ratings or make
           employment decisions.
@@ -152,7 +151,7 @@ export function Coach({ review, oversight = false, onSummary, onSaved }: {
         <Feedback error={error} />
         <p role="status">{review.workflow?.ai_coaching || "Loading coaching status…"}</p>
         {review.workflow?.ai_blocked_reason && <p className="alert">{review.workflow.ai_blocked_reason}</p>}
-        {!employee && <p>The Steward Guy runs AI coaching after both submissions are complete.</p>}
+        {!employee && <p>The Steward Associate runs AI coaching after both submissions are complete.</p>}
         <div className="actions">
           {employee && <Button
             disabled={
@@ -184,7 +183,7 @@ export function Coach({ review, oversight = false, onSummary, onSaved }: {
             </small>
             {a.error_code && (
               <p>
-                Analysis failed. The Steward Guy can retry; contact Chief Steward if retries are exhausted.
+                Analysis failed. The Steward Associate can retry; contact Chief Steward if retries are exhausted.
               </p>
             )}
             {a.output?.pillar_coaching &&

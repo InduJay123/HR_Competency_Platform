@@ -14,7 +14,7 @@ vi.mock("./review-form", () => ({ ReviewForm: () => null }));
 vi.mock("./review-coach", () => ({ Coach: () => <div>Shared coaching panel</div> }));
 
 const review = {
-  id: "review-1", employee_member: "member-1", employee_name: "Steward Guy",
+  id: "review-1", employee_member: "member-1", employee_name: "Steward Associate",
   state: "FINALISED", round: 1, version: 1,
   cycle_detail: { kind: "MID_YEAR", year: 2026, due_on: "2026-07-15" },
   forms: [], history: [],
@@ -30,12 +30,12 @@ it("renders accepted guidance with friendly sources and no AI controls", async (
   vi.mocked(api).mockImplementation(async (path) => path.endsWith("accepted-coaching/") ? {
     available: true,
     coaching: pillarCoaching({ strengths: [item], gaps: [], support_options: [], limitations: ["Limited evidence"] }),
-    sources: { "raw-source-uuid": "Steward Guy reflection" },
+    sources: { "raw-source-uuid": "Steward Associate reflection" },
   } : review);
   render(<ReviewDetail showAcceptedCoaching />);
   expect(await screen.findByText("Steward coaching")).toBeTruthy();
   for (const text of ["Supported the team", "Reported claim",
-    "Sources: Steward Guy reflection", "Limited evidence",
+    "Sources: Steward Associate reflection", "Limited evidence",
     "Reviewed by Chief Steward"]) expect(screen.getByText(text)).toBeTruthy();
   expect(screen.getByText("What helped?", { exact: false }).textContent).toBe("Discuss: What helped?");
   for (const pillar of ["Context", "Character", "Capability", "Continuity", "Contribution"])

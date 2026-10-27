@@ -67,7 +67,7 @@ class AcceptedCoachingTests(TestCase):
             [source["id"] for source in analysis.input_snapshot["sources"]],
         )
         self.assertEqual(set(response.data["sources"].values()), {
-            "Steward Guy reflection", "Chief Steward appraisal", "Validated evidence",
+            "Steward Associate reflection", "Chief Steward appraisal", "Validated evidence",
         })
         self.assertNotIn("private", response.content.decode())
         self.assertNotIn("must not leak", response.content.decode())

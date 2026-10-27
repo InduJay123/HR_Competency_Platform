@@ -118,7 +118,7 @@ class CoachingActions:
             )
 
         labels = {
-            "EMPLOYEE_SUBMISSION": "Steward Guy reflection",
+            "EMPLOYEE_SUBMISSION": "Steward Associate reflection",
             "MANAGER_SUBMISSION": "Chief Steward appraisal",
             "VALIDATED_EVIDENCE": "Validated evidence",
             "PILLAR_TARGET": "Individual pillar target",

@@ -203,7 +203,7 @@ class LoginView(APIView):
                 raise ValidationError(
                     "No approved workspace with this responsibility "
                     "is available. Check your request status using "
-                    "Steward Guy sign-in."
+                    "Steward Associate sign-in."
                 )
 
         login(request, user)

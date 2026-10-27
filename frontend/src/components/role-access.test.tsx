@@ -44,7 +44,7 @@ it.each(["employee", "hr", "platform"])(
     expect(select.required).toBe(true);
     expect(select.value).toBe("");
     expect(
-      within(select).getByRole("option", { name: "Steward Guy" }),
+      within(select).getByRole("option", { name: "Steward Associate" }),
     ).toBeTruthy();
     expect(
       within(select).getByRole("option", { name: "Chief Steward" }),
@@ -103,7 +103,7 @@ it.each([false, true])(
     const sidebar = nav.closest("aside")!;
     expect(within(sidebar).queryByRole("combobox")).toBeNull();
     expect(
-      within(sidebar).getByText(chief ? "Chief Steward" : "Steward Guy"),
+      within(sidebar).getByText(chief ? "Chief Steward" : "Steward Associate"),
     ).toBeTruthy();
     expect(within(sidebar).getByText("Alex Test")).toBeTruthy();
     expect(
@@ -115,7 +115,7 @@ it.each([false, true])(
     expect(sidebar.classList.contains("sidebar-steward-guy")).toBe(!chief);
     expect(
       within(sidebar)
-        .getByText(chief ? "Chief Steward" : "Steward Guy")
+        .getByText(chief ? "Chief Steward" : "Steward Associate")
         .classList.contains("identity-role"),
     ).toBe(true);
     if (chief) {

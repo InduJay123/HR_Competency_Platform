@@ -39,7 +39,7 @@ it.each(["steward", "chief"])("consolidates submitted forms for %s without chang
   expect(screen.queryByText(/submission.*Sealed/)).toBeNull();
   expect(screen.queryByText("Evidence ids")).toBeNull();
   expect(screen.getByText("Prior reflection").closest("details")?.open).toBe(false);
-  expect(screen.getByText("Steward Guy submitted")).toBeTruthy();
+  expect(screen.getByText("Steward Associate submitted")).toBeTruthy();
   expect(screen.queryByText(/internal audit metadata/)).toBeNull();
   expect(review).toEqual(before);
 });

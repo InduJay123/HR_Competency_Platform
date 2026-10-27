@@ -33,7 +33,7 @@ class FoundationTests(TestCase):
         )
         m = Membership.objects.create(company=company, user=u, is_hr=hr, is_head_hr=hr)
         EmployeeProfile.objects.create(
-            company=company, membership=m, designation="Manager" if manager else "Steward Guy"
+            company=company, membership=m, designation="Manager" if manager else "Steward Associate"
         )
         return m
 

@@ -78,7 +78,7 @@ class EmployeeViewSet(viewsets.ReadOnlyModelViewSet):
         require_hr(member)
         obj = self.get_object()
         if not obj.membership.active:
-            raise ValidationError("Restore Steward Guy access before sending an invitation.")
+            raise ValidationError("Restore Steward Associate access before sending an invitation.")
         if not queue_access_email(str(obj.membership.user_id)):
             raise ValidationError("Email delivery is unavailable. Try again when the worker is healthy.")
         record(member, "employee.invitation_queued", obj)

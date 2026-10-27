@@ -81,7 +81,7 @@ export function Registration() {
             <li>
               <strong>A person verifies your request</strong>
               <span>
-                Bradley approves companies. Company HR approves Steward Guys.
+                Bradley approves companies. Company HR approves Steward Associates.
               </span>
             </li>
             <li>
@@ -190,7 +190,7 @@ export function Registration() {
                       />
                     </label>
                     <label>
-                      Steward Guy count
+                      Steward Associate count
                       <input
                         name="employee_count"
                         type="number"
@@ -428,7 +428,7 @@ export function RequestQueue({
     <>
       <div className="page-heading">
         <div>
-          <h1>{platform ? "Company requests" : "Steward Guy join requests"}</h1>
+          <h1>{platform ? "Company requests" : "Steward Associate join requests"}</h1>
           <p>
             Verify{" "}
             {platform
@@ -507,7 +507,7 @@ export function RequestQueue({
                 <label>
                   Approved responsibility
                   <select name="role">
-                    <option value="EMPLOYEE">Steward Guy</option>
+                    <option value="EMPLOYEE">Steward Associate</option>
                     <option value="HR">
                       HR administrator (Chief Steward approval required)
                     </option>

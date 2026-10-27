@@ -38,7 +38,7 @@ async function main() {
       } else {
         assert.equal(response.status, 200);
         assert.match(response.body, /PLATFORM ADMINISTRATION/);
-        assert.doesNotMatch(response.body, /Chief Steward|Steward Guy/);
+        assert.doesNotMatch(response.body, /Chief Steward|Steward Associate/);
       }
       if (path === '/') { assert.notEqual(response.headers['x-nextjs-cache'], 'HIT'); assert.equal(response.headers['x-nextjs-prerender'], undefined); }
       console.log(`PASS ${host}${path} [${cookie || 'anonymous'}] -> ${response.headers.location || '200 admin login'}`);

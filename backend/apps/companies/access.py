@@ -96,7 +96,7 @@ class RegisterView(APIView):
                             "Unable to submit this request. Use your existing account password or recover access."
                         )
                     if user.is_superuser:
-                        raise ValidationError("Platform administrators cannot request Steward Guy membership.")
+                        raise ValidationError("Platform administrators cannot request Steward Associate membership.")
                 else:
                     user = User(
                         username=email,

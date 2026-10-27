@@ -242,7 +242,7 @@ class CommitmentViewSet(viewsets.ReadOnlyModelViewSet):
             obj.employee.membership_id,
             obj.owner.membership_id,
         ]:
-            raise PermissionDenied("Only the Steward Guy, owner or assigned manager can record follow-up.")
+            raise PermissionDenied("Only the Steward Associate, owner or assigned manager can record follow-up.")
         data = ProgressSerializer(data=request.data)
         data.is_valid(raise_exception=True)
         obj = Commitment.objects.select_for_update().get(id=obj.id)
@@ -258,7 +258,7 @@ class CommitmentViewSet(viewsets.ReadOnlyModelViewSet):
             id__in=ids, company=member.company, task__assigned_to=obj.employee
         )
         if evidence.count() != len(set(ids)):
-            raise ValidationError("Evidence must belong to this Steward Guy and organisation.")
+            raise ValidationError("Evidence must belong to this Steward Associate and organisation.")
         update = CommitmentUpdate.objects.create(
             company=member.company,
             commitment=obj,

@@ -24,7 +24,7 @@ it("loads personal history without a selector, with five human pillar comparison
   render(<ReviewHistory />);
   await screen.findByText("Overall progress");
   expect(api).toHaveBeenCalledWith("review-history/?");
-  expect(screen.queryByLabelText("Choose a Steward Guy")).toBeNull();
+  expect(screen.queryByLabelText("Choose a Steward Associate")).toBeNull();
   expect(
     screen.getByText("Changed from Developing Steward to Strong Steward"),
   ).toBeTruthy();
@@ -76,9 +76,9 @@ it("requires explicit Chief Steward selection before fetching private history", 
   );
   render(<ReviewHistory chief />);
   expect(
-    screen.getByText("Choose a Steward Guy to view review history."),
+    screen.getByText("Choose a Steward Associate to view review history."),
   ).toBeTruthy();
-  const select = await screen.findByLabelText("Choose a Steward Guy");
+  const select = await screen.findByLabelText("Choose a Steward Associate");
   expect(
     vi
       .mocked(api)
@@ -89,7 +89,7 @@ it("requires explicit Chief Steward selection before fetching private history", 
   expect(api).toHaveBeenCalledWith("review-history/?employee_id=person");
   expect(
     screen.getByRole("option", {
-      name: "Alex Steward Guy · Analyst · Finance",
+      name: "Alex Steward Associate · Analyst · Finance",
     }),
   ).toBeTruthy();
   expect(
@@ -112,13 +112,13 @@ it.each([true, false])(
     );
     render(<ReviewHistory chief={chief} />);
     if (chief)
-      fireEvent.change(await screen.findByLabelText("Choose a Steward Guy"), {
+      fireEvent.change(await screen.findByLabelText("Choose a Steward Associate"), {
         target: { value: "person" },
       });
     expect(
       await screen.findByText(
         chief
-          ? "No formal review history is available for this Steward Guy."
+          ? "No formal review history is available for this Steward Associate."
           : "No formal review history is available yet.",
       ),
     ).toBeTruthy();

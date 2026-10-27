@@ -106,18 +106,18 @@ export function TeamGrowth({
         <div>
           <h1>Growth Tools</h1>
           <p className="subtitle">
-            Shared development activity from your Steward Guys.
+            Shared development activity from your Steward Associates.
           </p>
         </div>
       </div>
       {initialSubject && (
         <Link className="growth-back" href="/manager/growth">
-          View all Steward Guys
+          View all Steward Associates
         </Link>
       )}
       <div className="growth-toolbar">
         <label className="filter-label">
-          Search Steward Guys
+          Search Steward Associates
           <input
             type="search"
             value={search}
@@ -146,7 +146,7 @@ export function TeamGrowth({
         </Card>
       ) : !filtered.length ? (
         <Card title="No matching entries">
-          <p>Try another Steward Guy name or growth area.</p>
+          <p>Try another Steward Associate name or growth area.</p>
         </Card>
       ) : (
         Array.from(groups, ([subject, rows]) => (
@@ -437,7 +437,7 @@ function PersonalGrowthPage({
           <small>
             {x.shared
               ? x.perspective === "MANAGER"
-                ? "Shared with the Steward Guy"
+                ? "Shared with the Steward Associate"
                 : "Shared with Chief Steward"
               : "Private"}{" "}
             ·{" "}
@@ -519,7 +519,7 @@ function PersonalGrowthPage({
                 setPage(1);
               }}
             >
-              Steward Guy perspective
+              Steward Associate perspective
             </button>
             <button
               aria-current={perspective === "MANAGER" ? "page" : undefined}

@@ -68,7 +68,7 @@ export function Cycles() {
       setSelected(null);
       setPreview(null);
       await reload();
-      setSuccess("Cycle launched. Steward Guys have been notified.");
+      setSuccess("Cycle launched. Steward Associates have been notified.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -80,7 +80,7 @@ export function Cycles() {
     setBusy(true); setError("");
     try {
       const cycle = await post<Cycle>(`review-cycles/${selected.id}/start/`, {});
-      await inspect(cycle); await reload(); setSuccess("Cycle started. Steward Guys can link Growth Tools evidence to their targets.");
+      await inspect(cycle); await reload(); setSuccess("Cycle started. Steward Associates can link Growth Tools evidence to their targets.");
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
   }
@@ -165,7 +165,7 @@ export function Cycles() {
               disabled={busy || !ids.length || !reviewer}
               onClick={launch}
             >
-              Open formal reviews for {ids.length} Steward Guys
+              Open formal reviews for {ids.length} Steward Associates
             </Button>}
             <Button variant="neutral" onClick={() => setPreview(null)}>
               Cancel

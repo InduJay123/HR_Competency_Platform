@@ -172,7 +172,7 @@ export function AssignWork({
       </p>
       {!people.length && (
         <p className="empty">
-          No active Steward Guys are available for Chief Steward to assign work to.
+          No active Steward Associates are available for Chief Steward to assign work to.
         </p>
       )}
       <form onSubmit={submit}>
@@ -393,7 +393,7 @@ export function WorkDetail({ id }: { id: string }) {
         ) : (
           <Card title="Accountability">
             <p>
-              Progress is recorded by the assigned Steward Guy. The assigning
+              Progress is recorded by the assigned Steward Associate. The assigning
               manager remains able to follow the timeline.
             </p>
             {closed && <p>This assignment is closed.</p>}

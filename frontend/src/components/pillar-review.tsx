@@ -15,7 +15,7 @@ export function PillarReview({ review }: { review: Review }) {
   if (!review.pillar_context?.length) return null;
   return <Card title="Pillar review">
     {review.pillar_context.map(p => <div className="pillar" key={p.id}><h3>{human(p.pillar)}</h3><PillarTargetDetails pillar={p} />
-      <h4>Steward Guy reflection</h4><p>{String(reflection?.[p.pillar.toLowerCase()] || "Awaiting submission")}</p>
+      <h4>Steward Associate reflection</h4><p>{String(reflection?.[p.pillar.toLowerCase()] || "Awaiting submission")}</p>
       <h4>Chief Steward appraisal</h4><p>{String(appraisal?.[p.pillar.toLowerCase()]?.narrative || "Awaiting submission")}</p>
       <p>Outcome against target: {String(appraisal?.[p.pillar.toLowerCase()]?.outcome || "Pending")}</p>
       <p>Steward pillar judgement: {String(appraisal?.[p.pillar.toLowerCase()]?.descriptor || "Pending")}</p>

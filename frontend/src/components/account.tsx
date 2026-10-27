@@ -314,7 +314,7 @@ export function Account() {
                 <dd>{profile.joined_on || "Not recorded"}</dd>
               </dl>
               <small>
-                All Steward Guys report directly to Chief Steward. HR manages
+                All Steward Associates report directly to Chief Steward. HR manages
                 joining dates and access.
               </small>
             </Card>

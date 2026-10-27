@@ -57,7 +57,7 @@ def head_of_hr(company_id):
         membership__user__is_superuser=False,
     )[:2])
     if len(heads) != 1:
-        raise ValidationError("Company must have exactly one active Chief Steward with a Steward Guy profile. Contact your administrator.")
+        raise ValidationError("Company must have exactly one active Chief Steward with a Steward Associate profile. Contact your administrator.")
     return heads[0]
 
 

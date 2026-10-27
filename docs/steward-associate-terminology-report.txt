@@ -1,0 +1,27 @@
+Terminology review - 2026-10-26
+Initial git diff: no backend changes, technical renames, or migrations. Existing branding changes were preserved. Previous report did not match active source.
+Applied display-only Steward Guy -> Steward Associate replacements in application strings and matching test text. Internal identifiers, EMPLOYEE/employee roles, API field names, serializers, permissions, routes, models, columns, and migration history remain unchanged. No existing database records were edited.
+Backend technical renames reverted: none were present.
+Migration status: none created, removed, or applied; makemigrations --check --dry-run reports no changes.
+Validation: Django check passed. Frontend typecheck and production build passed. Backend suite ran 281 tests: 272 passed, 6 failed, 3 skipped. The same six NaturalCoachingTests failed before and after this change due to existing prompt wording expectations. git diff --check passed.
+Full backend output: tmp/terminology-backend-tests.log
+Backend files (all display copy or test text):
+backend/apps/accounts/views.py
+backend/apps/ai_coach/schema.py
+backend/apps/ai_coach/services.py
+backend/apps/ai_coach/trainer.py
+backend/apps/ai_coach/trainer_documents.py
+backend/apps/ai_coach/views.py
+backend/apps/companies/access.py
+backend/apps/companies/platform.py
+backend/apps/development/views.py
+backend/apps/organisation/serializers.py
+backend/apps/organisation/services.py
+backend/apps/organisation/views.py
+backend/apps/reports/views.py
+backend/apps/reviews/services.py
+backend/apps/reviews/targets.py
+backend/apps/reviews/workflow.py
+backend/tests/test_accepted_coaching.py
+backend/tests/test_foundation.py
+backend/tests/test_reviews.py

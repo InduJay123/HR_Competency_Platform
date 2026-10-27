@@ -19,7 +19,7 @@ function setup(role: string) {
   return { trigger, dialog: screen.getByRole("dialog") };
 }
 
-describe.each(["Platform Super Admin", "Chief Steward", "Steward Guy"])("%s shared navigation", (role) => {
+describe.each(["Platform Super Admin", "Chief Steward", "Steward Associate"])("%s shared navigation", (role) => {
   it("opens an icon-only accessible drawer, locks background and restores focus", () => {
     const { trigger, dialog } = setup(role);
     const close = within(dialog).getByRole("button", { name: "Close navigation" });

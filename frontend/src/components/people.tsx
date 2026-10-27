@@ -43,7 +43,7 @@ export function People({ manage = false }: { manage?: boolean }) {
         job_role: data.job_role || null,
       });
       setSuccess(
-        "Steward Guy created with login disabled until account activation.",
+        "Steward Associate created with login disabled until account activation.",
       );
       setCreating(false);
       load();
@@ -64,12 +64,12 @@ export function People({ manage = false }: { manage?: boolean }) {
       {manage && (
         <div className="toolbar">
           <Button onClick={() => setCreating(!creating)}>
-            {creating ? "Close form" : "Add Steward Guy"}
+            {creating ? "Close form" : "Add Steward Associate"}
           </Button>
         </div>
       )}
       {creating && (
-        <Card title="Add Steward Guy">
+        <Card title="Add Steward Associate">
           <form onSubmit={create}>
             <div className="form-grid">
               <label>
@@ -119,7 +119,7 @@ export function People({ manage = false }: { manage?: boolean }) {
               <input className="check" type="checkbox" name="senior_leader" />{" "}
               Senior leadership evaluation view
             </label>
-            <Button disabled={busy}>Create Steward Guy</Button>
+            <Button disabled={busy}>Create Steward Associate</Button>
           </form>
         </Card>
       )}
@@ -133,7 +133,7 @@ export function People({ manage = false }: { manage?: boolean }) {
                 <table>
                   <thead>
                     <tr>
-                      <th>Steward Guy</th>
+                      <th>Steward Associate</th>
                       <th>Role</th>
                       <th>Employment start</th>
                       {manage && <th>Platform joined</th>}
@@ -253,7 +253,7 @@ export function Organisation() {
         </Link>
       </div>
       <p className="subtitle">
-        Give each Steward Guy a clear place in your organisation.
+        Give each Steward Associate a clear place in your organisation.
       </p>
       <Feedback error={error} />
       <div className="split">

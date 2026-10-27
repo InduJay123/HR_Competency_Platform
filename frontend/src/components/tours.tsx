@@ -68,7 +68,7 @@ export const tourSteps: Record<
     },
     {
       title: "View reporting lines",
-      copy: "Every Steward Guy reports directly to the company's Chief Steward. The people directory shows this automatically.",
+      copy: "Every Steward Associate reports directly to the company's Chief Steward. The people directory shows this automatically.",
       path: "/hr/employees",
     },
     {

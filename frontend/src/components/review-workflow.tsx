@@ -39,7 +39,7 @@ export function ReviewWorkflow({ review, role, hr, onSaved }: {
   return <>
     <Feedback error={error} />
     <Card title="Commitments">
-      <p>One shared action plan, agreed by the Steward Guy and assigned manager.</p>
+      <p>One shared action plan, agreed by the Steward Associate and assigned manager.</p>
       <Badge>{workflow?.commitments_complete ? "Complete" : "Pending"}</Badge>
       {!workflow?.commitments_available && <p className="alert">Editing unlocks after both submissions and AI coaching are complete.</p>}
       {review.commitments?.map(item => <div className="evidence-row" key={item.id}>
@@ -60,7 +60,7 @@ export function ReviewWorkflow({ review, role, hr, onSaved }: {
             {editing && <Button type="button" variant="neutral" onClick={() => { setEditing(undefined); setDraft(empty); }}>Cancel edit</Button>}</div>
         </fieldset>
       </form>}
-      <p>Steward Guy: {marks?.employee_commitments ? "Confirmed" : "Pending"} · Chief Steward: {marks?.manager_commitments ? "Confirmed" : "Pending"}</p>
+      <p>Steward Associate: {marks?.employee_commitments ? "Confirmed" : "Pending"} · Chief Steward: {marks?.manager_commitments ? "Confirmed" : "Pending"}</p>
       {editable && <p>Save changes before confirming. Any edit clears prior agreement so both people confirm the same plan.</p>}
       {role && !locked && !marks?.[`${role}_commitments`] && <Button disabled={busy || !editable || !review.commitments?.length || !!editing || !!draft.action}
         onClick={() => act("confirm-commitments")}>Confirm Commitments</Button>}

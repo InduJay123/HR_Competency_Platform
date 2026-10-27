@@ -320,7 +320,7 @@ export function ReviewForm({
       <div className="section-heading">
         <div>
           <p className="eyebrow">
-            {manager ? "E03 · CHIEF STEWARD APPRAISAL" : "E02 · STEWARD GUY REFLECTION"}
+            {manager ? "E03 · CHIEF STEWARD APPRAISAL" : "E02 · STEWARD ASSOCIATE REFLECTION"}
           </p>
           <h2>
             {manager ? (pillarBased ? "Chief Steward appraisal" : "Chief Steward appraisal") : "Your contribution, in your words"}
@@ -329,7 +329,7 @@ export function ReviewForm({
         <span role="status">{locked ? "Read-only submission" : status}</span>
       </div>
       <Feedback error={error} />
-      <Card title="01 · Steward Guy context">
+      <Card title="01 · Steward Associate context">
         <p>
           {review.employee_name} · {human(review.cycle_detail.kind)}{" "}
           {review.cycle_detail.year}
@@ -371,8 +371,8 @@ export function ReviewForm({
             </h3>
             {review.pillar_context?.filter(t => t.pillar.toLowerCase() === p).map(t => <PillarTargetDetails key={t.id} pillar={t} />)}
             {manager && pillarBased && <>
-              <h4>Steward Guy reflection</h4>
-              <p>{String((review.forms?.find(f => f.kind === "EMPLOYEE")?.content.pillars as Record<string, Json> | undefined)?.[p] || "Awaiting Steward Guy submission")}</p>
+              <h4>Steward Associate reflection</h4>
+              <p>{String((review.forms?.find(f => f.kind === "EMPLOYEE")?.content.pillars as Record<string, Json> | undefined)?.[p] || "Awaiting Steward Associate submission")}</p>
               <label>{human(p)} — Outcome against target<select disabled={locked || submitting} value={answers[`outcome_${p}`] || ""} onChange={e => update(`outcome_${p}`, e.target.value)}>
                 <option value="">Choose outcome</option>{TARGET_OUTCOMES.map(o => <option key={o}>{o}</option>)}
               </select></label>
@@ -525,7 +525,7 @@ export function ReviewForm({
       )}
       {!locked && (
         <Card title="Save and submit">
-          {pillarBased && manager && !review.forms?.some(f => f.kind === "EMPLOYEE" && f.submitted_at) && <p>Save your draft now. The Steward Guy must submit their reflection before you submit the appraisal.</p>}
+          {pillarBased && manager && !review.forms?.some(f => f.kind === "EMPLOYEE" && f.submitted_at) && <p>Save your draft now. The Steward Associate must submit their reflection before you submit the appraisal.</p>}
           <p>
             Submitting seals this version. Chief Steward can open a new revision
             round without changing the submitted history.

@@ -117,7 +117,7 @@ export default function Login({
                   Choose your role
                 </option>
                 <option value="hr">Chief Steward</option>
-                <option value="employee">Steward Guy</option>
+                <option value="employee">Steward Associate</option>
               </select>
             </label>
           )}

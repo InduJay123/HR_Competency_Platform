@@ -152,7 +152,7 @@ export function Settings() {
             {new Date(data.approved_at || data.created_at).toLocaleString()}
           </p>
           <p>
-            Give this code to Steward Guys so they can request membership. Approve
+            Give this code to Steward Associates so they can request membership. Approve
             them under Join requests.
           </p>
           <label>

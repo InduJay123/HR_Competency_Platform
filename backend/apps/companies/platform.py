@@ -148,7 +148,7 @@ class PlatformCompanyViewSet(viewsets.ViewSet):
                     if p.membership.is_head_hr
                     else "HR"
                     if p.membership.is_hr
-                    else "Steward Guy",
+                    else "Steward Associate",
                 }
                 for p in page
             ]

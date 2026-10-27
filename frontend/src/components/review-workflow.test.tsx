@@ -32,7 +32,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); });
 it("shows exactly the six review stages for HR oversight", () => {
   const { container } = render(<HrWorkflow review={review} />);
   expect(Array.from(container.querySelectorAll("dt"), item => item.textContent)).toEqual([
-    "Steward Guy reflection", "Chief Steward appraisal", "AI coaching", "Commitments", "Acknowledgement", "Final record",
+    "Steward Associate reflection", "Chief Steward appraisal", "AI coaching", "Commitments", "Acknowledgement", "Final record",
   ]);
   expect(Array.from(container.querySelectorAll("dd"), item => item.textContent).slice(0, 4)).toEqual([
     "Complete", "Complete", "Complete", "Pending",

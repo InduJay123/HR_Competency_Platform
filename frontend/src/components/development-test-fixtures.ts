@@ -8,7 +8,7 @@ export const followUpFixture: FollowUpCommitment = {
   owner_name: "Morgan Chief Steward",
   employee_details: {
     id: "person",
-    name: "Alex Steward Guy",
+    name: "Alex Steward Associate",
     designation: "Analyst",
     department: "Finance",
     photo_url: "/api/v1/employees/person/photo/",
@@ -25,7 +25,7 @@ export const followUpFixture: FollowUpCommitment = {
   version: 1,
 };
 export const followUpOptions = {
-  people: [{ id: "person", name: "Alex Steward Guy", designation: "Analyst" }],
+  people: [{ id: "person", name: "Alex Steward Associate", designation: "Analyst" }],
   departments: [{ id: "finance", name: "Finance" }],
 };
 export const followUpPage = {

@@ -84,7 +84,7 @@ export function HrWorkflow({
 }) {
   const rows = [
     [
-      "Steward Guy reflection",
+      "Steward Associate reflection",
       (
         review.workflow?.employee_submitted ??
         review.forms?.some(
@@ -122,7 +122,7 @@ export function HrWorkflow({
     ],
     [
       "Acknowledgement",
-      `Steward Guy: ${
+      `Steward Associate: ${
         review.employee_ack ? "acknowledged" : "pending"
       } · Chief Steward: ${
         review.manager_ack ? "acknowledged" : "pending"
@@ -330,7 +330,7 @@ export function HrCoaching({
         AI coaching is generated separately for Context,
         Character, Capability, Continuity and Contribution.
         It compares the original pillar targets with the
-        Steward Guy reflection and Chief Steward appraisal. Human
+        Steward Associate reflection and Chief Steward appraisal. Human
         judgement determines the formal assessment.
       </p>
 
@@ -444,7 +444,7 @@ export function HrCoaching({
       >
         <div className="actions">
           <p>
-            The Steward Guy runs AI coaching after both
+            The Steward Associate runs AI coaching after both
             submissions are complete.
           </p>
         </div>

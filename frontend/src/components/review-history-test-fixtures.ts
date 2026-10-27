@@ -24,7 +24,7 @@ export function historyFixture(): ReviewHistoryData {
       notes: "",
       reflection: "I worked with colleagues on the handover.",
       appraisal:
-        "The Steward Guy demonstrated progress against the agreed target.",
+        "The Steward Associate demonstrated progress against the agreed target.",
       outcome: kind === "MID_YEAR" ? "Partially achieved" : "Achieved",
       judgement: "Strong",
     })),
@@ -34,7 +34,7 @@ export function historyFixture(): ReviewHistoryData {
   return {
     person: {
       id: "person",
-      name: "Alex Steward Guy",
+      name: "Alex Steward Associate",
       designation: "Analyst",
       department: "Finance",
       photo_url: "",
@@ -56,7 +56,7 @@ export function historyFixture(): ReviewHistoryData {
       {
         id: "commitment",
         action: "Transfer supplier onboarding responsibility",
-        owner: "Alex Steward Guy",
+        owner: "Alex Steward Associate",
         due_date: "2026-12-01",
         success_measure: "Agreed handover completed",
         support: "Practice with team",

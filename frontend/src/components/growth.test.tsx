@@ -89,7 +89,7 @@ it("shows attributed shared entries, search and filters without any write contro
     }),
   ).toBeNull();
   expect(allPages).toHaveBeenCalledWith("growth/?scope=team");
-  fireEvent.change(screen.getByLabelText("Search Steward Guys"), {
+  fireEvent.change(screen.getByLabelText("Search Steward Associates"), {
     target: { value: "dinaya" },
   });
   expect(screen.queryByText("Alex Test")).toBeNull();
@@ -114,7 +114,7 @@ it("preserves subject bookmarks without falling back to personal entries", async
   expect(allPages).toHaveBeenCalledWith("growth/?scope=team&subject=steward");
   expect(
     screen
-      .getByRole("link", { name: "View all Steward Guys" })
+      .getByRole("link", { name: "View all Steward Associates" })
       .getAttribute("href"),
   ).toBe("/manager/growth");
 });
@@ -130,7 +130,7 @@ it.each(["hub", "CONTRIBUTION", "CAPABILITY", "LEGACY"])(
       ),
     );
     await screen.findByText(
-      "Shared development activity from your Steward Guys.",
+      "Shared development activity from your Steward Associates.",
     );
     expect(
       screen.queryByRole("button", {
@@ -141,7 +141,7 @@ it.each(["hub", "CONTRIBUTION", "CAPABILITY", "LEGACY"])(
   },
 );
 
-it("Steward Guy can create with explicit sharing and see private/shared badges", async () => {
+it("Steward Associate can create with explicit sharing and see private/shared badges", async () => {
   role.chief = false;
   vi.mocked(allPages).mockResolvedValue([person]);
   vi.mocked(api).mockImplementation(async (path) =>

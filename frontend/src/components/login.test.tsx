@@ -106,10 +106,10 @@ it("keeps Chief Steward login on its existing workspace flow", async () => {
   expect(mocks.post.mock.calls[0][0]).toBe("auth/login/");
   expect(mocks.session).toHaveBeenCalledTimes(1);
 });
-it("offers only Chief Steward and Steward Guy on normal login", () => {
+it("offers only Chief Steward and Steward Associate on normal login", () => {
   render(<Login />);
   expect(screen.getByRole("option", { name: "Chief Steward" })).toBeTruthy();
-  expect(screen.getByRole("option", { name: "Steward Guy" })).toBeTruthy();
+  expect(screen.getByRole("option", { name: "Steward Associate" })).toBeTruthy();
   expect(screen.queryByText(/Platform super admin/i)).toBeNull();
 });
 it("shows the admin identity without roles or registration", () => {

@@ -60,17 +60,17 @@ export function DevelopmentFilters({
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Steward Guy name or commitment"
+            placeholder="Steward Associate name or commitment"
           />
         </label>
         <label>
-          Steward Guy
+          Steward Associate
           <select
             value={value.employee}
             disabled={!options}
             onChange={(e) => change("employee", e.target.value)}
           >
-            <option value="">All Steward Guys</option>
+            <option value="">All Steward Associates</option>
             {options?.people.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}

@@ -242,7 +242,7 @@ function EmployeeCoaching({ review }: { review: Review }) {
     <Card title="Steward coaching">
       <p>
         Human-reviewed, pillar-based coaching grounded in your original
-        targets, Steward Guy reflection and Chief Steward appraisal.
+        targets, Steward Associate reflection and Chief Steward appraisal.
       </p>
 
       <Badge>Reviewed by Chief Steward</Badge>
@@ -489,7 +489,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
       <div className="review-banner">
         <strong>Evidence informs. People decide.</strong>
         <p>
-          Steward Guy reflection → Chief Steward appraisal → AI coaching →
+          Steward Associate reflection → Chief Steward appraisal → AI coaching →
           commitments → acknowledgement → final record
         </p>
       </div>
@@ -509,7 +509,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
         .map((f) => (
           <Card
             key={f.kind}
-            title={oversight ? (f.kind === "EMPLOYEE" ? "Steward Guy reflection" : "Chief Steward appraisal") : `${human(f.kind)} submission · ${f.submitted_at ? "Sealed" : "Draft"}`}
+            title={oversight ? (f.kind === "EMPLOYEE" ? "Steward Associate reflection" : "Chief Steward appraisal") : `${human(f.kind)} submission · ${f.submitted_at ? "Sealed" : "Draft"}`}
           >
             {oversight && <>
               <p><Badge>{f.submitted_at ? "Submitted" : "Draft"}</Badge></p>
@@ -534,12 +534,12 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
         <Card title="Acknowledgements">
           {review.employee_comments && (
             <div>
-              <h3>Steward Guy’s recorded perspective</h3>
+              <h3>Steward Associate’s recorded perspective</h3>
               <p className="long-copy">{review.employee_comments}</p>
             </div>
           )}
           <p>
-            Steward Guy: {review.employee_ack ? "Acknowledged" : "Pending"} ·
+            Steward Associate: {review.employee_ack ? "Acknowledged" : "Pending"} ·
             Chief Steward: {review.manager_ack ? "Acknowledged" : "Pending"}
           </p>
           {review.state !== "FINALISED" && ((employee && !review.employee_ack) ||
@@ -547,7 +547,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
             <>
               {employee && (
                 <label>
-                  Steward Guy comments (optional)
+                  Steward Associate comments (optional)
                   <small>
                     Record your perspective, including any disagreement. These
                     comments become part of the shared final record.
@@ -657,7 +657,7 @@ export function ReviewDetail({ showAcceptedCoaching = false, oversight = false }
         <HrDisclosure enabled={oversight} label={`View full history (${visibleHistory.length} events)`}>
         {visibleHistory.map((h) => (
           <div className={`history-row${oversight && /(?:^|[._])saved$/.test(h.action) ? ` ${hrReviewStyles.autosave}` : ""}`} key={h.version}>
-            <strong>{human(h.action.replaceAll(".", "_")).replace(/^Employee/, "Steward Guy").replace(/^Manager/, "Chief Steward")}</strong>
+            <strong>{human(h.action.replaceAll(".", "_")).replace(/^Employee/, "Steward Associate").replace(/^Manager/, "Chief Steward")}</strong>
             <time>{new Date(h.created_at).toLocaleString()}</time>
             {h.actor_id && <p>By {[h.actor__user__first_name, h.actor__user__last_name].filter(Boolean).join(" ") || h.actor_id}</p>}
             {h.reason && h.action !== "commitment.saved" && !/^\s*[\[{]/.test(h.reason) && <p>{h.reason}</p>}

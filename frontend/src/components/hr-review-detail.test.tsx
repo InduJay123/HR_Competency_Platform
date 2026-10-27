@@ -16,11 +16,11 @@ vi.mock("./shell", () => ({
 const baseReview = {
   id: "review-1", employee: "employee-1", employee_member: "employee-member",
   manager: "manager-1", manager_member: "manager-member", reviewer: "hr-1",
-  employee_name: "Alex Steward Guy", manager_name: "Morgan Manager",
+  employee_name: "Alex Steward Associate", manager_name: "Morgan Manager",
   state: "SUBMITTED", round: 1, version: 7, employee_ack: null, manager_ack: null,
   cycle_detail: { kind: "MID_YEAR", year: 2026, starts_on: "2026-01-01", ends_on: "2026-06-30", due_on: "2026-07-07" },
   forms: [
-    { kind: "EMPLOYEE", submitted_at: "2026-07-01", content: { outcomes: "Original Steward Guy reflection" } },
+    { kind: "EMPLOYEE", submitted_at: "2026-07-01", content: { outcomes: "Original Steward Associate reflection" } },
     { kind: "MANAGER", submitted_at: "2026-07-02", content: { overall: "Developing Steward", ecp: "Growers", summary: "Original Chief Steward appraisal" } },
   ],
   workflow: { employee_submitted: true, manager_submitted: true, ai_coaching: "Complete",
@@ -73,12 +73,12 @@ it("keeps submissions and audit records in closed disclosures and accepted coach
   expect(screen.getByText("Review progress")).toBeTruthy();
   expect(disclosure(/^View submission$/).open).toBe(false);
   expect(disclosure(/^View appraisal$/).open).toBe(false);
-  expect(within(disclosure(/^View submission$/)).getByText("Original Steward Guy reflection")).toBeTruthy();
+  expect(within(disclosure(/^View submission$/)).getByText("Original Steward Associate reflection")).toBeTruthy();
   expect(within(disclosure(/^View appraisal$/)).getByText("Original Chief Steward appraisal")).toBeTruthy();
   const history = disclosure(/^View full history/);
   expect(history.open).toBe(false);
-  expect(within(history).queryByText("Steward Guy saved")).toBeNull();
-  expect(within(history).getByText("Steward Guy submitted")).toBeTruthy();
+  expect(within(history).queryByText("Steward Associate saved")).toBeNull();
+  expect(within(history).getByText("Steward Associate submitted")).toBeTruthy();
   const aiHistory = disclosure(/^AI history and provenance/);
   expect(aiHistory.open).toBe(false);
   expect(within(aiHistory).getByText("Failed")).toBeTruthy();
@@ -105,18 +105,18 @@ it.each([true, false])("shows meaningful history without draft events or commitm
   );
   render(<ReviewDetail oversight={oversight} />);
   await screen.findByText("Workflow history");
-  expect(screen.queryByText("Steward Guy saved")).toBeNull();
+  expect(screen.queryByText("Steward Associate saved")).toBeNull();
   expect(screen.queryByText("Chief Steward saved")).toBeNull();
   expect(screen.queryByText(metadata)).toBeNull();
   expect(screen.getByText("Commitment saved")).toBeTruthy();
   expect(screen.getByText("By Morgan Manager")).toBeTruthy();
   expect(screen.getByText("Please clarify the outcome")).toBeTruthy();
-  expect(screen.getByText("Steward Guy submitted")).toBeTruthy();
+  expect(screen.getByText("Steward Associate submitted")).toBeTruthy();
   if (oversight) expect(screen.getByText("View full history (3 events)")).toBeTruthy();
   expect(review.history).toHaveLength(5);
 });
 
-it("offers HR refresh but keeps generation Steward Guy-owned", async () => {
+it("offers HR refresh but keeps generation Steward Associate-owned", async () => {
   analyses = [];
   await show();
   expect(screen.queryByRole("button", { name: /Generate coaching|Run AI Coaching/ })).toBeNull();

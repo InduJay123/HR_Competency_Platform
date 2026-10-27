@@ -40,12 +40,12 @@ afterEach(() => {
   vi.resetAllMocks();
 });
 
-it("identifies the Steward Guy and distinct owner, with status, due date and original links", async () => {
+it("identifies the Steward Associate and distinct owner, with status, due date and original links", async () => {
   render(<Development team />);
-  expect(await screen.findByText("Alex Steward Guy")).toBeTruthy();
+  expect(await screen.findByText("Alex Steward Associate")).toBeTruthy();
   expect(screen.getByText("Analyst · Finance")).toBeTruthy();
   expect(
-    screen.getByRole("img", { name: "Alex Steward Guy's profile" }),
+    screen.getByRole("img", { name: "Alex Steward Associate's profile" }),
   ).toBeTruthy();
   expect(
     screen.getByText("Commitment owner: Morgan Chief Steward"),
@@ -61,8 +61,8 @@ it("identifies the Steward Guy and distinct owner, with status, due date and ori
 
 it("sends all filters to the server and resets pagination", async () => {
   render(<Development team />);
-  await screen.findByText("Alex Steward Guy");
-  fireEvent.change(screen.getByLabelText("Steward Guy"), {
+  await screen.findByText("Alex Steward Associate");
+  fireEvent.change(screen.getByLabelText("Steward Associate"), {
     target: { value: "person" },
   });
   await waitFor(() =>
@@ -87,9 +87,9 @@ it("sends all filters to the server and resets pagination", async () => {
     ),
   );
   fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
-  await screen.findByText("Alex Steward Guy");
+  await screen.findByText("Alex Steward Associate");
   expect(
-    (screen.getByLabelText("Steward Guy") as HTMLSelectElement).value,
+    (screen.getByLabelText("Steward Associate") as HTMLSelectElement).value,
   ).toBe("");
 });
 
@@ -116,7 +116,7 @@ it("keeps Next and Previous and uses all-page filtered summary counts", async ()
 
 it("preserves status notes evidence save and development-work assignment", async () => {
   render(<Development team />);
-  await screen.findByText("Alex Steward Guy");
+  await screen.findByText("Alex Steward Associate");
   const details = screen
     .getByText("Progress history and follow-up")
     .closest("details")!;
@@ -176,12 +176,12 @@ it.each(["none", "person", "status"])(
     render(<Development team />);
     await screen.findByText("No development commitments are available.");
     if (mode === "person") {
-      fireEvent.change(screen.getByLabelText("Steward Guy"), {
+      fireEvent.change(screen.getByLabelText("Steward Associate"), {
         target: { value: "person" },
       });
       expect(
         await screen.findByText(
-          "No development commitments are recorded for this Steward Guy.",
+          "No development commitments are recorded for this Steward Associate.",
         ),
       ).toBeTruthy();
     } else if (mode === "status") {
@@ -197,9 +197,9 @@ it.each(["none", "person", "status"])(
 
 it("does not request Chief Steward filter options on the personal route", async () => {
   render(<Development />);
-  await screen.findByText("Alex Steward Guy");
+  await screen.findByText("Alex Steward Associate");
   expect(api).not.toHaveBeenCalledWith("development/filters/");
-  expect(screen.queryByLabelText("Steward Guy")).toBeNull();
+  expect(screen.queryByLabelText("Steward Associate")).toBeNull();
 });
 
 it("renders stored support text verbatim rather than rewriting it", async () => {

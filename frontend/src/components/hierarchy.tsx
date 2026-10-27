@@ -62,7 +62,7 @@ export function Hierarchy() {
         <div>
           <h1>Management Structure</h1>
           <p className="subtitle">
-            All Steward Guys report directly to the Chief Steward.
+            All Steward Associates report directly to the Chief Steward.
           </p>
         </div>
         <Link className="button primary" href="/hr/employees">

@@ -73,10 +73,10 @@ def make_input(review):
 def request_analysis(member, review, version):
     review = lock(member, review, version)
     if member.id != review.employee.membership_id:
-        raise PermissionDenied("Only the Steward Guy can run AI coaching for their review.")
+        raise PermissionDenied("Only the Steward Associate can run AI coaching for their review.")
     if current_forms(review).filter(submitted_at__isnull=False).count() != 2:
         raise ValidationError(
-            "Submit both the Steward Guy reflection and Chief Steward appraisal before running AI coaching."
+            "Submit both the Steward Associate reflection and Chief Steward appraisal before running AI coaching."
         )
     existing = review.analyses.filter(company=member.company, round=review.round, state="SUCCEEDED").order_by("-created_at").first()
     if existing:

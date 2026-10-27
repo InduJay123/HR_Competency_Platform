@@ -37,8 +37,8 @@ export function TargetSetup({ cycle, people, onSaved }: {
   }
   return <Card title="Individual pillar targets">
     <p>Set five individual targets. Changes are audited. Targets lock when formal reviews open.</p>
-    <label>Steward Guy<select value={employee} disabled={busy} onChange={e => setEmployee(e.target.value)}>
-      <option value="">Choose Steward Guy</option>
+    <label>Steward Associate<select value={employee} disabled={busy} onChange={e => setEmployee(e.target.value)}>
+      <option value="">Choose Steward Associate</option>
       {people.filter(p => p.has_manager).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
     </select></label>
     <Feedback error={error} />

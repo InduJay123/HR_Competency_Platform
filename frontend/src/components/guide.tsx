@@ -72,14 +72,14 @@ export function Guide() {
       </div>
       <Card title="What is shared">
         <p>
-          Draft formal forms stay with their author. Submitted Steward Guy
+          Draft formal forms stay with their author. Submitted Steward Associate
           reflections are shared with the assigned reviewers. Once both forms
-          are submitted, the Steward Guy can read the Chief Steward appraisal before the
+          are submitted, the Steward Associate can read the Chief Steward appraisal before the
           conversation.
         </p>
         <p>
           Acknowledgement records participation and receipt, not necessarily
-          agreement. Steward Guys may add comments to the shared final record.
+          agreement. Steward Associates may add comments to the shared final record.
         </p>
         <p>
           The client’s pre-workshop self-evaluation workbook is separate

@@ -171,7 +171,7 @@ export function Shell({ children }: { children: ReactNode }) {
         <NavigationShell className="workspace" sidebarClassName={stewardGuy ? "sidebar sidebar-steward-guy" : "sidebar"} navigation={<>            <Link href={`/${role}/dashboard`} className="brand desktop-nav-brand">
               <Brand />
             </Link>
-             <span className="identity-role">{chief ? "Chief Steward" : stewardGuy ? "Steward Guy" : "Company administrator"}</span>
+             <span className="identity-role">{chief ? "Chief Steward" : stewardGuy ? "Steward Associate" : "Company administrator"}</span>
               
             <nav aria-label="Main navigation">
               {visibleLinks.map(([label, url]) => (

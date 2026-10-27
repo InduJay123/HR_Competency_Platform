@@ -16,7 +16,7 @@ vi.mock("@/lib/api", () => ({ post: vi.fn(), allPages: vi.fn() }));
 const review = {
   id: "review-1",
   employee: "employee-1",
-  employee_name: "Test Steward Guy",
+  employee_name: "Test Steward Associate",
   state: "OPEN",
   round: 1,
   version: 4,
@@ -62,7 +62,7 @@ describe("Reflection draft safety", () => {
     expect(payload).toMatchObject({ version: 4, submit: false });
     expect(JSON.stringify(payload)).toContain("Preserved draft text");
   });
-  it("blocks navigation when the Steward Guy chooses to keep unsaved changes", async () => {
+  it("blocks navigation when the Steward Associate chooses to keep unsaved changes", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     await show();
     fireEvent.change(

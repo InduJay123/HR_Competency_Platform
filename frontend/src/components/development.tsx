@@ -108,7 +108,7 @@ export function CommitmentCard({
           <strong>{item.employee_details.name}</strong>
           <p>
             {[
-              item.employee_details.designation || "Steward Guy",
+              item.employee_details.designation || "Steward Associate",
               item.employee_details.department,
             ]
               .filter(Boolean)
@@ -224,7 +224,7 @@ export function CommitmentCard({
                   </label>
                 ))
               ) : (
-                <p>Add evidence to the Steward Guy’s work item first.</p>
+                <p>Add evidence to the Steward Associate’s work item first.</p>
               )}
             </fieldset>
             <Button disabled={busy || !notes.trim()} onClick={save}>
@@ -346,7 +346,7 @@ function CommitmentResults({
             !filters.status &&
             !filters.department &&
             !filters.due
-              ? "No development commitments are recorded for this Steward Guy."
+              ? "No development commitments are recorded for this Steward Associate."
               : filtered
                 ? "No commitments match these filters."
                 : "No development commitments are available."}

@@ -29,7 +29,7 @@ export function Brand({
         role="img"
         aria-label="Beyond the Finish Line"
       >
-        <image href="/btfl-logo.png" width="2000" height="2000" />
+        <image href="/logo_b.png" width="2000" height="2000" />
       </svg>
 
       <div

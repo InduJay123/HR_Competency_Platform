@@ -8,7 +8,7 @@ def require_participant(member, review):
         return "employee"
     if member.id == review.responsible_manager.membership_id:
         return "manager"
-    raise PermissionDenied("Only the Steward Guy or assigned manager can update this review.")
+    raise PermissionDenied("Only the Steward Associate or assigned manager can update this review.")
 
 
 def require_content_access(member, review):
@@ -37,7 +37,7 @@ def workflow_status(review):
     if complete:
         ai = "Complete"
     elif "EMPLOYEE" not in submitted:
-        ai = "Waiting for Steward Guy reflection"
+        ai = "Waiting for Steward Associate reflection"
     elif "MANAGER" not in submitted:
         ai = "Waiting for Chief Steward appraisal"
     elif latest and latest.state in ("QUEUED", "RUNNING", "RETRYING"):
@@ -51,11 +51,11 @@ def workflow_status(review):
         marks.get(f"{role}_commitments") for role in ("employee", "manager")
     )
     requirements = [
-        ("Steward Guy reflection", "EMPLOYEE" in submitted),
+        ("Steward Associate reflection", "EMPLOYEE" in submitted),
         ("Chief Steward appraisal", "MANAGER" in submitted),
         ("AI coaching", complete),
         ("Commitments confirmation", commitments),
-        ("Steward Guy acknowledgement", review.employee_ack),
+        ("Steward Associate acknowledgement", review.employee_ack),
         ("Chief Steward acknowledgement", review.manager_ack),
         (
             "Final human assessment",

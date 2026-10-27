@@ -251,7 +251,7 @@ class ReviewTests(TestCase):
         self.agree_commitments(r)
         url = f"/api/v1/reviews/{r.id}/acknowledge/"
         denied = self.acting(self.hr).post(
-            url, {"version": r.version, "comments": "Forged Steward Guy perspective"}, format="json"
+            url, {"version": r.version, "comments": "Forged Steward Associate perspective"}, format="json"
         )
         self.assertEqual(denied.status_code, 403)
         response = self.acting(self.nimal).post(

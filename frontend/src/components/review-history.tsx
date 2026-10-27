@@ -56,7 +56,7 @@ function HistoryWorkspace({ chief }: { chief: boolean }) {
       )}
       {chief && !person ? (
         <Card>
-          <p>Choose a Steward Guy to view review history.</p>
+          <p>Choose a Steward Associate to view review history.</p>
         </Card>
       ) : (
         <HistoryLoader
@@ -88,7 +88,7 @@ function PersonSelector({
   return (
     <Card title="Review history for">
       <label>
-        Search Steward Guys
+        Search Steward Associates
         <input
           type="search"
           value={search}
@@ -170,7 +170,7 @@ function PeopleOptions({
   return (
     <>
       <label>
-        Choose a Steward Guy
+        Choose a Steward Associate
         <select
           value={
             data.results.some((p) => p.id === selected?.id) ? selected!.id : ""
@@ -195,7 +195,7 @@ function PeopleOptions({
           ))}
         </select>
       </label>
-      {!data.results.length && <p>No Steward Guys match this search.</p>}
+      {!data.results.length && <p>No Steward Associates match this search.</p>}
       {(data.previous || data.next) && (
         <div className="actions">
           <Button
@@ -312,7 +312,7 @@ function PillarDetails({
               ["Target", value.target],
               ["Success measure", value.success_measure],
               ["Target notes", value.notes],
-              ["Steward Guy reflection", value.reflection],
+              ["Steward Associate reflection", value.reflection],
               ["Chief Steward appraisal", value.appraisal],
               ["Outcome against target", value.outcome],
               ["Pillar judgement", value.judgement],
@@ -346,7 +346,7 @@ export function HistoryComparison({
       <Card>
         <p>
           {chief
-            ? "No formal review history is available for this Steward Guy."
+            ? "No formal review history is available for this Steward Associate."
             : "No formal review history is available yet."}
         </p>
       </Card>
